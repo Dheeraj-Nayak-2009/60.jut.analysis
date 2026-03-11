@@ -7,18 +7,19 @@ api_bp = Blueprint('api', __name__)
 
 @api_bp.get("/api/csv-files")
 def list_csv_files():
-    static_dir = app.static_folder   # use Flask's static folder
+    static_dir = app.static_folder
     files = [f for f in os.listdir(static_dir) if f.endswith('.csv')]
     return jsonify(sorted(files))
 
 app.register_blueprint(api_bp)
 
 
-
 @app.get("/")
 def read_root():
-    return """
-<!DOCTYPE html>
+    return app.response_class(HTML, mimetype='text/html')
+
+
+HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -55,7 +56,6 @@ def read_root():
     overflow-x: hidden;
   }
 
-  /* ---- NOISE OVERLAY ---- */
   body::before {
     content: '';
     position: fixed;
@@ -66,7 +66,6 @@ def read_root():
     opacity: 0.4;
   }
 
-  /* ---- HERO ---- */
   .hero {
     min-height: 100vh;
     display: flex;
@@ -82,7 +81,7 @@ def read_root():
   .hero-bg {
     position: absolute;
     inset: 0;
-    background: 
+    background:
       radial-gradient(ellipse 80% 50% at 20% 40%, rgba(232,197,71,0.08) 0%, transparent 60%),
       radial-gradient(ellipse 60% 60% at 80% 60%, rgba(71,232,197,0.06) 0%, transparent 60%),
       radial-gradient(ellipse 40% 40% at 50% 10%, rgba(232,71,160,0.05) 0%, transparent 50%);
@@ -91,7 +90,7 @@ def read_root():
   .hero-grid {
     position: absolute;
     inset: 0;
-    background-image: 
+    background-image:
       linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
     background-size: 60px 60px;
@@ -142,9 +141,7 @@ def read_root():
     justify-content: center;
   }
 
-  .hero-stat {
-    text-align: center;
-  }
+  .hero-stat { text-align: center; }
 
   .hero-stat-val {
     font-family: 'Bebas Neue', sans-serif;
@@ -161,34 +158,6 @@ def read_root():
     margin-top: 0.3rem;
   }
 
-  .scroll-hint {
-    position: absolute;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0;
-    animation: fadeUp 1s 1.2s forwards;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .scroll-hint span {
-    font-size: 0.6rem;
-    color: var(--muted);
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-  }
-
-  .scroll-line {
-    width: 1px;
-    height: 40px;
-    background: linear-gradient(to bottom, var(--accent), transparent);
-    animation: pulse 2s infinite;
-  }
-
-  /* ---- SECTIONS ---- */
   section {
     padding: 5rem 2rem;
     max-width: 1400px;
@@ -211,7 +180,6 @@ def read_root():
     color: var(--text);
   }
 
-  /* ---- PODIUM ---- */
   .podium-section {
     padding: 5rem 2rem;
     background: var(--surface);
@@ -284,14 +252,11 @@ def read_root():
 
   .p1 .podium-score { color: var(--gold); }
   .p1 .podium-block { background: linear-gradient(135deg, #fbbf24, #f59e0b); height: 160px; }
-
   .p2 .podium-score { color: var(--silver); }
   .p2 .podium-block { background: linear-gradient(135deg, #94a3b8, #64748b); height: 120px; }
-
   .p3 .podium-score { color: var(--bronze); }
   .p3 .podium-block { background: linear-gradient(135deg, #cd7f32, #a0632a); height: 90px; }
 
-  /* ---- LEADERBOARD ---- */
   .leaderboard-table {
     width: 100%;
     border-collapse: separate;
@@ -314,10 +279,7 @@ def read_root():
     cursor: default;
   }
 
-  .leaderboard-table tr.row:hover {
-    background: var(--surface2);
-    transform: translateX(4px);
-  }
+  .leaderboard-table tr.row:hover { background: var(--surface2); transform: translateX(4px); }
 
   .leaderboard-table td {
     padding: 0.9rem 1rem;
@@ -326,9 +288,7 @@ def read_root():
     border-bottom: 1px solid transparent;
   }
 
-  .leaderboard-table tr.row:hover td {
-    border-color: var(--border);
-  }
+  .leaderboard-table tr.row:hover td { border-color: var(--border); }
 
   .rank-badge {
     font-family: 'Bebas Neue', sans-serif;
@@ -352,11 +312,7 @@ def read_root():
     letter-spacing: 0.05em;
   }
 
-  .mini-bar-wrap {
-    display: flex;
-    gap: 3px;
-    align-items: center;
-  }
+  .mini-bar-wrap { display: flex; gap: 3px; align-items: center; }
 
   .mini-bar {
     height: 6px;
@@ -371,7 +327,6 @@ def read_root():
     color: var(--text);
   }
 
-  /* ---- CHARTS GRID ---- */
   .charts-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -404,12 +359,8 @@ def read_root():
     margin-bottom: 1.5rem;
   }
 
-  canvas {
-    width: 100% !important;
-    max-height: 300px;
-  }
+  canvas { width: 100% !important; max-height: 300px; }
 
-  /* ---- SUBJECT DEEP DIVE ---- */
   .subject-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -428,7 +379,6 @@ def read_root():
   }
 
   .subj-card:hover { transform: translateY(-4px); }
-
   .subj-card.phy { border-top: 3px solid var(--phy); }
   .subj-card.chem { border-top: 3px solid var(--chem); }
   .subj-card.math { border-top: 3px solid var(--math); }
@@ -455,10 +405,7 @@ def read_root():
   .subj-stat-key { color: var(--muted); }
   .subj-stat-val { color: var(--text); font-weight: 600; }
 
-  /* ---- ACCURACY MATRIX ---- */
-  .matrix-wrap {
-    overflow-x: auto;
-  }
+  .matrix-wrap { overflow-x: auto; }
 
   .matrix-grid {
     display: grid;
@@ -475,10 +422,7 @@ def read_root():
     transition: transform 0.15s;
   }
 
-  .matrix-cell:hover {
-    transform: scale(1.15);
-    z-index: 10;
-  }
+  .matrix-cell:hover { transform: scale(1.15); z-index: 10; }
 
   .matrix-cell .tooltip {
     position: absolute;
@@ -500,10 +444,7 @@ def read_root():
 
   .matrix-cell:hover .tooltip { opacity: 1; }
 
-  /* ---- SCORE DIST ---- */
-  .dist-bar-container {
-    margin-top: 1.5rem;
-  }
+  .dist-bar-container { margin-top: 1.5rem; }
 
   .dist-bar-row {
     display: flex;
@@ -512,12 +453,7 @@ def read_root():
     margin-bottom: 0.6rem;
   }
 
-  .dist-range {
-    font-size: 0.65rem;
-    color: var(--muted);
-    width: 80px;
-    flex-shrink: 0;
-  }
+  .dist-range { font-size: 0.65rem; color: var(--muted); width: 80px; flex-shrink: 0; }
 
   .dist-bar-outer {
     flex: 1;
@@ -541,21 +477,8 @@ def read_root():
     width: 0;
   }
 
-  .dist-count {
-    font-size: 0.7rem;
-    color: var(--muted);
-    width: 20px;
-    text-align: right;
-    flex-shrink: 0;
-  }
+  .dist-count { font-size: 0.7rem; color: var(--muted); width: 20px; text-align: right; flex-shrink: 0; }
 
-  /* ---- SCATTER ---- */
-  .scatter-wrap {
-    position: relative;
-    height: 350px;
-  }
-
-  /* ---- FOOTER ---- */
   footer {
     text-align: center;
     padding: 3rem 2rem;
@@ -565,7 +488,6 @@ def read_root():
     border-top: 1px solid var(--border);
   }
 
-  /* ---- ANIMATIONS ---- */
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
@@ -582,19 +504,14 @@ def read_root():
     transition: opacity 0.7s ease, transform 0.7s ease;
   }
 
-  .reveal.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
 
-  /* ---- DIVIDER ---- */
   .divider {
     width: 100%;
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--border), transparent);
   }
 
-  /* ---- SEARCH / FILTER ---- */
   .filter-bar {
     display: flex;
     gap: 1rem;
@@ -634,16 +551,91 @@ def read_root():
     transition: all 0.2s;
   }
 
-  .sort-btn:hover, .sort-btn.active {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
+  .sort-btn:hover, .sort-btn.active { border-color: var(--accent); color: var(--accent); }
 
-  /* ---- PERFORMANCE TIER ---- */
   .tier-excellent { background: rgba(71,232,197,0.1); }
   .tier-good { background: rgba(232,197,71,0.1); }
   .tier-average { background: rgba(251,146,60,0.1); }
   .tier-poor { background: rgba(232,71,160,0.08); }
+
+  /* ---- CSV PICKER ---- */
+  #uploadOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,10,15,0.95);
+    backdrop-filter: blur(10px);
+    transition: opacity 0.5s;
+  }
+
+  .picker-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: #e8c547;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .picker-sub {
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    color: #6b6b8a;
+    margin-top: 0.75rem;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  #csvMenu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 90%;
+    max-width: 480px;
+    margin-top: 2rem;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .csv-btn {
+    background: #111118;
+    border: 1px solid #1e1e2e;
+    color: #e8e8f0;
+    padding: 1rem 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+  }
+
+  .csv-btn:hover {
+    border-color: #e8c547;
+    color: #e8c547;
+    background: #16161f;
+  }
+
+  .csv-btn-filename {
+    color: #6b6b8a;
+    font-size: 0.6rem;
+  }
+
+  #uploadError {
+    color: #e847a0;
+    font-size: 0.7rem;
+    margin-top: 1.5rem;
+    display: none;
+  }
 
   @media (max-width: 768px) {
     .charts-grid { grid-template-columns: 1fr; }
@@ -655,14 +647,13 @@ def read_root():
 </head>
 <body>
 
-<!-- HERO -->
 <div class="hero">
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
   <div style="position:relative;z-index:2;">
     <div class="hero-tag" id="heroTag">NEW JUT · Batch Analysis</div>
     <div class="hero-title">PERFOR<span>MANCE</span><br>REPORT</div>
-    <div class="hero-sub" id="heroSub">UPLOAD A CSV TO BEGIN</div>
+    <div class="hero-sub" id="heroSub">SELECT A TEST TO BEGIN</div>
     <div class="hero-stats">
       <div class="hero-stat">
         <div class="hero-stat-val" id="hs-avg">—</div>
@@ -682,10 +673,8 @@ def read_root():
       </div>
     </div>
   </div>
-  
 </div>
 
-<!-- PODIUM -->
 <div class="podium-section">
   <div class="podium-inner">
     <div class="section-label reveal">Top Performers</div>
@@ -696,7 +685,6 @@ def read_root():
 
 <div class="divider"></div>
 
-<!-- LEADERBOARD -->
 <section>
   <div class="section-label reveal">Full Results</div>
   <div class="section-title reveal">Leaderboard</div>
@@ -712,12 +700,7 @@ def read_root():
     <table class="leaderboard-table">
       <thead>
         <tr>
-          <th>#</th>
-          <th>Student</th>
-          <th>Score</th>
-          <th>Subject Breakdown</th>
-          <th>Accuracy</th>
-          <th>Attempted</th>
+          <th>#</th><th>Student</th><th>Score</th><th>Subject Breakdown</th><th>Accuracy</th><th>Attempted</th>
         </tr>
       </thead>
       <tbody id="leaderboardBody"></tbody>
@@ -727,7 +710,6 @@ def read_root():
 
 <div class="divider"></div>
 
-<!-- SUBJECT DEEP DIVE -->
 <section>
   <div class="section-label reveal">Subject Performance</div>
   <div class="section-title reveal">Deep Dive</div>
@@ -740,7 +722,6 @@ def read_root():
 
 <div class="divider"></div>
 
-<!-- CHARTS -->
 <section>
   <div class="section-label reveal">Visual Analysis</div>
   <div class="section-title reveal">Score Insights</div>
@@ -766,52 +747,38 @@ def read_root():
 
 <div class="divider"></div>
 
-<!-- ACCURACY HEATMAP -->
 <section>
   <div class="section-label reveal">Accuracy Heatmap</div>
   <div class="section-title reveal">Who Got What Right</div>
   <div class="matrix-wrap reveal">
-    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap; justify-content: center;">
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;justify-content:center;">
       <span style="font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;">Subject:</span>
-      <span style="font-size:0.65rem;color:var(--phy);">■ Physics</span>
-      <span style="font-size:0.65rem;color:var(--chem);">■ Chemistry</span>
-      <span style="font-size:0.65rem;color:var(--math);">■ Maths</span>
+      <span style="font-size:0.65rem;color:var(--phy);">&#9632; Physics</span>
+      <span style="font-size:0.65rem;color:var(--chem);">&#9632; Chemistry</span>
+      <span style="font-size:0.65rem;color:var(--math);">&#9632; Maths</span>
     </div>
     <div id="heatmapGrid" class="matrix-grid"></div>
   </div>
 </section>
 
-<footer id="footerBar">
-  JUT ANALYSIS DASHBOARD · UPLOAD A CSV TO BEGIN
-</footer>
+<footer id="footerBar">JUT ANALYSIS DASHBOARD</footer>
 
 <!-- CSV PICKER OVERLAY -->
-<div id="uploadOverlay" style="
-  position:fixed;inset:0;z-index:2000;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:rgba(10,10,15,0.92);backdrop-filter:blur(10px);
-  transition:opacity 0.5s;
-">
-  <div style="text-align:center;margin-bottom:2rem;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:#e8c547;line-height:1;">SELECT TEST</div>
-    <div style="font-size:0.7rem;letter-spacing:0.25em;color:#6b6b8a;margin-top:0.75rem;text-transform:uppercase;">Choose a CSV file to analyse</div>
-  </div>
-  <div id="csvMenu" style="display:flex;flex-direction:column;gap:0.6rem;width:90%;max-width:420px;"></div>
-  <div id="uploadError" style="color:#e847a0;font-size:0.7rem;margin-top:1.5rem;display:none;"></div>
+<div id="uploadOverlay">
+  <div class="picker-title">SELECT TEST</div>
+  <div class="picker-sub">Choose a CSV file to analyse</div>
+  <div id="csvMenu"></div>
+  <div id="uploadError"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
-// ─── HELPER: get first meaningful name token (skip single-letter initials) ───
 function firstMeaningfulName(fullName) {
   const parts = fullName.trim().split(/\s+/);
-  for (const part of parts) {
-    if (part.length > 1) return part;
-  }
+  for (const part of parts) { if (part.length > 1) return part; }
   return parts[0] || fullName;
 }
 
-// ─── CSV PARSER ───────────────────────────────────────────────
 function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/);
   const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
@@ -826,55 +793,46 @@ function parseCSV(text) {
 function n(v) { return parseFloat(v) || 0; }
 
 function mapRow(r) {
-  // Support both column name formats
   const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined) return r[k]; } return '0'; };
   return {
-    name:        get('name') || 'Unknown',
-    total:       n(get('total_marks','total_score','total')),
-    rank:        n(get('rank')),
-    phy_a:       n(get('phy_attempt','physics_attempt')),
-    chem_a:      n(get('chem_attempt','chemistry_attempt')),
-    math_a:      n(get('math_attempt','maths_attempt')),
-    tot_a:       n(get('total_attempt')),
-    phy_c:       n(get('phy_correct','physics_correct')),
-    chem_c:      n(get('chem_correct','chemistry_correct')),
-    math_c:      n(get('math_correct','maths_correct')),
-    tot_c:       n(get('total_correct')),
-    phy_w:       n(get('phy_wrong','physics_wrong')),
-    chem_w:      n(get('chem_wrong','chemistry_wrong')),
-    math_w:      n(get('math_wrong','maths_wrong')),
-    tot_w:       n(get('total_wrong')),
-    phy_m:       n(get('phy_marks','physics_marks')),
-    chem_m:      n(get('chem_marks','chemistry_marks')),
-    math_m:      n(get('math_marks','maths_marks')),
+    name:   get('name') || 'Unknown',
+    total:  n(get('total_marks','total_score','total')),
+    rank:   n(get('rank')),
+    phy_a:  n(get('phy_attempt','physics_attempt')),
+    chem_a: n(get('chem_attempt','chemistry_attempt')),
+    math_a: n(get('math_attempt','maths_attempt')),
+    tot_a:  n(get('total_attempt')),
+    phy_c:  n(get('phy_correct','physics_correct')),
+    chem_c: n(get('chem_correct','chemistry_correct')),
+    math_c: n(get('math_correct','maths_correct')),
+    tot_c:  n(get('total_correct')),
+    phy_w:  n(get('phy_wrong','physics_wrong')),
+    chem_w: n(get('chem_wrong','chemistry_wrong')),
+    math_w: n(get('math_wrong','maths_wrong')),
+    tot_w:  n(get('total_wrong')),
+    phy_m:  n(get('phy_marks','physics_marks')),
+    chem_m: n(get('chem_marks','chemistry_marks')),
+    math_m: n(get('math_marks','maths_marks')),
   };
 }
 
-// ─── CHART INSTANCES ──────────────────────────────────────────
 let radarInst, stackedInst, accuracyInst;
 
-// ─── MAIN RENDER ──────────────────────────────────────────────
-function buildDashboard(raw) {
-  // Enrich
-  raw.forEach(s => {
-    s.accuracy = s.tot_a > 0 ? Math.round((s.tot_c / s.tot_a) * 100) : 0;
-  });
+function buildDashboard(raw, filename) {
+  raw.forEach(s => { s.accuracy = s.tot_a > 0 ? Math.round((s.tot_c / s.tot_a) * 100) : 0; });
   const sorted = [...raw].sort((a,b) => b.total - a.total);
-
-  // Extract test label from CSV test field if present
-  const testLabel = raw[0]?._testlabel || '';
-
-  // Hero stats
   const avg = Math.round(raw.reduce((s,r) => s+r.total, 0) / raw.length);
   const high = Math.max(...raw.map(r => r.total));
   const avgAcc = Math.round(raw.reduce((s,r) => s+r.accuracy, 0) / raw.length);
+
   document.getElementById('hs-avg').textContent = avg;
   document.getElementById('hs-high').textContent = high;
   document.getElementById('hs-acc').textContent = avgAcc + '%';
   document.getElementById('hs-count').textContent = raw.length;
-  document.getElementById('heroSub').textContent = `${raw.length} STUDENTS · PHYSICS · CHEMISTRY · MATHEMATICS`;
-  if(testLabel) document.getElementById('heroTag').textContent = `NEW JUT · ${testLabel} · BATCH ANALYSIS`;
-  document.getElementById('footerBar').textContent = `JUT ANALYSIS DASHBOARD · ${raw.length} STUDENTS`;
+  document.getElementById('heroSub').textContent = raw.length + ' STUDENTS · PHYSICS · CHEMISTRY · MATHEMATICS';
+  const label = filename.replace('.csv','').replace(/_/g,' ').toUpperCase();
+  document.getElementById('heroTag').textContent = 'NEW JUT · ' + label + ' · BATCH ANALYSIS';
+  document.getElementById('footerBar').textContent = 'JUT ANALYSIS DASHBOARD · ' + raw.length + ' STUDENTS';
 
   // PODIUM
   const podiumEl = document.getElementById('podium');
@@ -883,77 +841,60 @@ function buildDashboard(raw) {
   const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean);
   const heights = [120, 160, 90];
   const podiumClasses = ['p2','p1','p3'];
-  const medals = ['🥈','🥇','🥉'];
-  const bgColors = [
-    'linear-gradient(135deg,#94a3b8,#64748b)',
-    'linear-gradient(135deg,#fbbf24,#f59e0b)',
-    'linear-gradient(135deg,#cd7f32,#a0632a)'
-  ];
+  const medals = ['medal2','medal1','medal3'];
+  const bgColors = ['linear-gradient(135deg,#94a3b8,#64748b)','linear-gradient(135deg,#fbbf24,#f59e0b)','linear-gradient(135deg,#cd7f32,#a0632a)'];
+  const scoreColors = ['var(--silver)','var(--gold)','var(--bronze)'];
+  const medalEmoji = ['\u{1F948}','\u{1F947}','\u{1F949}'];
   podiumOrder.forEach((s,i) => {
     const c = document.createElement('div');
-    c.className = `podium-card ${podiumClasses[i]}`;
-    const scoreColors = ['var(--silver)','var(--gold)','var(--bronze)'];
-    c.innerHTML = `
-      <div class="podium-name">${s.name}</div>
-      <div class="podium-score" style="color:${scoreColors[i]}">${s.total}</div>
-      <div class="podium-rank-label">Overall Rank ${s.rank || i+1}</div>
-      <div class="podium-block" style="height:${heights[i]}px;background:${bgColors[i]};">
-        <span style="font-size:2rem;">${medals[i]}</span>
-      </div>
-    `;
+    c.className = 'podium-card ' + podiumClasses[i];
+    c.innerHTML = '<div class="podium-name">' + s.name + '</div>' +
+      '<div class="podium-score" style="color:' + scoreColors[i] + '">' + s.total + '</div>' +
+      '<div class="podium-rank-label">Overall Rank ' + (s.rank || i+1) + '</div>' +
+      '<div class="podium-block" style="height:' + heights[i] + 'px;background:' + bgColors[i] + ';">' +
+      '<span style="font-size:2rem;">' + medalEmoji[i] + '</span></div>';
     podiumEl.appendChild(c);
   });
 
   // LEADERBOARD
-  let currentSort = 'total';
-  let sortDir = -1;
-  let filterText = '';
+  let currentSort = 'total', sortDir = -1, filterText = '';
 
   function getTier(score) {
-    const max = high;
-    if (score >= max * 0.75) return 'tier-excellent';
-    if (score >= max * 0.5) return 'tier-good';
-    if (score >= max * 0.25) return 'tier-average';
+    if (score >= high * 0.75) return 'tier-excellent';
+    if (score >= high * 0.5)  return 'tier-good';
+    if (score >= high * 0.25) return 'tier-average';
     return 'tier-poor';
   }
 
   function renderLeaderboard() {
     let data = [...raw];
     if (filterText) data = data.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
-    data.sort((a,b) => {
-      const vals = {total:'total',phy:'phy_m',chem:'chem_m',math:'math_m',acc:'accuracy'};
-      return sortDir * (a[vals[currentSort]] - b[vals[currentSort]]);
-    });
+    const valKeys = {total:'total',phy:'phy_m',chem:'chem_m',math:'math_m',acc:'accuracy'};
+    data.sort((a,b) => sortDir * (b[valKeys[currentSort]] - a[valKeys[currentSort]]));
     const tbody = document.getElementById('leaderboardBody');
     tbody.innerHTML = '';
-    data.forEach((s) => {
+    data.forEach(s => {
       const maxScore = high || 300;
-      const phyPct = Math.max(0, (s.phy_m / maxScore) * 100);
+      const phyPct  = Math.max(0, (s.phy_m  / maxScore) * 100);
       const chemPct = Math.max(0, (s.chem_m / maxScore) * 100);
       const mathPct = Math.max(0, (s.math_m / maxScore) * 100);
       const localRank = sorted.indexOf(s) + 1;
-      let rankClass = 'rank-other';
-      if (localRank===1) rankClass='rank-1';
-      else if (localRank===2) rankClass='rank-2';
-      else if (localRank===3) rankClass='rank-3';
+      const rankClass = localRank===1 ? 'rank-1' : localRank===2 ? 'rank-2' : localRank===3 ? 'rank-3' : 'rank-other';
       const scoreColor = s.total >= high*0.75 ? 'var(--accent2)' : s.total >= high*0.5 ? 'var(--accent)' : s.total >= high*0.25 ? 'var(--math)' : 'var(--accent3)';
+      const accColor = s.accuracy>=60 ? 'var(--accent2)' : s.accuracy>=40 ? 'var(--accent)' : 'var(--accent3)';
       const tr = document.createElement('tr');
-      tr.className = `row ${getTier(s.total)}`;
-      tr.innerHTML = `
-        <td><span class="rank-badge ${rankClass}">${localRank}</span></td>
-        <td><div class="name-cell">${s.name}</div></td>
-        <td><span class="score-pill" style="background:${scoreColor}22;color:${scoreColor}">${s.total}</span></td>
-        <td>
-          <div class="mini-bar-wrap">
-            <div class="mini-bar" style="width:${phyPct*2}px;background:var(--phy)"></div>
-            <div class="mini-bar" style="width:${chemPct*2}px;background:var(--chem)"></div>
-            <div class="mini-bar" style="width:${mathPct*2}px;background:var(--math)"></div>
-          </div>
-          <div style="font-size:0.6rem;color:var(--muted);margin-top:3px;">P:${s.phy_m} · C:${s.chem_m} · M:${s.math_m}</div>
-        </td>
-        <td style="color:${s.accuracy>=60?'var(--accent2)':s.accuracy>=40?'var(--accent)':'var(--accent3)'}">${s.accuracy}%</td>
-        <td style="color:var(--muted)">${s.tot_a}/75</td>
-      `;
+      tr.className = 'row ' + getTier(s.total);
+      tr.innerHTML =
+        '<td><span class="rank-badge ' + rankClass + '">' + localRank + '</span></td>' +
+        '<td><div class="name-cell">' + s.name + '</div></td>' +
+        '<td><span class="score-pill" style="background:' + scoreColor + '22;color:' + scoreColor + '">' + s.total + '</span></td>' +
+        '<td><div class="mini-bar-wrap">' +
+          '<div class="mini-bar" style="width:' + (phyPct*2) + 'px;background:var(--phy)"></div>' +
+          '<div class="mini-bar" style="width:' + (chemPct*2) + 'px;background:var(--chem)"></div>' +
+          '<div class="mini-bar" style="width:' + (mathPct*2) + 'px;background:var(--math)"></div>' +
+        '</div><div style="font-size:0.6rem;color:var(--muted);margin-top:3px;">P:' + s.phy_m + ' \u00b7 C:' + s.chem_m + ' \u00b7 M:' + s.math_m + '</div></td>' +
+        '<td style="color:' + accColor + '">' + s.accuracy + '%</td>' +
+        '<td style="color:var(--muted)">' + s.tot_a + '/75</td>';
       tbody.appendChild(tr);
     });
   }
@@ -973,26 +914,23 @@ function buildDashboard(raw) {
   // SUBJECT CARDS
   function subjectStats(marks, correct, wrong, attempt) {
     const avg = (marks.reduce((a,b)=>a+b,0)/marks.length).toFixed(1);
-    const best = Math.max(...marks);
-    const worst = Math.min(...marks);
+    const best = Math.max(...marks), worst = Math.min(...marks);
     const avgC = (correct.reduce((a,b)=>a+b,0)/correct.length).toFixed(1);
     const avgW = (wrong.reduce((a,b)=>a+b,0)/wrong.length).toFixed(1);
-    const totalC = correct.reduce((a,b)=>a+b,0);
-    const totalA = attempt.reduce((a,b)=>a+b,0);
+    const totalC = correct.reduce((a,b)=>a+b,0), totalA = attempt.reduce((a,b)=>a+b,0);
     const acc = totalA > 0 ? Math.round((totalC/totalA)*100) : 0;
     return {avg, best, worst, avgC, avgW, acc};
   }
   function makeSubjectCard(id, label, color, marks, correct, wrong, attempt) {
     const s = subjectStats(marks, correct, wrong, attempt);
-    document.getElementById(id).innerHTML = `
-      <div class="subj-name">${label}</div>
-      <div class="subj-stat-row"><span class="subj-stat-key">Avg Marks</span><span class="subj-stat-val" style="color:${color}">${s.avg}</span></div>
-      <div class="subj-stat-row"><span class="subj-stat-key">Highest</span><span class="subj-stat-val">${s.best}</span></div>
-      <div class="subj-stat-row"><span class="subj-stat-key">Lowest</span><span class="subj-stat-val">${s.worst}</span></div>
-      <div class="subj-stat-row"><span class="subj-stat-key">Avg Correct</span><span class="subj-stat-val">${s.avgC} / 25</span></div>
-      <div class="subj-stat-row"><span class="subj-stat-key">Avg Wrong</span><span class="subj-stat-val">${s.avgW}</span></div>
-      <div class="subj-stat-row"><span class="subj-stat-key">Accuracy</span><span class="subj-stat-val">${s.acc}%</span></div>
-    `;
+    document.getElementById(id).innerHTML =
+      '<div class="subj-name">' + label + '</div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Avg Marks</span><span class="subj-stat-val" style="color:' + color + '">' + s.avg + '</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Highest</span><span class="subj-stat-val">' + s.best + '</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Lowest</span><span class="subj-stat-val">' + s.worst + '</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Avg Correct</span><span class="subj-stat-val">' + s.avgC + ' / 25</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Avg Wrong</span><span class="subj-stat-val">' + s.avgW + '</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Accuracy</span><span class="subj-stat-val">' + s.acc + '%</span></div>';
   }
   makeSubjectCard('physCard','Physics','var(--phy)',raw.map(r=>r.phy_m),raw.map(r=>r.phy_c),raw.map(r=>r.phy_w),raw.map(r=>r.phy_a));
   makeSubjectCard('chemCard','Chemistry','var(--chem)',raw.map(r=>r.chem_m),raw.map(r=>r.chem_c),raw.map(r=>r.chem_w),raw.map(r=>r.chem_a));
@@ -1004,7 +942,7 @@ function buildDashboard(raw) {
   const step = high > 0 ? Math.ceil(high / 5) : 60;
   const ranges = [];
   for(let i=4;i>=0;i--) ranges.push([i*step, (i+1)*step - (i<4?1:0)]);
-  const rangeLabels = ranges.map(([lo,hi],i) => i===0 ? `${lo}+` : `${lo}–${hi}`);
+  const rangeLabels = ranges.map(([lo,hi],i) => i===0 ? lo+'+' : lo+'\u2013'+hi);
   const rangeCounts = ranges.map(([lo,hi]) => raw.filter(s=>s.total>=lo&&s.total<=hi).length);
   const maxCount = Math.max(...rangeCounts, 1);
   const barColors = ['#47e8c5','#e8c547','#fb923c','#a78bfa','#e847a0'];
@@ -1012,18 +950,14 @@ function buildDashboard(raw) {
     const pct = (rangeCounts[i]/maxCount)*100;
     const row = document.createElement('div');
     row.className = 'dist-bar-row';
-    row.innerHTML = `
-      <div class="dist-range">${rangeLabels[i]}</div>
-      <div class="dist-bar-outer">
-        <div class="dist-bar-inner" data-pct="${pct}" style="background:${barColors[i]};width:0%">${rangeCounts[i]>0?rangeCounts[i]+' student'+(rangeCounts[i]>1?'s':''):''}</div>
-      </div>
-      <div class="dist-count">${rangeCounts[i]}</div>
-    `;
+    row.innerHTML =
+      '<div class="dist-range">' + rangeLabels[i] + '</div>' +
+      '<div class="dist-bar-outer"><div class="dist-bar-inner" data-pct="' + pct + '" style="background:' + barColors[i] + ';width:0%">' +
+      (rangeCounts[i]>0 ? rangeCounts[i]+' student'+(rangeCounts[i]>1?'s':'') : '') + '</div></div>' +
+      '<div class="dist-count">' + rangeCounts[i] + '</div>';
     distContainer.appendChild(row);
   });
-  setTimeout(()=>{
-    document.querySelectorAll('.dist-bar-inner').forEach(b=>{ b.style.width=b.dataset.pct+'%'; });
-  }, 300);
+  setTimeout(() => { document.querySelectorAll('.dist-bar-inner').forEach(b => { b.style.width = b.dataset.pct + '%'; }); }, 300);
 
   // RADAR
   const phyAvg = raw.reduce((a,r)=>a+r.phy_m,0)/raw.length;
@@ -1032,12 +966,7 @@ function buildDashboard(raw) {
   if(radarInst) radarInst.destroy();
   radarInst = new Chart(document.getElementById('radarChart'), {
     type:'radar',
-    data:{
-      labels:['Physics','Chemistry','Mathematics'],
-      datasets:[{label:'Avg Marks',data:[phyAvg.toFixed(1),chemAvg.toFixed(1),mathAvg.toFixed(1)],
-        borderColor:'#e8c547',backgroundColor:'rgba(232,197,71,0.1)',
-        pointBackgroundColor:['#4fc3f7','#a78bfa','#fb923c'],pointRadius:6,borderWidth:2}]
-    },
+    data:{labels:['Physics','Chemistry','Mathematics'],datasets:[{label:'Avg Marks',data:[phyAvg.toFixed(1),chemAvg.toFixed(1),mathAvg.toFixed(1)],borderColor:'#e8c547',backgroundColor:'rgba(232,197,71,0.1)',pointBackgroundColor:['#4fc3f7','#a78bfa','#fb923c'],pointRadius:6,borderWidth:2}]},
     options:{scales:{r:{grid:{color:'#1e1e2e'},ticks:{display:false},pointLabels:{color:'#e8e8f0',font:{family:'JetBrains Mono',size:11}}}},plugins:{legend:{display:false}}}
   });
 
@@ -1046,21 +975,12 @@ function buildDashboard(raw) {
   if(stackedInst) stackedInst.destroy();
   stackedInst = new Chart(document.getElementById('stackedChart'), {
     type:'bar',
-    data:{
-      labels:top10.map(s=>firstMeaningfulName(s.name)),
-      datasets:[
-        {label:'Correct',data:top10.map(s=>s.tot_c),backgroundColor:'#47e8c5bb',stack:'s'},
-        {label:'Wrong',data:top10.map(s=>s.tot_w),backgroundColor:'#e847a0bb',stack:'s'},
-        {label:'Unattempted',data:top10.map(s=>75-s.tot_a),backgroundColor:'#1e1e2e',stack:'s'},
-      ]
-    },
-    options:{
-      scales:{
-        x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'}},
-        y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:75}
-      },
-      plugins:{legend:{labels:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}}}}
-    }
+    data:{labels:top10.map(s=>firstMeaningfulName(s.name)),datasets:[
+      {label:'Correct',data:top10.map(s=>s.tot_c),backgroundColor:'#47e8c5bb',stack:'s'},
+      {label:'Wrong',data:top10.map(s=>s.tot_w),backgroundColor:'#e847a0bb',stack:'s'},
+      {label:'Unattempted',data:top10.map(s=>75-s.tot_a),backgroundColor:'#1e1e2e',stack:'s'},
+    ]},
+    options:{scales:{x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:75}},plugins:{legend:{labels:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}}}}}
   });
 
   // ACCURACY CHART
@@ -1068,20 +988,8 @@ function buildDashboard(raw) {
   if(accuracyInst) accuracyInst.destroy();
   accuracyInst = new Chart(document.getElementById('accuracyChart'), {
     type:'bar',
-    data:{
-      labels:accSorted.map(s=>firstMeaningfulName(s.name)),
-      datasets:[{label:'Accuracy %',data:accSorted.map(s=>s.accuracy),
-        backgroundColor:accSorted.map(s=>s.accuracy>=70?'#47e8c5aa':s.accuracy>=50?'#e8c547aa':s.accuracy>=35?'#fb923caa':'#e847a0aa'),
-        borderRadius:2}]
-    },
-    options:{
-      indexAxis:'y',
-      scales:{
-        x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:100},
-        y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'transparent'}}
-      },
-      plugins:{legend:{display:false}}
-    }
+    data:{labels:accSorted.map(s=>firstMeaningfulName(s.name)),datasets:[{label:'Accuracy %',data:accSorted.map(s=>s.accuracy),backgroundColor:accSorted.map(s=>s.accuracy>=70?'#47e8c5aa':s.accuracy>=50?'#e8c547aa':s.accuracy>=35?'#fb923caa':'#e847a0aa'),borderRadius:2}]},
+    options:{indexAxis:'y',scales:{x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:100},y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'transparent'}}},plugins:{legend:{display:false}}}
   });
 
   // HEATMAP
@@ -1089,38 +997,29 @@ function buildDashboard(raw) {
   hmGrid.innerHTML = '';
   const subjects = ['phy','chem','math'];
   const subjColors = {'phy':'79,195,247','chem':'167,139,250','math':'251,146,60'};
-  const cols = subjects.length * 3;
-  hmGrid.style.gridTemplateColumns = `repeat(${cols}, 28px)`;
-  const headerLabels2 = ['P','C','M'];
-  ['Correct','Wrong','Acc%'].forEach((_,li) => {
-    headerLabels2.forEach((s) => {
-      const cell = document.createElement('div');
-      cell.style.cssText = 'font-size:0.55rem;color:var(--muted);letter-spacing:0.1em;text-align:center;padding-bottom:4px;';
-      cell.textContent = s + '·' + ['C','W','%'][li];
-      hmGrid.appendChild(cell);
-    });
-  });
+  hmGrid.style.gridTemplateColumns = 'repeat(' + (subjects.length * 3) + ', 28px)';
+  ['P','C','M'].forEach(s => { ['C','W','%'].forEach(t => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'font-size:0.55rem;color:var(--muted);letter-spacing:0.1em;text-align:center;padding-bottom:4px;';
+    cell.textContent = s + '\u00b7' + t;
+    hmGrid.appendChild(cell);
+  }); });
   sorted.forEach(s => {
     subjects.forEach(subj => {
-      const c = s[`${subj}_c`], w = s[`${subj}_w`], a = s[`${subj}_a`];
+      const c = s[subj+'_c'], w = s[subj+'_w'], a = s[subj+'_a'];
       const acc = a > 0 ? Math.round((c/a)*100) : 0;
       const rgb = subjColors[subj];
-      const displayName = firstMeaningfulName(s.name);
-      const cCell = document.createElement('div');
-      cCell.className = 'matrix-cell';
-      cCell.style.cssText = `background:rgba(${rgb},${0.1+(c/25)*0.7});width:28px;height:28px;`;
-      cCell.innerHTML = `<div class="tooltip">${displayName} · ${subj.toUpperCase()} correct: ${c}</div>`;
-      hmGrid.appendChild(cCell);
-      const wCell = document.createElement('div');
-      wCell.className = 'matrix-cell';
-      wCell.style.cssText = `background:rgba(232,71,160,${0.05+(w/25)*0.7});width:28px;height:28px;`;
-      wCell.innerHTML = `<div class="tooltip">${displayName} · ${subj.toUpperCase()} wrong: ${w}</div>`;
-      hmGrid.appendChild(wCell);
-      const aCell = document.createElement('div');
-      aCell.className = 'matrix-cell';
-      aCell.style.cssText = `background:rgba(232,197,71,${0.05+(acc/100)*0.7});width:28px;height:28px;`;
-      aCell.innerHTML = `<div class="tooltip">${displayName} · ${subj.toUpperCase()} accuracy: ${acc}%</div>`;
-      hmGrid.appendChild(aCell);
+      const dn = firstMeaningfulName(s.name);
+      const mk = (bg, tip) => {
+        const el = document.createElement('div');
+        el.className = 'matrix-cell';
+        el.style.cssText = 'background:' + bg + ';width:28px;height:28px;';
+        el.innerHTML = '<div class="tooltip">' + dn + ' \u00b7 ' + subj.toUpperCase() + ' ' + tip + '</div>';
+        hmGrid.appendChild(el);
+      };
+      mk('rgba('+rgb+','+(0.1+(c/25)*0.7)+')', 'correct: '+c);
+      mk('rgba(232,71,160,'+(0.05+(w/25)*0.7)+')', 'wrong: '+w);
+      mk('rgba(232,197,71,'+(0.05+(acc/100)*0.7)+')', 'accuracy: '+acc+'%');
     });
   });
 
@@ -1129,14 +1028,14 @@ function buildDashboard(raw) {
     entries.forEach(e => {
       if(e.isIntersecting){
         e.target.classList.add('visible');
-        e.target.querySelectorAll('.dist-bar-inner').forEach(b=>{ b.style.width=b.dataset.pct+'%'; });
+        e.target.querySelectorAll('.dist-bar-inner').forEach(b => { b.style.width = b.dataset.pct + '%'; });
       }
     });
   }, {threshold:0.1});
   document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('visible'); observer.observe(el); });
 }
 
-// ─── FILE HANDLING: fetch list then load selected ─────────────
+// ─── FILE PICKER ──────────────────────────────────────────────
 function showError(msg) {
   const el = document.getElementById('uploadError');
   el.textContent = msg;
@@ -1145,8 +1044,8 @@ function showError(msg) {
 
 async function loadCSVByName(filename) {
   try {
-    const res = await fetch(`/static/${filename}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch('/static/' + filename);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     const rows = parseCSV(text);
     if (rows.length === 0) { showError('CSV appears to be empty or malformed'); return; }
@@ -1154,7 +1053,7 @@ async function loadCSVByName(filename) {
     const overlay = document.getElementById('uploadOverlay');
     overlay.style.opacity = '0';
     setTimeout(() => { overlay.style.display = 'none'; }, 500);
-    buildDashboard(mapped);
+    buildDashboard(mapped, filename);
   } catch(err) {
     showError('Error loading file: ' + err.message);
   }
@@ -1164,39 +1063,29 @@ async function populateMenu() {
   const menu = document.getElementById('csvMenu');
   try {
     const res = await fetch('/api/csv-files');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const files = await res.json();
     if (files.length === 0) {
       menu.innerHTML = '<div style="color:#6b6b8a;font-size:0.75rem;letter-spacing:0.15em;">NO CSV FILES FOUND IN /static</div>';
       return;
     }
     files.forEach(filename => {
-      const label = filename.replace('.csv', '').replace(/_/g, ' ').toUpperCase();
+      const label = filename.replace('.csv','').replace(/_/g,' ').toUpperCase();
       const btn = document.createElement('button');
-      btn.style.cssText = `
-        background:#111118;border:1px solid #1e1e2e;color:#e8e8f0;
-        padding:1rem 1.5rem;font-family:'JetBrains Mono',monospace;
-        font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;
-        cursor:pointer;border-radius:3px;text-align:left;
-        transition:border-color 0.2s,background 0.2s,color 0.2s;
-        display:flex;justify-content:space-between;align-items:center;
-      `;
-      btn.innerHTML = `<span>${label}</span><span style="color:#6b6b8a;font-size:0.6rem;">${filename}</span>`;
-      btn.onmouseover = () => { btn.style.borderColor='#e8c547'; btn.style.color='#e8c547'; btn.style.background='#16161f'; };
-      btn.onmouseout  = () => { btn.style.borderColor='#1e1e2e'; btn.style.color='#e8e8f0'; btn.style.background='#111118'; };
-      btn.onclick = () => loadCSVByName(filename);
+      btn.className = 'csv-btn';
+      btn.innerHTML = '<span>' + label + '</span><span class="csv-btn-filename">' + filename + '</span>';
+      btn.addEventListener('click', () => loadCSVByName(filename));
       menu.appendChild(btn);
     });
   } catch(err) {
-    menu.innerHTML = `<div style="color:#e847a0;font-size:0.7rem;">Failed to load file list: ${err.message}</div>`;
+    menu.innerHTML = '<div style="color:#e847a0;font-size:0.7rem;">Failed to load file list: ' + err.message + '</div>';
   }
 }
 
 populateMenu();
 </script>
 </body>
-</html>
-    """
+</html>"""
 
 
 if __name__ == "__main__":
