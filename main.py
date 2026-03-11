@@ -1,19 +1,18 @@
-from flask import Flask
-from flask import Blueprint, jsonify, send_from_directory
+from flask import Flask, Blueprint, jsonify
 import os
+
+app = Flask(__name__)
 
 api_bp = Blueprint('api', __name__)
 
 @api_bp.get("/api/csv-files")
 def list_csv_files():
-    static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    static_dir = app.static_folder   # use Flask's static folder
     files = [f for f in os.listdir(static_dir) if f.endswith('.csv')]
     return jsonify(sorted(files))
 
-app = Flask(__name__)
-
-
 app.register_blueprint(api_bp)
+
 
 
 @app.get("/")
@@ -1198,3 +1197,7 @@ populateMenu();
 </body>
 </html>
     """
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
