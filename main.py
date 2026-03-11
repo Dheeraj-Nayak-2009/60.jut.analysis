@@ -1,5 +1,4 @@
 from flask import Flask
-from endpoints import api_bp
 from flask import Blueprint, jsonify, send_from_directory
 import os
 
