@@ -1,6 +1,15 @@
 from flask import Flask
 from endpoints import api_bp
+from flask import Blueprint, jsonify, send_from_directory
+import os
 
+api_bp = Blueprint('api', __name__)
+
+@api_bp.get("/api/csv-files")
+def list_csv_files():
+    static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    files = [f for f in os.listdir(static_dir) if f.endswith('.csv')]
+    return jsonify(sorted(files))
 
 app = Flask(__name__)
 
@@ -778,38 +787,19 @@ def read_root():
   JUT ANALYSIS DASHBOARD · UPLOAD A CSV TO BEGIN
 </footer>
 
-<!-- CSV UPLOAD OVERLAY -->
+<!-- CSV PICKER OVERLAY -->
 <div id="uploadOverlay" style="
   position:fixed;inset:0;z-index:2000;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:rgba(10,10,15,0.92);backdrop-filter:blur(10px);
   transition:opacity 0.5s;
 ">
-  <div id="dropZone" style="
-    border:2px dashed #1e1e2e;border-radius:6px;
-    padding:4rem 5rem;text-align:center;cursor:pointer;
-    transition:border-color 0.2s,background 0.2s;
-    max-width:480px;width:90%;
-  ">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:#e8c547;line-height:1;">DROP CSV</div>
-    <div style="font-size:0.7rem;letter-spacing:0.25em;color:#6b6b8a;margin-top:0.75rem;text-transform:uppercase;">Drag & drop your analysis.csv here</div>
-    <div style="margin:1.5rem 0;color:#1e1e2e;">— or —</div>
-    <label style="
-      display:inline-block;padding:0.6rem 1.5rem;
-      background:#e8c54722;border:1px solid #e8c547;
-      color:#e8c547;font-size:0.7rem;letter-spacing:0.2em;
-      text-transform:uppercase;cursor:pointer;border-radius:2px;
-      transition:background 0.2s;
-    " onmouseover="this.style.background='#e8c54744'" onmouseout="this.style.background='#e8c54722'">
-      Browse File
-      <input type="file" accept=".csv" id="fileInput" style="display:none">
-    </label>
-    <div style="margin-top:2rem;font-size:0.6rem;color:#6b6b8a;letter-spacing:0.15em;">
-      EXPECTED COLUMNS: name · total_marks · phy_marks · chem_marks · math_marks<br>
-      phy/chem/math attempt · correct · wrong · total_attempt/correct/wrong · rank
-    </div>
-    <div id="uploadError" style="color:#e847a0;font-size:0.7rem;margin-top:1rem;display:none;"></div>
+  <div style="text-align:center;margin-bottom:2rem;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:#e8c547;line-height:1;">SELECT TEST</div>
+    <div style="font-size:0.7rem;letter-spacing:0.25em;color:#6b6b8a;margin-top:0.75rem;text-transform:uppercase;">Choose a CSV file to analyse</div>
   </div>
+  <div id="csvMenu" style="display:flex;flex-direction:column;gap:0.6rem;width:90%;max-width:420px;"></div>
+  <div id="uploadError" style="color:#e847a0;font-size:0.7rem;margin-top:1.5rem;display:none;"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -1148,47 +1138,63 @@ function buildDashboard(raw) {
   document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('visible'); observer.observe(el); });
 }
 
-// ─── FILE HANDLING ────────────────────────────────────────────
-function handleFile(file) {
-  if(!file || !file.name.endsWith('.csv')) {
-    showError('Please upload a .csv file');
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const rows = parseCSV(e.target.result);
-      if(rows.length === 0) { showError('CSV appears to be empty or malformed'); return; }
-      const mapped = rows.map(mapRow);
-      // Hide overlay with fade
-      const overlay = document.getElementById('uploadOverlay');
-      overlay.style.opacity = '0';
-      setTimeout(() => { overlay.style.display = 'none'; }, 500);
-      buildDashboard(mapped);
-    } catch(err) {
-      showError('Error parsing CSV: ' + err.message);
-    }
-  };
-  reader.readAsText(file);
-}
-
+// ─── FILE HANDLING: fetch list then load selected ─────────────
 function showError(msg) {
   const el = document.getElementById('uploadError');
   el.textContent = msg;
   el.style.display = 'block';
 }
 
-// Drop zone
-const dropZone = document.getElementById('dropZone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor='#e8c547'; dropZone.style.background='rgba(232,197,71,0.04)'; });
-dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor='#1e1e2e'; dropZone.style.background=''; });
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.style.borderColor='#1e1e2e';
-  dropZone.style.background='';
-  handleFile(e.dataTransfer.files[0]);
-});
-document.getElementById('fileInput').addEventListener('change', e => { handleFile(e.target.files[0]); });
+async function loadCSVByName(filename) {
+  try {
+    const res = await fetch(`/static/${filename}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    if (rows.length === 0) { showError('CSV appears to be empty or malformed'); return; }
+    const mapped = rows.map(mapRow);
+    const overlay = document.getElementById('uploadOverlay');
+    overlay.style.opacity = '0';
+    setTimeout(() => { overlay.style.display = 'none'; }, 500);
+    buildDashboard(mapped);
+  } catch(err) {
+    showError('Error loading file: ' + err.message);
+  }
+}
+
+async function populateMenu() {
+  const menu = document.getElementById('csvMenu');
+  try {
+    const res = await fetch('/api/csv-files');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const files = await res.json();
+    if (files.length === 0) {
+      menu.innerHTML = '<div style="color:#6b6b8a;font-size:0.75rem;letter-spacing:0.15em;">NO CSV FILES FOUND IN /static</div>';
+      return;
+    }
+    files.forEach(filename => {
+      const label = filename.replace('.csv', '').replace(/_/g, ' ').toUpperCase();
+      const btn = document.createElement('button');
+      btn.style.cssText = `
+        background:#111118;border:1px solid #1e1e2e;color:#e8e8f0;
+        padding:1rem 1.5rem;font-family:'JetBrains Mono',monospace;
+        font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;
+        cursor:pointer;border-radius:3px;text-align:left;
+        transition:border-color 0.2s,background 0.2s,color 0.2s;
+        display:flex;justify-content:space-between;align-items:center;
+      `;
+      btn.innerHTML = `<span>${label}</span><span style="color:#6b6b8a;font-size:0.6rem;">${filename}</span>`;
+      btn.onmouseover = () => { btn.style.borderColor='#e8c547'; btn.style.color='#e8c547'; btn.style.background='#16161f'; };
+      btn.onmouseout  = () => { btn.style.borderColor='#1e1e2e'; btn.style.color='#e8e8f0'; btn.style.background='#111118'; };
+      btn.onclick = () => loadCSVByName(filename);
+      menu.appendChild(btn);
+    });
+  } catch(err) {
+    menu.innerHTML = `<div style="color:#e847a0;font-size:0.7rem;">Failed to load file list: ${err.message}</div>`;
+  }
+}
+
+populateMenu();
 </script>
 </body>
 </html>
