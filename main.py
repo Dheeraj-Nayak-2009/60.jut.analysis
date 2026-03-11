@@ -857,7 +857,7 @@ function buildDashboard(raw, filename) {
   });
 
   // LEADERBOARD
-  let currentSort = 'total', sortDir = 1, filterText = '';
+  let currentSort = 'total', sortDir = -1, filterText = '';
 
   function getTier(score) {
     if (score >= high * 0.75) return 'tier-excellent';
