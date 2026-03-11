@@ -870,7 +870,7 @@ function buildDashboard(raw, filename) {
     let data = [...raw];
     if (filterText) data = data.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
     const valKeys = {total:'total',phy:'phy_m',chem:'chem_m',math:'math_m',acc:'accuracy'};
-    data.sort((a,b) => sortDir * (a[valKeys[currentSort]] - b[valKeys[currentSort]]));
+    data.sort((a,b) => sortDir * (b[valKeys[currentSort]] - a[valKeys[currentSort]]));
     const tbody = document.getElementById('leaderboardBody');
     tbody.innerHTML = '';
     data.forEach(s => {
