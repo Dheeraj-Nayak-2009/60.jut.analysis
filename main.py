@@ -750,7 +750,7 @@ HTML = r"""<!DOCTYPE html>
 <section>
   <div class="section-label reveal">Accuracy Heatmap</div>
   <div class="section-title reveal">Who Got What Right</div>
-  <div class="matrix-wrap reveal">
+  <div class="matrix-wrap reveal" style="display: flex;flex-direction: column;align-items: center;">
     <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;justify-content:center;">
       <span style="font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;">Subject:</span>
       <span style="font-size:0.65rem;color:var(--phy);">&#9632; Physics</span>
