@@ -696,7 +696,7 @@ HTML = r"""<!DOCTYPE html>
     <button class="sort-btn" data-sort="math">Maths ↕</button>
     <button class="sort-btn" data-sort="acc">Accuracy ↕</button>
   </div>
-  <div class="reveal" style="overflow-x: auto">
+  <div class="" style="overflow-x: auto">
     <table class="leaderboard-table">
       <thead>
         <tr>
