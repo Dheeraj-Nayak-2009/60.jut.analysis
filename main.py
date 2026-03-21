@@ -1,4 +1,4 @@
-from flask import Flask, Blueprint, jsonify
+from flask import Flask, Blueprint, jsonify, request
 import os
 
 app = Flask(__name__)
@@ -16,15 +16,509 @@ app.register_blueprint(api_bp)
 
 @app.get("/")
 def read_root():
-    return app.response_class(HTML, mimetype='text/html')
+    return app.response_class(HOME_HTML, mimetype='text/html')
 
 
-HTML = r"""<!DOCTYPE html>
+@app.get("/analysis")
+def analysis():
+    return app.response_class(ANALYSIS_HTML, mimetype='text/html')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  HOME PAGE
+# ══════════════════════════════════════════════════════════════════════════════
+HOME_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JUT Performance Analysis — Dynamic</title>
+<title>JUT · Analytics Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #e8c547;
+    --accent2: #47e8c5;
+    --accent3: #e847a0;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --phy: #4fc3f7;
+    --chem: #a78bfa;
+    --math: #fb923c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── animated grid bg ── */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridDrift 30s linear infinite;
+  }
+  @keyframes gridDrift {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 60px; }
+  }
+
+  /* ── ambient glows ── */
+  .glow-1 {
+    position: fixed;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,197,71,0.07) 0%, transparent 70%);
+    top: -200px; left: -200px;
+    pointer-events: none;
+    animation: floatA 18s ease-in-out infinite;
+  }
+  .glow-2 {
+    position: fixed;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(71,232,197,0.05) 0%, transparent 70%);
+    bottom: -100px; right: -100px;
+    pointer-events: none;
+    animation: floatB 22s ease-in-out infinite;
+  }
+  .glow-3 {
+    position: fixed;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,71,160,0.04) 0%, transparent 70%);
+    top: 50%; right: 20%;
+    pointer-events: none;
+    animation: floatC 26s ease-in-out infinite;
+  }
+  @keyframes floatA { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,40px)} }
+  @keyframes floatB { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-50px,-30px)} }
+  @keyframes floatC { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-50px)} }
+
+  /* ── layout ── */
+  .page {
+    position: relative;
+    z-index: 10;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ── header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 0;
+    border-bottom: 1px solid var(--border);
+    opacity: 0;
+    animation: fadeUp 0.6s 0.1s forwards;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+  .header-tag {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* ── hero text ── */
+  .hero {
+    padding: 6rem 0 4rem;
+    text-align: center;
+  }
+  .hero-eyebrow {
+    font-size: 0.65rem;
+    letter-spacing: 0.45em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.3s forwards;
+  }
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(4.5rem, 14vw, 11rem);
+    line-height: 0.88;
+    letter-spacing: 0.02em;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.45s forwards;
+  }
+  .hero-title .outline { -webkit-text-stroke: 1.5px var(--accent); color: transparent; }
+  .hero-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    margin-top: 2rem;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.8;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.6s forwards;
+  }
+
+  /* ── divider ── */
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 2rem 0;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.75s forwards;
+  }
+
+  /* ── section label ── */
+  .section-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.85s forwards;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.5rem);
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.95s forwards;
+  }
+
+  /* ── file grid ── */
+  #fileGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 1.1s forwards;
+  }
+
+  .file-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.8rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  }
+  .file-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+  .file-card:hover { transform: translateY(-5px); border-color: var(--accent); background: var(--surface2); }
+  .file-card:hover::before { transform: scaleX(1); }
+
+  .file-card-icon {
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    color: var(--accent2);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .file-card-icon::before {
+    content: '';
+    display: inline-block;
+    width: 24px; height: 1px;
+    background: var(--accent2);
+  }
+  .file-card-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+  }
+  .file-card-filename {
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+  }
+  .file-card-arrow {
+    position: absolute;
+    bottom: 1.8rem; right: 1.8rem;
+    font-size: 1.4rem;
+    color: var(--muted);
+    transition: color 0.2s, transform 0.2s;
+  }
+  .file-card:hover .file-card-arrow { color: var(--accent); transform: translate(3px, -3px); }
+
+  /* subject pills */
+  .subj-pills {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+  .pill {
+    font-size: 0.55rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.6rem;
+    border-radius: 2px;
+  }
+  .pill-p { background: rgba(79,195,247,0.12); color: #4fc3f7; }
+  .pill-c { background: rgba(167,139,250,0.12); color: #a78bfa; }
+  .pill-m { background: rgba(251,146,60,0.12); color: #fb923c; }
+
+  /* ── empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted);
+    grid-column: 1/-1;
+  }
+  .empty-state-icon {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    color: var(--border);
+    margin-bottom: 1rem;
+  }
+  .empty-state p {
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    line-height: 2;
+  }
+
+  /* ── loading state ── */
+  .loading-row {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    grid-column: 1/-1;
+    padding: 2rem 0;
+  }
+  .loading-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: blink 1.2s infinite;
+  }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+  /* ── stats strip ── */
+  .stats-strip {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 3rem;
+    opacity: 0;
+    animation: fadeUp 0.7s 1.0s forwards;
+  }
+  .stat-item {
+    flex: 1;
+    padding: 1.5rem 2rem;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 0.3rem;
+  }
+
+  /* ── footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  @media(max-width:600px) {
+    .stats-strip { flex-direction: column; }
+    .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+    .stat-item:last-child { border-bottom: none; }
+    footer { flex-direction: column; gap: 0.5rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="glow-1"></div>
+<div class="glow-2"></div>
+<div class="glow-3"></div>
+
+<div class="page">
+  <header>
+    <div class="logo">JUT<span>·</span>HUB</div>
+    <div class="header-tag">New JUT · Analytics Platform</div>
+  </header>
+
+  <div class="hero">
+    <div class="hero-eyebrow">Batch Performance Intelligence</div>
+    <div class="hero-title">ANALYSE<br><span class="outline">EVERY</span><br>TEST</div>
+    <div class="hero-desc">
+      Select any JUT result below to instantly unlock deep performance analytics — podium, leaderboards, subject heatmaps, accuracy charts and more.
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="stats-strip" id="statsStrip">
+    <div class="stat-item">
+      <div class="stat-val" id="strip-files">—</div>
+      <div class="stat-label">Tests Available</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">3</div>
+      <div class="stat-label">Subjects Tracked</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">75</div>
+      <div class="stat-label">Questions / Test</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">∞</div>
+      <div class="stat-label">Insights</div>
+    </div>
+  </div>
+
+  <div class="section-label">All Tests</div>
+  <div class="section-title">Choose a JUT Result</div>
+
+  <div id="fileGrid">
+    <div class="loading-row">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <span style="font-size:0.65rem;letter-spacing:0.2em;color:var(--muted);margin-left:0.5rem;">LOADING FILES…</span>
+    </div>
+  </div>
+
+  <footer>
+    <span>JUT Analytics Hub</span>
+    <span>Physics · Chemistry · Mathematics</span>
+  </footer>
+</div>
+
+<script>
+async function loadMenu() {
+  const grid = document.getElementById('fileGrid');
+  try {
+    const res = await fetch('/api/csv-files');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const files = await res.json();
+
+    document.getElementById('strip-files').textContent = files.length || '0';
+
+    if (files.length === 0) {
+      grid.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon">NO FILES</div>
+        <p>No CSV files found in the <code>/static</code> folder.<br>Add result CSVs and refresh.</p>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = '';
+    files.forEach((filename, idx) => {
+      const label = filename.replace('.csv','').replace(/_/g,' ');
+      const card = document.createElement('a');
+      card.className = 'file-card';
+      card.href = '/analysis?file=' + encodeURIComponent(filename);
+      card.style.animationDelay = (idx * 0.06) + 's';
+      card.innerHTML = `
+        <div class="file-card-icon">JUT Result</div>
+        <div class="file-card-name">${label}</div>
+        <div class="file-card-filename">${filename}</div>
+        <div class="subj-pills">
+          <span class="pill pill-p">Physics</span>
+          <span class="pill pill-c">Chemistry</span>
+          <span class="pill pill-m">Maths</span>
+        </div>
+        <div class="file-card-arrow">↗</div>`;
+      grid.appendChild(card);
+    });
+  } catch(err) {
+    grid.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">ERROR</div>
+      <p>Could not load file list.<br>${err.message}</p>
+    </div>`;
+  }
+}
+loadMenu();
+</script>
+</body>
+</html>"""
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ANALYSIS PAGE
+# ══════════════════════════════════════════════════════════════════════════════
+ANALYSIS_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JUT Performance Analysis</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -46,7 +540,6 @@ HTML = r"""<!DOCTYPE html>
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   html { scroll-behavior: smooth; }
 
   body {
@@ -66,6 +559,51 @@ HTML = r"""<!DOCTYPE html>
     opacity: 0.4;
   }
 
+  /* ── nav bar ── */
+  .topnav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 500;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 2rem;
+  }
+  .topnav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .topnav-logo span { color: var(--accent); }
+  .topnav-back {
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 0.2s;
+  }
+  .topnav-back:hover { color: var(--accent); }
+  .topnav-file {
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--accent2);
+    text-transform: uppercase;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── hero ── */
   .hero {
     min-height: 100vh;
     display: flex;
@@ -74,7 +612,7 @@ HTML = r"""<!DOCTYPE html>
     align-items: center;
     text-align: center;
     position: relative;
-    padding: 2rem;
+    padding: 6rem 2rem 3rem;
     overflow: hidden;
   }
 
@@ -97,7 +635,6 @@ HTML = r"""<!DOCTYPE html>
   }
 
   .hero-tag {
-    font-family: 'JetBrains Mono', monospace;
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.3em;
@@ -139,6 +676,7 @@ HTML = r"""<!DOCTYPE html>
     opacity: 0;
     animation: fadeUp 0.8s 0.8s forwards;
     justify-content: center;
+    flex-wrap: wrap;
   }
 
   .hero-stat { text-align: center; }
@@ -206,7 +744,6 @@ HTML = r"""<!DOCTYPE html>
     justify-content: center;
     gap: 0;
     margin-top: 3rem;
-    perspective: 1000px;
   }
 
   .podium-card {
@@ -493,11 +1030,6 @@ HTML = r"""<!DOCTYPE html>
     to { opacity: 1; transform: translateY(0); }
   }
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
-
   .reveal {
     opacity: 0;
     transform: translateY(30px);
@@ -558,7 +1090,7 @@ HTML = r"""<!DOCTYPE html>
   .tier-average { background: rgba(251,146,60,0.1); }
   .tier-poor { background: rgba(232,71,160,0.08); }
 
-  /* ---- CSV PICKER ---- */
+  /* ── overlay (manual picker) ── */
   #uploadOverlay {
     position: fixed;
     inset: 0;
@@ -567,7 +1099,7 @@ HTML = r"""<!DOCTYPE html>
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(10,10,15,0.95);
+    background: rgba(10,10,15,0.97);
     backdrop-filter: blur(10px);
     transition: opacity 0.5s;
   }
@@ -619,58 +1151,53 @@ HTML = r"""<!DOCTYPE html>
     transition: border-color 0.2s, background 0.2s, color 0.2s;
   }
 
-  .csv-btn:hover {
-    border-color: #e8c547;
-    color: #e8c547;
-    background: #16161f;
-  }
+  .csv-btn:hover { border-color: #e8c547; color: #e8c547; background: #16161f; }
+  .csv-btn-filename { color: #6b6b8a; font-size: 0.6rem; }
 
-  .csv-btn-filename {
-    color: #6b6b8a;
-    font-size: 0.6rem;
-  }
+  #uploadError { color: #e847a0; font-size: 0.7rem; margin-top: 1.5rem; display: none; }
 
-  #uploadError {
-    color: #e847a0;
-    font-size: 0.7rem;
+  .picker-back {
     margin-top: 1.5rem;
-    display: none;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.2s;
   }
+  .picker-back:hover { color: var(--accent); }
 
   @media (max-width: 768px) {
     .charts-grid { grid-template-columns: 1fr; }
     .subject-grid { grid-template-columns: 1fr; }
     .hero-stats { gap: 1.5rem; }
     .podium { gap: 0.5rem; }
+    .topnav-file { display: none; }
   }
 </style>
 </head>
 <body>
 
+<!-- top nav -->
+<nav class="topnav">
+  <a class="topnav-logo" href="/">JUT<span>·</span>HUB</a>
+  <div class="topnav-file" id="topnavFile">—</div>
+  <a class="topnav-back" href="/">← All Tests</a>
+</nav>
+
+<!-- hero -->
 <div class="hero">
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
   <div style="position:relative;z-index:2;">
     <div class="hero-tag" id="heroTag">NEW JUT · Batch Analysis</div>
     <div class="hero-title">PERFOR<span>MANCE</span><br>REPORT</div>
-    <div class="hero-sub" id="heroSub">SELECT A TEST TO BEGIN</div>
+    <div class="hero-sub" id="heroSub">LOADING…</div>
     <div class="hero-stats">
-      <div class="hero-stat">
-        <div class="hero-stat-val" id="hs-avg">—</div>
-        <div class="hero-stat-label">Avg Score</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-val" id="hs-high">—</div>
-        <div class="hero-stat-label">Top Score</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-val" id="hs-acc">—</div>
-        <div class="hero-stat-label">Avg Accuracy</div>
-      </div>
-      <div class="hero-stat">
-        <div class="hero-stat-val" id="hs-count">—</div>
-        <div class="hero-stat-label">Students</div>
-      </div>
+      <div class="hero-stat"><div class="hero-stat-val" id="hs-avg">—</div><div class="hero-stat-label">Avg Score</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="hs-high">—</div><div class="hero-stat-label">Top Score</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="hs-acc">—</div><div class="hero-stat-label">Avg Accuracy</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="hs-count">—</div><div class="hero-stat-label">Students</div></div>
     </div>
   </div>
 </div>
@@ -696,7 +1223,7 @@ HTML = r"""<!DOCTYPE html>
     <button class="sort-btn" data-sort="math">Maths ↕</button>
     <button class="sort-btn" data-sort="acc">Accuracy ↕</button>
   </div>
-  <div class="" style="overflow-x: auto">
+  <div style="overflow-x:auto">
     <table class="leaderboard-table">
       <thead>
         <tr>
@@ -750,7 +1277,7 @@ HTML = r"""<!DOCTYPE html>
 <section>
   <div class="section-label reveal">Accuracy Heatmap</div>
   <div class="section-title reveal">Who Got What Right</div>
-  <div class="matrix-wrap reveal" style="display: flex;flex-direction: column;align-items: center;">
+  <div class="matrix-wrap reveal" style="display:flex;flex-direction:column;align-items:center;">
     <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;justify-content:center;">
       <span style="font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;">Subject:</span>
       <span style="font-size:0.65rem;color:var(--phy);">&#9632; Physics</span>
@@ -763,16 +1290,18 @@ HTML = r"""<!DOCTYPE html>
 
 <footer id="footerBar">JUT ANALYSIS DASHBOARD</footer>
 
-<!-- CSV PICKER OVERLAY -->
-<div id="uploadOverlay">
+<!-- CSV PICKER OVERLAY (shown only when no ?file= param) -->
+<div id="uploadOverlay" style="display:none;">
   <div class="picker-title">SELECT TEST</div>
   <div class="picker-sub">Choose a CSV file to analyse</div>
   <div id="csvMenu"></div>
   <div id="uploadError"></div>
+  <a class="picker-back" href="/">← Back to Hub</a>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
+/* ── utils ── */
 function firstMeaningfulName(fullName) {
   const parts = fullName.trim().split(/\s+/);
   for (const part of parts) { if (part.length > 1) return part; }
@@ -818,37 +1347,40 @@ function mapRow(r) {
 
 let radarInst, stackedInst, accuracyInst;
 
+/* ── main dashboard builder ── */
 function buildDashboard(raw, filename) {
   raw.forEach(s => { s.accuracy = s.tot_a > 0 ? Math.round((s.tot_c / s.tot_a) * 100) : 0; });
   const sorted = [...raw].sort((a,b) => b.total - a.total);
-  const avg = Math.round(raw.reduce((s,r) => s+r.total, 0) / raw.length);
+  const avg  = Math.round(raw.reduce((s,r) => s+r.total, 0) / raw.length);
   const high = Math.max(...raw.map(r => r.total));
   const avgAcc = Math.round(raw.reduce((s,r) => s+r.accuracy, 0) / raw.length);
 
-  document.getElementById('hs-avg').textContent = avg;
-  document.getElementById('hs-high').textContent = high;
-  document.getElementById('hs-acc').textContent = avgAcc + '%';
+  document.getElementById('hs-avg').textContent   = avg;
+  document.getElementById('hs-high').textContent  = high;
+  document.getElementById('hs-acc').textContent   = avgAcc + '%';
   document.getElementById('hs-count').textContent = raw.length;
-  document.getElementById('heroSub').textContent = raw.length + ' STUDENTS · PHYSICS · CHEMISTRY · MATHEMATICS';
+  document.getElementById('heroSub').textContent  = raw.length + ' STUDENTS · PHYSICS · CHEMISTRY · MATHEMATICS';
   const label = filename.replace('.csv','').replace(/_/g,' ').toUpperCase();
-  document.getElementById('heroTag').textContent = 'NEW JUT · ' + label + ' · BATCH ANALYSIS';
-  document.getElementById('footerBar').textContent = 'JUT ANALYSIS DASHBOARD · ' + raw.length + ' STUDENTS';
+  document.getElementById('heroTag').textContent  = 'NEW JUT · ' + label + ' · BATCH ANALYSIS';
+  document.getElementById('topnavFile').textContent = label;
+  document.getElementById('footerBar').textContent = 'JUT ANALYSIS DASHBOARD · ' + raw.length + ' STUDENTS · ' + label;
+  document.title = 'JUT · ' + label;
 
-  // PODIUM
+  /* podium */
   const podiumEl = document.getElementById('podium');
   podiumEl.innerHTML = '';
   const top3 = sorted.slice(0,3);
   const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean);
   const heights = [120, 160, 90];
   const podiumClasses = ['p2','p1','p3'];
-  const medals = ['medal2','medal1','medal3'];
   const bgColors = ['linear-gradient(135deg,#94a3b8,#64748b)','linear-gradient(135deg,#fbbf24,#f59e0b)','linear-gradient(135deg,#cd7f32,#a0632a)'];
   const scoreColors = ['var(--silver)','var(--gold)','var(--bronze)'];
   const medalEmoji = ['\u{1F948}','\u{1F947}','\u{1F949}'];
   podiumOrder.forEach((s,i) => {
     const c = document.createElement('div');
     c.className = 'podium-card ' + podiumClasses[i];
-    c.innerHTML = '<div class="podium-name">' + s.name + '</div>' +
+    c.innerHTML =
+      '<div class="podium-name">' + s.name + '</div>' +
       '<div class="podium-score" style="color:' + scoreColors[i] + '">' + s.total + '</div>' +
       '<div class="podium-rank-label">Overall Rank ' + (s.rank || i+1) + '</div>' +
       '<div class="podium-block" style="height:' + heights[i] + 'px;background:' + bgColors[i] + ';">' +
@@ -856,7 +1388,7 @@ function buildDashboard(raw, filename) {
     podiumEl.appendChild(c);
   });
 
-  // LEADERBOARD
+  /* leaderboard */
   let currentSort = 'total', sortDir = -1, filterText = '';
 
   function getTier(score) {
@@ -879,9 +1411,9 @@ function buildDashboard(raw, filename) {
       const chemPct = Math.max(0, (s.chem_m / maxScore) * 100);
       const mathPct = Math.max(0, (s.math_m / maxScore) * 100);
       const localRank = sorted.indexOf(s) + 1;
-      const rankClass = localRank===1 ? 'rank-1' : localRank===2 ? 'rank-2' : localRank===3 ? 'rank-3' : 'rank-other';
-      const scoreColor = s.total >= high*0.75 ? 'var(--accent2)' : s.total >= high*0.5 ? 'var(--accent)' : s.total >= high*0.25 ? 'var(--math)' : 'var(--accent3)';
-      const accColor = s.accuracy>=60 ? 'var(--accent2)' : s.accuracy>=40 ? 'var(--accent)' : 'var(--accent3)';
+      const rankClass = localRank===1?'rank-1':localRank===2?'rank-2':localRank===3?'rank-3':'rank-other';
+      const scoreColor = s.total>=high*0.75?'var(--accent2)':s.total>=high*0.5?'var(--accent)':s.total>=high*0.25?'var(--math)':'var(--accent3)';
+      const accColor = s.accuracy>=60?'var(--accent2)':s.accuracy>=40?'var(--accent)':'var(--accent3)';
       const tr = document.createElement('tr');
       tr.className = 'row ' + getTier(s.total);
       tr.innerHTML =
@@ -911,9 +1443,9 @@ function buildDashboard(raw, filename) {
     };
   });
 
-  // SUBJECT CARDS
+  /* subject cards */
   function subjectStats(marks, correct, wrong, attempt) {
-    const avg = (marks.reduce((a,b)=>a+b,0)/marks.length).toFixed(1);
+    const avg  = (marks.reduce((a,b)=>a+b,0)/marks.length).toFixed(1);
     const best = Math.max(...marks), worst = Math.min(...marks);
     const avgC = (correct.reduce((a,b)=>a+b,0)/correct.length).toFixed(1);
     const avgW = (wrong.reduce((a,b)=>a+b,0)/wrong.length).toFixed(1);
@@ -936,7 +1468,7 @@ function buildDashboard(raw, filename) {
   makeSubjectCard('chemCard','Chemistry','var(--chem)',raw.map(r=>r.chem_m),raw.map(r=>r.chem_c),raw.map(r=>r.chem_w),raw.map(r=>r.chem_a));
   makeSubjectCard('mathCard','Maths','var(--math)',raw.map(r=>r.math_m),raw.map(r=>r.math_c),raw.map(r=>r.math_w),raw.map(r=>r.math_a));
 
-  // DISTRIBUTION BARS
+  /* distribution bars */
   const distContainer = document.getElementById('distBars');
   distContainer.innerHTML = '';
   const step = high > 0 ? Math.ceil(high / 5) : 60;
@@ -959,8 +1491,8 @@ function buildDashboard(raw, filename) {
   });
   setTimeout(() => { document.querySelectorAll('.dist-bar-inner').forEach(b => { b.style.width = b.dataset.pct + '%'; }); }, 300);
 
-  // RADAR
-  const phyAvg = raw.reduce((a,r)=>a+r.phy_m,0)/raw.length;
+  /* radar */
+  const phyAvg  = raw.reduce((a,r)=>a+r.phy_m,0)/raw.length;
   const chemAvg = raw.reduce((a,r)=>a+r.chem_m,0)/raw.length;
   const mathAvg = raw.reduce((a,r)=>a+r.math_m,0)/raw.length;
   if(radarInst) radarInst.destroy();
@@ -970,7 +1502,7 @@ function buildDashboard(raw, filename) {
     options:{scales:{r:{grid:{color:'#1e1e2e'},ticks:{display:false},pointLabels:{color:'#e8e8f0',font:{family:'JetBrains Mono',size:11}}}},plugins:{legend:{display:false}}}
   });
 
-  // STACKED BAR
+  /* stacked bar */
   const top10 = sorted.slice(0,10);
   if(stackedInst) stackedInst.destroy();
   stackedInst = new Chart(document.getElementById('stackedChart'), {
@@ -983,7 +1515,7 @@ function buildDashboard(raw, filename) {
     options:{scales:{x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:75}},plugins:{legend:{labels:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}}}}}
   });
 
-  // ACCURACY CHART
+  /* accuracy chart */
   const accSorted = [...raw].sort((a,b)=>b.accuracy-a.accuracy);
   if(accuracyInst) accuracyInst.destroy();
   accuracyInst = new Chart(document.getElementById('accuracyChart'), {
@@ -992,7 +1524,7 @@ function buildDashboard(raw, filename) {
     options:{indexAxis:'y',scales:{x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:100},y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'transparent'}}},plugins:{legend:{display:false}}}
   });
 
-  // HEATMAP
+  /* heatmap */
   const hmGrid = document.getElementById('heatmapGrid');
   hmGrid.innerHTML = '';
   const subjects = ['phy','chem','math'];
@@ -1023,7 +1555,7 @@ function buildDashboard(raw, filename) {
     });
   });
 
-  // SCROLL REVEAL
+  /* scroll reveal */
   const observer = new IntersectionObserver(entries => {
     entries.forEach(e => {
       if(e.isIntersecting){
@@ -1035,11 +1567,17 @@ function buildDashboard(raw, filename) {
   document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('visible'); observer.observe(el); });
 }
 
-// ─── FILE PICKER ──────────────────────────────────────────────
+/* ── overlay helpers ── */
 function showError(msg) {
   const el = document.getElementById('uploadError');
   el.textContent = msg;
   el.style.display = 'block';
+}
+
+function hideOverlay() {
+  const overlay = document.getElementById('uploadOverlay');
+  overlay.style.opacity = '0';
+  setTimeout(() => { overlay.style.display = 'none'; }, 500);
 }
 
 async function loadCSVByName(filename) {
@@ -1048,18 +1586,15 @@ async function loadCSVByName(filename) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     const rows = parseCSV(text);
-    if (rows.length === 0) { showError('CSV appears to be empty or malformed'); return; }
-    const mapped = rows.map(mapRow);
-    const overlay = document.getElementById('uploadOverlay');
-    overlay.style.opacity = '0';
-    setTimeout(() => { overlay.style.display = 'none'; }, 500);
-    buildDashboard(mapped, filename);
+    if (rows.length === 0) { showError('CSV appears empty or malformed'); return; }
+    hideOverlay();
+    buildDashboard(rows.map(mapRow), filename);
   } catch(err) {
     showError('Error loading file: ' + err.message);
   }
 }
 
-async function populateMenu() {
+async function populatePickerMenu() {
   const menu = document.getElementById('csvMenu');
   try {
     const res = await fetch('/api/csv-files');
@@ -1074,7 +1609,13 @@ async function populateMenu() {
       const btn = document.createElement('button');
       btn.className = 'csv-btn';
       btn.innerHTML = '<span>' + label + '</span><span class="csv-btn-filename">' + filename + '</span>';
-      btn.addEventListener('click', () => loadCSVByName(filename));
+      btn.addEventListener('click', () => {
+        // update URL without reload
+        const url = new URL(window.location);
+        url.searchParams.set('file', filename);
+        history.replaceState(null, '', url.toString());
+        loadCSVByName(filename);
+      });
       menu.appendChild(btn);
     });
   } catch(err) {
@@ -1082,7 +1623,24 @@ async function populateMenu() {
   }
 }
 
-populateMenu();
+/* ── boot ── */
+(async function boot() {
+  const params = new URLSearchParams(window.location.search);
+  const fileParam = params.get('file');
+
+  if (fileParam) {
+    // Auto-load from URL param — no overlay shown
+    document.getElementById('heroSub').textContent = 'LOADING ' + fileParam.toUpperCase() + '…';
+    await loadCSVByName(fileParam);
+  } else {
+    // Show picker overlay
+    document.getElementById('heroSub').textContent = 'SELECT A TEST TO BEGIN';
+    const overlay = document.getElementById('uploadOverlay');
+    overlay.style.display = 'flex';
+    overlay.style.opacity = '1';
+    await populatePickerMenu();
+  }
+})();
 </script>
 </body>
 </html>"""
