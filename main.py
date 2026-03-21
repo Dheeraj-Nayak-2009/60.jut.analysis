@@ -1171,7 +1171,7 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
     .hero-tag {letter-spacing: 0rem;}
     .charts-grid { grid-template-columns: 1fr; }
     .subject-grid { grid-template-columns: 1fr; }
-    .hero-stats { gap: 3rem; }
+    .hero-stats { gap: 5rem; }
     .podium { gap: 0.5rem; }
     .topnav-file { display: none; }
   }
