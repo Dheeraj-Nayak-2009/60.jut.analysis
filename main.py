@@ -420,7 +420,7 @@ HOME_HTML = r"""<!DOCTYPE html>
     <div class="hero-eyebrow">Batch Performance Intelligence</div>
     <div class="hero-title">ANALYSE<br><span class="outline">EVERY</span><br>TEST</div>
     <div class="hero-desc">
-      Select any JUT result below to instantly unlock deep performance analytics — podium, leaderboards, subject heatmaps, accuracy charts and more.
+Score • Analyse • Improve
     </div>
   </div>
 
