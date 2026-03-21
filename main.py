@@ -1168,9 +1168,10 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
   .picker-back:hover { color: var(--accent); }
 
   @media (max-width: 768px) {
+    .hero-tag {letter-spacing: 0rem;}
     .charts-grid { grid-template-columns: 1fr; }
     .subject-grid { grid-template-columns: 1fr; }
-    .hero-stats { gap: 1.5rem; }
+    .hero-stats { gap: 3rem; }
     .podium { gap: 0.5rem; }
     .topnav-file { display: none; }
   }
