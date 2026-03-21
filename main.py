@@ -151,6 +151,9 @@ HOME_HTML = r"""<!DOCTYPE html>
     color: var(--muted);
     text-transform: uppercase;
   }
+  @media (max-width: 600px) {
+    .header-tag {display: none;}
+}
 
   /* ── hero text ── */
   .hero {
