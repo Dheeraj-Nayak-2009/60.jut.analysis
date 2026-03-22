@@ -897,7 +897,7 @@ function buildProfile(studentName,masterRows){
     const tr=document.createElement('tr');tr.className='rr';
     tr.innerHTML=`
       <td style="font-family:'DM Serif Display',serif;font-size:0.78rem;">${shortLabel(t.testName)}</td>
-      <td>${t.absent?`<span class="tl-badge b-abs">Absent</span>`:`<span class="tl-badge b-good">✓ Present</span>`}</td>
+      <td>${t.absent?`<span class="tl-badge b-abs">Absent</span>`:`<span class="tl-badge b-good">✓Present</span>`}</td>
       <td><span style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${sc}">${t.absent?'—':t.total}</span></td>
       <td>${rankBadge}${!t.absent&&t.rank?`<span style="font-size:0.58rem;color:var(--muted)"> / ${t.batchSize}</span>`:''}</td>
       <td style="color:var(--muted)">${t.batchAvg}</td>
