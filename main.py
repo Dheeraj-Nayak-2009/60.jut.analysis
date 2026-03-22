@@ -209,15 +209,16 @@ section{padding:4.5rem 0;}
 .mini-bar-fill{height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(0.4,0,0.2,1);}
 .abs-notice{background:rgba(107,107,138,0.06);border:1px solid rgba(107,107,138,0.2);border-radius:4px;padding:1rem;text-align:center;font-size:0.65rem;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;}
 
-/* CHARTS - key fix: minimum height, no rotation on labels */
+/* CHARTS */
 .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.5rem;}
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.8rem;position:relative;overflow:hidden;}
 .chart-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
 .chart-card.full-w{grid-column:1/-1;}
 .chart-title{font-size:0.6rem;letter-spacing:0.28em;color:var(--muted);text-transform:uppercase;margin-bottom:1.2rem;}
-/* CRITICAL: min height on chart canvases so they never squash */
-.chart-card canvas{display:block;width:100%!important;min-height:260px;}
-.chart-card.full-w canvas{min-height:220px;}
+/* Fixed height on the canvas wrapper — Chart.js respects this when maintainAspectRatio:false */
+.chart-card .chart-wrap{position:relative;height:280px;}
+.chart-card.full-w .chart-wrap{height:260px;}
+.chart-card canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
 
 /* SW GRID */
 .sw-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.5rem;}
@@ -368,27 +369,27 @@ section{padding:4.5rem 0;}
   <div class="charts-grid">
     <div class="chart-card full-w reveal">
       <div class="chart-title">Score Across All JUTs vs Batch Average</div>
-      <canvas id="progressChart"></canvas>
+      <div class="chart-wrap"><canvas id="progressChart"></canvas></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Subject Breakdown — Average Marks</div>
-      <canvas id="radarChart"></canvas>
+      <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Correct · Wrong · Unattempted per JUT</div>
-      <canvas id="stackedChart"></canvas>
+      <div class="chart-wrap"><canvas id="stackedChart"></canvas></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Accuracy % per JUT</div>
-      <canvas id="accChart"></canvas>
+      <div class="chart-wrap"><canvas id="accChart"></canvas></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Subject Marks per JUT</div>
-      <canvas id="subjChart"></canvas>
+      <div class="chart-wrap"><canvas id="subjChart"></canvas></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Your Rank per JUT (lower = better)</div>
-      <canvas id="rankChart"></canvas>
+      <div class="chart-wrap"><canvas id="rankChart"></canvas></div>
     </div>
   </div>
 </section>
