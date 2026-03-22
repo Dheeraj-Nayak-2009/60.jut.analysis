@@ -1,18 +1,18 @@
 from flask import Flask, Blueprint, jsonify, request
 import os
-import csv, io
+import csv
 
 app = Flask(__name__)
 
 api_bp = Blueprint('api', __name__)
+
+# ── ALL blueprint routes MUST be defined before app.register_blueprint() ──
 
 @api_bp.get("/api/csv-files")
 def list_csv_files():
     static_dir = app.static_folder
     files = [f for f in os.listdir(static_dir) if f.endswith('.csv')]
     return jsonify(sorted(files))
-
-app.register_blueprint(api_bp)
 
 
 @api_bp.get("/api/master-data")
@@ -27,8 +27,8 @@ def get_master_data():
         for row in reader:
             rows.append({k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()})
     return jsonify(rows)
- 
- 
+
+
 @api_bp.get("/api/student/<path:student_name>")
 def get_student_data(student_name):
     """Return all rows for a specific student from master.csv."""
@@ -45,6 +45,12 @@ def get_student_data(student_name):
     return jsonify(results)
 
 
+# ── Register blueprint AFTER all routes are defined ──
+app.register_blueprint(api_bp)
+
+
+# ── Page routes (these go on `app` directly, not the blueprint) ──
+
 @app.get("/")
 def read_root():
     return app.response_class(HOME_HTML, mimetype='text/html')
@@ -54,9 +60,11 @@ def read_root():
 def analysis():
     return app.response_class(ANALYSIS_HTML, mimetype='text/html')
 
+
 @app.get("/student")
 def student_page():
-    with open(os.path.join(os.path.dirname(__file__), 'public', 'individual.html'), 'r', encoding='utf-8') as f:
+    html_path = os.path.join(os.path.dirname(__file__), 'public', 'individual.html')
+    with open(html_path, 'r', encoding='utf-8') as f:
         return app.response_class(f.read(), mimetype='text/html')
 
 
@@ -97,7 +105,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     overflow-x: hidden;
   }
 
-  /* noise overlay */
   body::before {
     content: '';
     position: fixed;
@@ -108,7 +115,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     opacity: 0.4;
   }
 
-  /* ── animated grid bg ── */
   .grid-bg {
     position: fixed;
     inset: 0;
@@ -123,7 +129,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     100% { background-position: 60px 60px; }
   }
 
-  /* ── ambient glows ── */
   .glow-1 {
     position: fixed;
     width: 700px; height: 700px;
@@ -155,7 +160,6 @@ HOME_HTML = r"""<!DOCTYPE html>
   @keyframes floatB { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-50px,-30px)} }
   @keyframes floatC { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-50px)} }
 
-  /* ── layout ── */
   .page {
     position: relative;
     z-index: 10;
@@ -164,7 +168,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     padding: 0 2rem;
   }
 
-  /* ── header ── */
   header {
     display: flex;
     align-items: center;
@@ -189,9 +192,8 @@ HOME_HTML = r"""<!DOCTYPE html>
   }
   @media (max-width: 600px) {
     .header-tag {display: none;}
-}
+  }
 
-  /* ── hero text ── */
   .hero {
     padding: 6rem 0 4rem;
     text-align: center;
@@ -227,7 +229,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     animation: fadeUp 0.8s 0.6s forwards;
   }
 
-  /* ── divider ── */
   .divider {
     width: 100%;
     height: 1px;
@@ -237,7 +238,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     animation: fadeUp 0.6s 0.75s forwards;
   }
 
-  /* ── section label ── */
   .section-label {
     font-size: 0.6rem;
     letter-spacing: 0.4em;
@@ -255,7 +255,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     animation: fadeUp 0.7s 0.95s forwards;
   }
 
-  /* ── file grid ── */
   #fileGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -327,7 +326,6 @@ HOME_HTML = r"""<!DOCTYPE html>
   }
   .file-card:hover .file-card-arrow { color: var(--accent); transform: translate(3px, -3px); }
 
-  /* subject pills */
   .subj-pills {
     display: flex;
     gap: 0.4rem;
@@ -345,7 +343,6 @@ HOME_HTML = r"""<!DOCTYPE html>
   .pill-c { background: rgba(167,139,250,0.12); color: #a78bfa; }
   .pill-m { background: rgba(251,146,60,0.12); color: #fb923c; }
 
-  /* ── empty state ── */
   .empty-state {
     text-align: center;
     padding: 4rem 2rem;
@@ -364,7 +361,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     line-height: 2;
   }
 
-  /* ── loading state ── */
   .loading-row {
     display: flex;
     gap: 0.4rem;
@@ -382,7 +378,6 @@ HOME_HTML = r"""<!DOCTYPE html>
   .loading-dot:nth-child(3) { animation-delay: 0.4s; }
   @keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
 
-  /* ── stats strip ── */
   .stats-strip {
     display: flex;
     gap: 0;
@@ -414,7 +409,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     margin-top: 0.3rem;
   }
 
-  /* ── footer ── */
   footer {
     border-top: 1px solid var(--border);
     padding: 2rem 0;
@@ -598,7 +592,6 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
     opacity: 0.4;
   }
 
-  /* ── nav bar ── */
   .topnav {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -642,7 +635,6 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
     white-space: nowrap;
   }
 
-  /* ── hero ── */
   .hero {
     min-height: 100vh;
     display: flex;
@@ -903,11 +895,22 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
     color: var(--text);
   }
 
+  /* Clickable student name link */
+  .name-cell a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dashed var(--muted);
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .name-cell a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
   .charts-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
-    margin-top: 2rem;
   }
 
   .chart-card {
@@ -1129,7 +1132,6 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
   .tier-average { background: rgba(251,146,60,0.1); }
   .tier-poor { background: rgba(232,71,160,0.08); }
 
-  /* ── overlay (manual picker) ── */
   #uploadOverlay {
     position: fixed;
     inset: 0;
@@ -1218,14 +1220,12 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
 </head>
 <body>
 
-<!-- top nav -->
 <nav class="topnav">
   <a class="topnav-logo" href="/">JUT<span>·</span>HUB</a>
   <div class="topnav-file" id="topnavFile">—</div>
   <a class="topnav-back" href="/">← All Tests</a>
 </nav>
 
-<!-- hero -->
 <div class="hero">
   <div class="hero-bg"></div>
   <div class="hero-grid"></div>
@@ -1330,7 +1330,6 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
 
 <footer id="footerBar">JUT ANALYSIS DASHBOARD</footer>
 
-<!-- CSV PICKER OVERLAY (shown only when no ?file= param) -->
 <div id="uploadOverlay" style="display:none;">
   <div class="picker-title">SELECT TEST</div>
   <div class="picker-sub">Choose a CSV file to analyse</div>
@@ -1341,7 +1340,6 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
-/* ── utils ── */
 function firstMeaningfulName(fullName) {
   const parts = fullName.trim().split(/\s+/);
   for (const part of parts) { if (part.length > 1) return part; }
@@ -1387,7 +1385,6 @@ function mapRow(r) {
 
 let radarInst, stackedInst, accuracyInst;
 
-/* ── main dashboard builder ── */
 function buildDashboard(raw, filename) {
   raw.forEach(s => { s.accuracy = s.tot_a > 0 ? Math.round((s.tot_c / s.tot_a) * 100) : 0; });
   const sorted = [...raw].sort((a,b) => b.total - a.total);
@@ -1406,7 +1403,6 @@ function buildDashboard(raw, filename) {
   document.getElementById('footerBar').textContent = 'JUT ANALYSIS DASHBOARD · ' + raw.length + ' STUDENTS · ' + label;
   document.title = 'JUT · ' + label;
 
-  /* podium */
   const podiumEl = document.getElementById('podium');
   podiumEl.innerHTML = '';
   const top3 = sorted.slice(0,3);
@@ -1428,7 +1424,6 @@ function buildDashboard(raw, filename) {
     podiumEl.appendChild(c);
   });
 
-  /* leaderboard */
   let currentSort = 'total', sortDir = -1, filterText = '';
 
   function getTier(score) {
@@ -1458,7 +1453,7 @@ function buildDashboard(raw, filename) {
       tr.className = 'row ' + getTier(s.total);
       tr.innerHTML =
         '<td><span class="rank-badge ' + rankClass + '">' + localRank + '</span></td>' +
-        '<td><div class="name-cell">' + s.name + '</div></td>' +
+        '<td><div class="name-cell"><a href="/student?student=' + encodeURIComponent(s.name) + '">' + s.name + '</a></div></td>' +
         '<td><span class="score-pill" style="background:' + scoreColor + '22;color:' + scoreColor + '">' + s.total + '</span></td>' +
         '<td><div class="mini-bar-wrap">' +
           '<div class="mini-bar" style="width:' + (phyPct*2) + 'px;background:var(--phy)"></div>' +
@@ -1483,7 +1478,6 @@ function buildDashboard(raw, filename) {
     };
   });
 
-  /* subject cards */
   function subjectStats(marks, correct, wrong, attempt) {
     const avg  = (marks.reduce((a,b)=>a+b,0)/marks.length).toFixed(1);
     const best = Math.max(...marks), worst = Math.min(...marks);
@@ -1508,7 +1502,6 @@ function buildDashboard(raw, filename) {
   makeSubjectCard('chemCard','Chemistry','var(--chem)',raw.map(r=>r.chem_m),raw.map(r=>r.chem_c),raw.map(r=>r.chem_w),raw.map(r=>r.chem_a));
   makeSubjectCard('mathCard','Maths','var(--math)',raw.map(r=>r.math_m),raw.map(r=>r.math_c),raw.map(r=>r.math_w),raw.map(r=>r.math_a));
 
-  /* distribution bars */
   const distContainer = document.getElementById('distBars');
   distContainer.innerHTML = '';
   const step = high > 0 ? Math.ceil(high / 5) : 60;
@@ -1531,7 +1524,6 @@ function buildDashboard(raw, filename) {
   });
   setTimeout(() => { document.querySelectorAll('.dist-bar-inner').forEach(b => { b.style.width = b.dataset.pct + '%'; }); }, 300);
 
-  /* radar */
   const phyAvg  = raw.reduce((a,r)=>a+r.phy_m,0)/raw.length;
   const chemAvg = raw.reduce((a,r)=>a+r.chem_m,0)/raw.length;
   const mathAvg = raw.reduce((a,r)=>a+r.math_m,0)/raw.length;
@@ -1542,7 +1534,6 @@ function buildDashboard(raw, filename) {
     options:{scales:{r:{grid:{color:'#1e1e2e'},ticks:{display:false},pointLabels:{color:'#e8e8f0',font:{family:'JetBrains Mono',size:11}}}},plugins:{legend:{display:false}}}
   });
 
-  /* stacked bar */
   const top10 = sorted.slice(0,10);
   if(stackedInst) stackedInst.destroy();
   stackedInst = new Chart(document.getElementById('stackedChart'), {
@@ -1555,7 +1546,6 @@ function buildDashboard(raw, filename) {
     options:{scales:{x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:75}},plugins:{legend:{labels:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}}}}}
   });
 
-  /* accuracy chart */
   const accSorted = [...raw].sort((a,b)=>b.accuracy-a.accuracy);
   if(accuracyInst) accuracyInst.destroy();
   accuracyInst = new Chart(document.getElementById('accuracyChart'), {
@@ -1564,7 +1554,6 @@ function buildDashboard(raw, filename) {
     options:{indexAxis:'y',scales:{x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:100},y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'transparent'}}},plugins:{legend:{display:false}}}
   });
 
-  /* heatmap */
   const hmGrid = document.getElementById('heatmapGrid');
   hmGrid.innerHTML = '';
   const subjects = ['phy','chem','math'];
@@ -1595,7 +1584,6 @@ function buildDashboard(raw, filename) {
     });
   });
 
-  /* scroll reveal */
   const observer = new IntersectionObserver(entries => {
     entries.forEach(e => {
       if(e.isIntersecting){
@@ -1607,7 +1595,6 @@ function buildDashboard(raw, filename) {
   document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('visible'); observer.observe(el); });
 }
 
-/* ── overlay helpers ── */
 function showError(msg) {
   const el = document.getElementById('uploadError');
   el.textContent = msg;
@@ -1650,7 +1637,6 @@ async function populatePickerMenu() {
       btn.className = 'csv-btn';
       btn.innerHTML = '<span>' + label + '</span><span class="csv-btn-filename">' + filename + '</span>';
       btn.addEventListener('click', () => {
-        // update URL without reload
         const url = new URL(window.location);
         url.searchParams.set('file', filename);
         history.replaceState(null, '', url.toString());
@@ -1663,17 +1649,14 @@ async function populatePickerMenu() {
   }
 }
 
-/* ── boot ── */
 (async function boot() {
   const params = new URLSearchParams(window.location.search);
   const fileParam = params.get('file');
 
   if (fileParam) {
-    // Auto-load from URL param — no overlay shown
     document.getElementById('heroSub').textContent = 'LOADING ' + fileParam.toUpperCase() + '…';
     await loadCSVByName(fileParam);
   } else {
-    // Show picker overlay
     document.getElementById('heroSub').textContent = 'SELECT A TEST TO BEGIN';
     const overlay = document.getElementById('uploadOverlay');
     overlay.style.display = 'flex';
