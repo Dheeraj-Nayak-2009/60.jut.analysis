@@ -99,7 +99,7 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 .hero-rank-bg{position:absolute;right:3rem;top:50%;transform:translateY(-50%);font-family:'Bebas Neue',sans-serif;font-size:clamp(10rem,22vw,20rem);line-height:1;-webkit-text-stroke:1px rgba(232,197,71,0.08);color:transparent;user-select:none;pointer-events:none;opacity:0;animation:fadeIn 1.2s 0.5s forwards;}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .hero-content{position:relative;z-index:5;}
-.hero-eyebrow{font-size:0.62rem;letter-spacing:0.4em;color:var(--accent2);text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:slideUp 0.6s 0.2s forwards;display:flex;align-items:center;gap:0.8rem;}
+.hero-eyebrow{font-size:0.62rem;letter-spacing:0.2em;color:var(--accent2);text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:slideUp 0.6s 0.2s forwards;display:flex;align-items:center;gap:0.8rem;}
 .hero-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(3.5rem,11vw,8.5rem);line-height:0.88;letter-spacing:0.02em;opacity:0;animation:slideUp 0.8s 0.35s forwards;}
 .hero-name .outline{-webkit-text-stroke:1.5px var(--accent);color:transparent;display:block;}
 .hero-tagline{font-size:0.7rem;color:var(--muted);letter-spacing:0.18em;margin-top:1.2rem;opacity:0;animation:slideUp 0.7s 0.55s forwards;}
