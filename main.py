@@ -1,5 +1,6 @@
 from flask import Flask, Blueprint, jsonify, request
 import os
+import csv, io
 
 app = Flask(__name__)
 
@@ -14,6 +15,36 @@ def list_csv_files():
 app.register_blueprint(api_bp)
 
 
+@api_bp.get("/api/master-data")
+def get_master_data():
+    """Return all rows from master/master.csv as JSON."""
+    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
+    if not os.path.exists(master_path):
+        return jsonify({"error": "master.csv not found"}), 404
+    rows = []
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append({k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()})
+    return jsonify(rows)
+ 
+ 
+@api_bp.get("/api/student/<path:student_name>")
+def get_student_data(student_name):
+    """Return all rows for a specific student from master.csv."""
+    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
+    if not os.path.exists(master_path):
+        return jsonify({"error": "master.csv not found"}), 404
+    results = []
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            if clean.get('name', '').strip().lower() == student_name.strip().lower():
+                results.append(clean)
+    return jsonify(results)
+
+
 @app.get("/")
 def read_root():
     return app.response_class(HOME_HTML, mimetype='text/html')
@@ -22,6 +53,11 @@ def read_root():
 @app.get("/analysis")
 def analysis():
     return app.response_class(ANALYSIS_HTML, mimetype='text/html')
+
+@app.get("/student")
+def student_page():
+    with open(os.path.join(os.path.dirname(__file__), 'public', 'individual.html'), 'r', encoding='utf-8') as f:
+        return app.response_class(f.read(), mimetype='text/html')
 
 
 # ══════════════════════════════════════════════════════════════════════════════
