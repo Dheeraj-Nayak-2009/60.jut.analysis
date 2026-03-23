@@ -941,6 +941,862 @@ def student_page():
     return app.response_class(INDIVIDUAL_HTML, mimetype='text/html')
 
 
+OVERVIEW_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JUT · Master Overview</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#111118;--surface2:#16161f;--border:#1e1e2e;
+  --accent:#e8c547;--accent2:#47e8c5;--accent3:#e847a0;
+  --text:#e8e8f0;--muted:#6b6b8a;
+  --phy:#4fc3f7;--chem:#a78bfa;--math:#fb923c;
+  --gold:#fbbf24;--silver:#94a3b8;--bronze:#cd7f32;
+  --green:#4ade80;--red:#f87171;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.4;}
+
+/* NAV */
+.topnav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(10,10,15,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0.9rem 2rem;gap:1rem;}
+.topnav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.08em;color:var(--text);text-decoration:none;flex-shrink:0;}
+.topnav-logo span{color:var(--accent);}
+.topnav-links{display:flex;gap:1.2rem;align-items:center;}
+.topnav-link{font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;padding:0.3rem 0;}
+.topnav-link:hover,.topnav-link.active{color:var(--accent);}
+.topnav-link.active{border-bottom:1px solid var(--accent);}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:7rem 4rem 5rem;position:relative;overflow:hidden;}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px);background-size:80px 80px;animation:gridDrift 40s linear infinite;}
+@keyframes gridDrift{0%{background-position:0 0}100%{background-position:80px 80px}}
+.hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 70% 30%,rgba(232,197,71,0.07) 0%,transparent 60%),radial-gradient(ellipse 50% 50% at 10% 80%,rgba(71,232,197,0.05) 0%,transparent 60%);}
+.hero-content{position:relative;z-index:5;}
+.hero-eyebrow{font-size:0.62rem;letter-spacing:0.42em;color:var(--accent2);text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:slideUp 0.6s 0.2s forwards;display:flex;align-items:center;gap:0.8rem;}
+.hero-eyebrow::before{content:'';display:block;width:36px;height:1px;background:var(--accent2);}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(4rem,12vw,10rem);line-height:0.86;letter-spacing:0.02em;opacity:0;animation:slideUp 0.8s 0.35s forwards;}
+.hero-title .outline{-webkit-text-stroke:1.5px var(--accent);color:transparent;display:block;}
+.hero-sub{font-size:0.72rem;color:var(--muted);letter-spacing:0.18em;margin-top:1.5rem;opacity:0;animation:slideUp 0.7s 0.55s forwards;}
+.hero-kpis{display:flex;gap:3rem;margin-top:3rem;opacity:0;animation:slideUp 0.7s 0.7s forwards;flex-wrap:wrap;}
+.kpi-val{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;color:var(--accent);line-height:1;}
+.kpi-label{font-size:0.52rem;letter-spacing:0.28em;color:var(--muted);text-transform:uppercase;margin-top:0.2rem;}
+@keyframes slideUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+/* JUT SELECTOR BAR */
+.jut-bar{position:sticky;top:57px;z-index:400;background:rgba(10,10,15,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0.7rem 2rem;display:flex;gap:0.5rem;overflow-x:auto;align-items:center;}
+.jut-tab{font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;padding:0.4rem 1rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;transition:all 0.2s;white-space:nowrap;flex-shrink:0;}
+.jut-tab:hover{border-color:var(--accent);color:var(--accent);}
+.jut-tab.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.jut-bar-label{font-size:0.55rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;flex-shrink:0;margin-right:0.5rem;}
+
+/* LAYOUT */
+.main-wrap{max-width:1600px;margin:0 auto;padding:0 2.5rem 6rem;}
+section{padding:4rem 0;}
+.sec-label{font-size:0.6rem;letter-spacing:0.42em;color:var(--accent);text-transform:uppercase;margin-bottom:0.7rem;display:flex;align-items:center;gap:0.8rem;}
+.sec-label::before{content:'';display:block;width:28px;height:1px;background:var(--accent);}
+.sec-title{font-family:'DM Serif Display',serif;font-size:clamp(1.8rem,4vw,2.8rem);margin-bottom:2rem;}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent);}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity 0.6s,transform 0.6s;}
+.reveal.vis{opacity:1;transform:translateY(0);}
+
+/* STAT STRIP */
+.stat-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:3rem;}
+.ss-item{background:var(--surface);padding:1.5rem;text-align:center;}
+.ss-val{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--accent);line-height:1;}
+.ss-label{font-size:0.52rem;letter-spacing:0.22em;color:var(--muted);text-transform:uppercase;margin-top:0.3rem;}
+
+/* PODIUM */
+.podium-wrap{display:flex;align-items:flex-end;justify-content:center;gap:0;margin:2rem 0 1rem;}
+.pod-card{flex:1;max-width:280px;text-align:center;cursor:pointer;transition:transform 0.3s;text-decoration:none;display:block;}
+.pod-card:hover{transform:translateY(-8px);}
+.pod-name{font-family:'DM Serif Display',serif;font-size:1rem;margin-bottom:0.25rem;color:var(--text);}
+.pod-score{font-family:'Bebas Neue',sans-serif;font-size:3.2rem;line-height:1;}
+.pod-sub{font-size:0.55rem;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-top:0.2rem;}
+.pod-block{margin-top:0.8rem;border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:center;font-size:2rem;}
+.pod-1 .pod-score{color:var(--gold);}
+.pod-1 .pod-block{background:linear-gradient(135deg,#fbbf24,#f59e0b);height:150px;}
+.pod-2 .pod-score{color:var(--silver);}
+.pod-2 .pod-block{background:linear-gradient(135deg,#94a3b8,#64748b);height:115px;}
+.pod-3 .pod-score{color:var(--bronze);}
+.pod-3 .pod-block{background:linear-gradient(135deg,#cd7f32,#a0632a);height:88px;}
+
+/* LEADERBOARD */
+.lb-controls{display:flex;gap:0.8rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center;}
+.lb-search{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:0.6rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.72rem;border-radius:2px;outline:none;flex:1;min-width:180px;transition:border-color 0.2s;}
+.lb-search:focus{border-color:var(--accent);}
+.lb-search::placeholder{color:var(--muted);}
+.sort-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:0.5rem 0.9rem;font-family:'JetBrains Mono',monospace;font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all 0.2s;white-space:nowrap;}
+.sort-btn:hover,.sort-btn.active{border-color:var(--accent);color:var(--accent);}
+.lb-table{width:100%;border-collapse:separate;border-spacing:0 3px;}
+.lb-table th{font-size:0.55rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;padding:0.4rem 0.8rem;text-align:left;font-weight:400;}
+.lb-table tr.lbr{background:var(--surface);transition:all 0.2s;cursor:pointer;}
+.lb-table tr.lbr:hover{background:var(--surface2);transform:translateX(4px);}
+.lb-table td{padding:0.65rem 0.8rem;font-size:0.7rem;border-top:1px solid transparent;border-bottom:1px solid transparent;}
+.lb-table tr.lbr:hover td{border-color:var(--border);}
+.lb-table tr.lbr.top1{background:rgba(251,191,36,0.06);}
+.lb-table tr.lbr.top3{background:rgba(232,197,71,0.04);}
+.lb-table tr.lbr.top10{background:rgba(71,232,197,0.03);}
+.rnk{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;}
+.r1{color:var(--gold);}.r2{color:var(--silver);}.r3{color:var(--bronze);}.rn{color:var(--muted);}
+.name-link{color:var(--text);text-decoration:none;border-bottom:1px dashed var(--muted);font-family:'DM Serif Display',serif;font-size:0.88rem;transition:color 0.2s,border-color 0.2s;}
+.name-link:hover{color:var(--accent);border-color:var(--accent);}
+.score-chip{display:inline-block;padding:0.18rem 0.7rem;border-radius:2px;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;}
+.mini-bars{display:flex;gap:2px;align-items:center;}
+.mini-bar{height:5px;border-radius:1px;}
+.trend-up{color:var(--green);font-size:0.65rem;}
+.trend-dn{color:var(--red);font-size:0.65rem;}
+.trend-fl{color:var(--muted);font-size:0.65rem;}
+
+/* TIER ROWS */
+.tier-s{background:rgba(71,232,197,0.06)!important;}
+.tier-a{background:rgba(232,197,71,0.05)!important;}
+.tier-b{background:rgba(251,146,60,0.04)!important;}
+.tier-c{background:rgba(232,71,160,0.03)!important;}
+
+/* CHARTS */
+.charts-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.5rem;}
+.charts-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-top:1.5rem;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.8rem;position:relative;overflow:hidden;}
+.chart-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.chart-card.full{grid-column:1/-1;}
+.chart-title{font-size:0.58rem;letter-spacing:0.26em;color:var(--muted);text-transform:uppercase;margin-bottom:1.2rem;}
+.chart-wrap{position:relative;height:280px;}
+.chart-wrap.tall{height:340px;}
+.chart-wrap.short{height:220px;}
+.chart-card canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
+
+/* SUBJECT CARDS */
+.subj-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-top:1.5rem;}
+.subj-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.8rem;position:relative;overflow:hidden;}
+.subj-card.phy{border-top:3px solid var(--phy);}
+.subj-card.chem{border-top:3px solid var(--chem);}
+.subj-card.math{border-top:3px solid var(--math);}
+.subj-name{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;margin-bottom:1rem;}
+.subj-card.phy .subj-name{color:var(--phy);}
+.subj-card.chem .subj-name{color:var(--chem);}
+.subj-card.math .subj-name{color:var(--math);}
+.subj-row{display:flex;justify-content:space-between;padding:0.38rem 0;border-bottom:1px solid var(--border);font-size:0.68rem;}
+.subj-row:last-child{border-bottom:none;}
+.subj-key{color:var(--muted);}
+.subj-val{color:var(--text);font-weight:600;}
+
+/* CONSISTENCY TABLE */
+.cons-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-top:1.5rem;}
+.cons-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.4rem;display:flex;align-items:center;gap:1rem;cursor:pointer;text-decoration:none;transition:transform 0.25s,border-color 0.25s;}
+.cons-card:hover{transform:translateY(-3px);border-color:rgba(232,197,71,0.4);}
+.cons-rank{font-family:'Bebas Neue',sans-serif;font-size:2rem;width:36px;text-align:center;flex-shrink:0;}
+.cons-info{flex:1;min-width:0;}
+.cons-name{font-family:'DM Serif Display',serif;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0.2rem;}
+.cons-bar-outer{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:0.4rem;}
+.cons-bar-inner{height:100%;border-radius:2px;transition:width 1.5s cubic-bezier(0.4,0,0.2,1);}
+.cons-score{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;flex-shrink:0;}
+
+/* DIST BARS */
+.dist-wrap{margin-top:1.2rem;}
+.dist-row{display:flex;align-items:center;gap:0.8rem;margin-bottom:0.6rem;}
+.dist-lbl{font-size:0.6rem;color:var(--muted);width:70px;flex-shrink:0;letter-spacing:0.08em;}
+.dist-outer{flex:1;height:26px;background:var(--border);border-radius:2px;overflow:hidden;}
+.dist-inner{height:100%;border-radius:2px;display:flex;align-items:center;padding-left:8px;font-size:0.6rem;font-weight:600;color:rgba(0,0,0,0.7);transition:width 1.5s cubic-bezier(0.4,0,0.2,1);}
+.dist-cnt{font-size:0.68rem;color:var(--muted);width:22px;text-align:right;flex-shrink:0;}
+
+/* JUT TREND TABLE */
+.jut-trend-table{width:100%;border-collapse:separate;border-spacing:0 3px;margin-top:1.2rem;}
+.jut-trend-table th{font-size:0.52rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;padding:0.35rem 0.7rem;text-align:left;font-weight:400;}
+.jut-trend-table tr.jtr{background:var(--surface);transition:all 0.18s;}
+.jut-trend-table tr.jtr:hover{background:var(--surface2);}
+.jut-trend-table td{padding:0.6rem 0.7rem;font-size:0.68rem;}
+
+/* LOADING */
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:1rem;}
+.loading-dots{display:flex;gap:6px;}
+.ld{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:blink 1.2s infinite;}
+.ld:nth-child(2){animation-delay:0.2s;}
+.ld:nth-child(3){animation-delay:0.4s;}
+@keyframes blink{0%,100%{opacity:0.15}50%{opacity:1}}
+.loading-text{font-size:0.65rem;letter-spacing:0.3em;color:var(--muted);text-transform:uppercase;}
+
+@media(max-width:1024px){.charts-3{grid-template-columns:1fr 1fr;}.subj-cards{grid-template-columns:1fr 1fr 1fr;}}
+@media(max-width:768px){
+  .hero{padding:7rem 1.5rem 4rem;}
+  .charts-2,.charts-3{grid-template-columns:1fr;}
+  .subj-cards{grid-template-columns:1fr;}
+  .main-wrap{padding:0 1.2rem 4rem;}
+  .hero-kpis{gap:1.5rem;}
+  .topnav-links .topnav-link:not(.always){display:none;}
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="topnav-logo" href="/">JUT<span>·</span>HUB</a>
+  <div class="topnav-links">
+    <a class="topnav-link always" href="/">Home</a>
+    <a class="topnav-link" href="/analysis">Per-Test</a>
+    <a class="topnav-link active always" href="/overview">Overview</a>
+    <a class="topnav-link" href="/student">Student</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">JUT · Master Analytics</div>
+    <div class="hero-title">BATCH<br><span class="outline">OVERVIEW</span></div>
+    <div class="hero-sub" id="heroSub">Loading all JUT data…</div>
+    <div class="hero-kpis">
+      <div><div class="kpi-val" id="kpiStudents">—</div><div class="kpi-label">Students</div></div>
+      <div><div class="kpi-val" id="kpiJuts">—</div><div class="kpi-label">JUTs</div></div>
+      <div><div class="kpi-val" id="kpiBatchAvg">—</div><div class="kpi-label">Overall Avg</div></div>
+      <div><div class="kpi-val" id="kpiTopScore">—</div><div class="kpi-label">Highest Ever</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- JUT FILTER BAR -->
+<div class="jut-bar" id="jutBar">
+  <span class="jut-bar-label">Filter:</span>
+  <button class="jut-tab active" data-jut="ALL">All JUTs</button>
+</div>
+
+<!-- LOADING -->
+<div class="main-wrap" id="mainWrap" style="display:none;">
+
+<section>
+  <div class="stat-strip reveal" id="statStrip"></div>
+
+  <!-- PODIUM -->
+  <div class="sec-label reveal">All-Time Top 3</div>
+  <div class="sec-title reveal">Overall Podium</div>
+  <div class="podium-wrap reveal" id="podium"></div>
+</section>
+
+<div class="divider"></div>
+
+<!-- LEADERBOARD -->
+<section>
+  <div class="sec-label reveal">Ranked by Average Score</div>
+  <div class="sec-title reveal">Master Leaderboard</div>
+  <div class="lb-controls reveal">
+    <input class="lb-search" id="lbSearch" type="text" placeholder="Search student…" autocomplete="off">
+    <button class="sort-btn active" data-sort="avg">Avg ↕</button>
+    <button class="sort-btn" data-sort="best">Best ↕</button>
+    <button class="sort-btn" data-sort="phy">Physics ↕</button>
+    <button class="sort-btn" data-sort="chem">Chem ↕</button>
+    <button class="sort-btn" data-sort="math">Maths ↕</button>
+    <button class="sort-btn" data-sort="acc">Accuracy ↕</button>
+    <button class="sort-btn" data-sort="cons">Consistency ↕</button>
+    <button class="sort-btn" data-sort="att">Attendance ↕</button>
+  </div>
+  <div class="reveal" style="overflow-x:auto;">
+    <table class="lb-table">
+      <thead><tr>
+        <th>#</th><th>Student</th><th>Avg Score</th><th>Best</th>
+        <th>Subjects (avg P·C·M)</th><th>Avg Acc</th><th>Consistency</th><th>Trend</th><th>Attended</th>
+      </tr></thead>
+      <tbody id="lbBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- SUBJECT DEEP DIVE -->
+<section>
+  <div class="sec-label reveal">Subject Analysis</div>
+  <div class="sec-title reveal">Batch Subject Stats</div>
+  <div class="subj-cards">
+    <div class="subj-card phy reveal" id="sPhysics"></div>
+    <div class="subj-card chem reveal" id="sChem"></div>
+    <div class="subj-card math reveal" id="sMath"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CHARTS -->
+<section>
+  <div class="sec-label reveal">Visual Analytics</div>
+  <div class="sec-title reveal">Batch Intelligence</div>
+  <div class="charts-2">
+    <div class="chart-card full reveal">
+      <div class="chart-title">Batch Average Score per JUT</div>
+      <div class="chart-wrap short"><canvas id="chartBatchTrend"></canvas></div>
+    </div>
+    <div class="chart-card reveal">
+      <div class="chart-title">Score Distribution (selected JUT / all)</div>
+      <div class="dist-wrap" id="distWrap"></div>
+    </div>
+    <div class="chart-card reveal">
+      <div class="chart-title">Subject Avg Comparison (selected JUT / all)</div>
+      <div class="chart-wrap"><canvas id="chartRadar"></canvas></div>
+    </div>
+    <div class="chart-card reveal">
+      <div class="chart-title">Top 15 Students — Avg Score</div>
+      <div class="chart-wrap tall"><canvas id="chartTopBar"></canvas></div>
+    </div>
+    <div class="chart-card reveal">
+      <div class="chart-title">Accuracy Distribution across Students</div>
+      <div class="chart-wrap"><canvas id="chartAccDist"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- JUT SUMMARY TABLE -->
+<section>
+  <div class="sec-label reveal">Test-by-Test Summary</div>
+  <div class="sec-title reveal">JUT Performance Table</div>
+  <div class="reveal" style="overflow-x:auto;">
+    <table class="jut-trend-table">
+      <thead><tr>
+        <th>JUT</th><th>Students</th><th>Avg Score</th><th>Top Score</th><th>Lowest</th>
+        <th>Avg Physics</th><th>Avg Chem</th><th>Avg Maths</th><th>Avg Accuracy</th>
+      </tr></thead>
+      <tbody id="jutSummaryBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CONSISTENCY RANKINGS -->
+<section>
+  <div class="sec-label reveal">Reliability Index</div>
+  <div class="sec-title reveal">Most Consistent Students</div>
+  <p class="reveal" style="font-size:0.62rem;color:var(--muted);letter-spacing:0.12em;margin-bottom:1.5rem;">Consistency = low variance relative to personal average. Min 3 JUTs required.</p>
+  <div class="cons-grid reveal" id="consGrid"></div>
+</section>
+
+</div><!-- /main-wrap -->
+
+<div id="loadingScreen" class="loading-screen main-wrap" style="max-width:1600px;margin:0 auto;padding:0 2.5rem;">
+  <div class="loading-dots"><div class="ld"></div><div class="ld"></div><div class="ld"></div></div>
+  <div class="loading-text">Loading master data…</div>
+</div>
+
+<footer style="text-align:center;padding:2rem;color:var(--muted);font-size:0.58rem;letter-spacing:0.18em;border-top:1px solid var(--border);" id="footerEl">JUT MASTER OVERVIEW</footer>
+
+<script>
+/* ── utils ── */
+const $ = id => document.getElementById(id);
+const n = v => parseFloat(v)||0;
+const pct = (a,b) => b>0?Math.round(a/b*100):0;
+const avg = arr => arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
+const rnd = v => Math.round(v*10)/10;
+Chart.defaults.font.family='JetBrains Mono';
+Chart.defaults.color='#6b6b8a';
+
+function normName(s){return s.trim().replace(/\s+/g,' ').toUpperCase();}
+function shortLabel(s){
+  s=s.replace(/_/g,' ').trim();
+  const m=s.match(/(\d+)\s*$/);
+  if(m){const kws=['JUT','JEE','TEST','EXAM'];for(const k of kws){if(s.toUpperCase().includes(k))return k+' '+m[1];}return '#'+m[1];}
+  return s.length>12?s.slice(0,12)+'…':s;
+}
+
+function mapRow(r){
+  const g=(...ks)=>{for(const k of ks){if(r[k]!==undefined&&r[k]!=='')return r[k];}return'0';};
+  const gs=(...ks)=>{for(const k of ks){if(r[k]!==undefined&&r[k]!=='')return r[k];}return'';};
+  return{
+    name:normName(gs('name')||'Unknown'),
+    test:gs('test','test_name','filename','jut','jut_name')||'Unknown',
+    total:n(g('total_marks','total_score','total')),
+    tot_a:n(g('total_attempt')),
+    tot_c:n(g('total_correct')),
+    tot_w:n(g('total_wrong')),
+    phy_m:n(g('phy_marks','physics_marks')),
+    chem_m:n(g('chem_marks','chemistry_marks')),
+    math_m:n(g('math_marks','maths_marks')),
+    phy_c:n(g('phy_correct','physics_correct')),
+    chem_c:n(g('chem_correct','chemistry_correct')),
+    math_c:n(g('math_correct','maths_correct')),
+  };
+}
+
+let charts={};
+function destroyChart(id){if(charts[id]){try{charts[id].destroy();}catch(e){}delete charts[id];}}
+
+/* ── data model ── */
+let allRows=[], allTests=[], allStudentNames=[];
+let studentMap={};  // normName → {name, rows[], stats}
+let testMap={};     // testName → rows[]
+let activeJut='ALL';
+
+/* ── build student stats ── */
+function buildStudentStats(rows){
+  const attended=rows.filter(r=>r.total>0||r.tot_a>0);
+  const scores=attended.map(r=>r.total);
+  const avgScore=scores.length?avg(scores):0;
+  const bestScore=scores.length?Math.max(...scores):0;
+  const avgPhy=attended.length?avg(attended.map(r=>r.phy_m)):0;
+  const avgChem=attended.length?avg(attended.map(r=>r.chem_m)):0;
+  const avgMath=attended.length?avg(attended.map(r=>r.math_m)):0;
+  const avgAcc=attended.length?avg(attended.map(r=>pct(r.tot_c,r.tot_a))):0;
+  let consistency=null;
+  if(scores.length>=3){
+    const mn=avg(scores),sd=Math.sqrt(avg(scores.map(x=>(x-mn)**2)));
+    consistency=mn>0?Math.max(0,Math.round(100-sd/mn*100)):0;
+  }
+  // trend: slope of linear regression on scores
+  let trend=0;
+  if(scores.length>=2){
+    const xs=scores.map((_,i)=>i),ym=avg(scores),xm=avg(xs);
+    const num=xs.reduce((s,x,i)=>s+(x-xm)*(scores[i]-ym),0);
+    const den=xs.reduce((s,x)=>s+(x-xm)**2,0);
+    trend=den?num/den:0;
+  }
+  return{avgScore,bestScore,avgPhy,avgChem,avgMath,avgAcc,consistency,trend,attended:attended.length,total:rows.length};
+}
+
+/* ── fetch & build ── */
+async function loadData(){
+  try{
+    const res=await fetch('/api/master-data');
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const raw=await res.json();
+    allRows=raw.map(mapRow);
+
+    // group by test
+    allRows.forEach(r=>{
+      if(!testMap[r.test])testMap[r.test]=[];
+      testMap[r.test].push(r);
+    });
+    allTests=Object.keys(testMap).sort();
+
+    // group by student
+    allRows.forEach(r=>{
+      const k=r.name;
+      if(!studentMap[k])studentMap[k]={name:r.name,rows:[]};
+      studentMap[k].rows.push(r);
+    });
+    // compute stats for each student
+    Object.values(studentMap).forEach(s=>{s.stats=buildStudentStats(s.rows);});
+    allStudentNames=Object.keys(studentMap).sort();
+
+    // populate JUT tabs
+    const bar=$('jutBar');
+    allTests.forEach(t=>{
+      const btn=document.createElement('button');
+      btn.className='jut-tab';btn.dataset.jut=t;
+      btn.textContent=shortLabel(t);
+      btn.addEventListener('click',()=>setActiveJut(t));
+      bar.appendChild(btn);
+    });
+
+    // hero KPIs
+    const allAttended=Object.values(studentMap).flatMap(s=>s.rows.filter(r=>r.total>0||r.tot_a>0));
+    const allScores=allAttended.map(r=>r.total);
+    $('kpiStudents').textContent=allStudentNames.length;
+    $('kpiJuts').textContent=allTests.length;
+    $('kpiBatchAvg').textContent=allScores.length?Math.round(avg(allScores)):'—';
+    $('kpiTopScore').textContent=allScores.length?Math.max(...allScores):'—';
+    $('heroSub').textContent=allStudentNames.length+' STUDENTS · '+allTests.length+' JUTs · PHYSICS · CHEMISTRY · MATHEMATICS';
+    $('footerEl').textContent='JUT MASTER OVERVIEW · '+allStudentNames.length+' STUDENTS · '+allTests.length+' JUTs';
+    document.title='JUT · Batch Overview';
+
+    $('loadingScreen').style.display='none';
+    $('mainWrap').style.display='block';
+
+    buildAll('ALL');
+    initReveal();
+
+  }catch(e){
+    $('loadingScreen').innerHTML=`<div style="color:var(--accent3);font-size:0.75rem;letter-spacing:0.2em;text-align:center;">Error loading data:<br>${e.message}</div>`;
+  }
+}
+
+function setActiveJut(jut){
+  activeJut=jut;
+  document.querySelectorAll('.jut-tab').forEach(b=>{b.classList.toggle('active',b.dataset.jut===jut);});
+  buildAll(jut);
+}
+
+/* ── MAIN BUILD ── */
+function buildAll(jut){
+  const rows=(jut==='ALL')?allRows:allRows.filter(r=>r.test===jut);
+  const attended=rows.filter(r=>r.total>0||r.tot_a>0);
+
+  buildStatStrip(jut,attended);
+  buildPodium(jut);
+  buildLeaderboard(jut);
+  buildSubjectCards(attended);
+  buildCharts(jut,attended);
+  buildJutSummary();
+  buildConsistency();
+}
+
+/* ── STAT STRIP ── */
+function buildStatStrip(jut,attended){
+  const scores=attended.map(r=>r.total);
+  const batchAvg=scores.length?Math.round(avg(scores)):0;
+  const topScore=scores.length?Math.max(...scores):0;
+  const lowScore=scores.length?Math.min(...scores):0;
+  const above=scores.filter(s=>s>batchAvg).length;
+  const avgAcc=attended.length?Math.round(avg(attended.map(r=>pct(r.tot_c,r.tot_a)))):0;
+  const phyAvg=attended.length?Math.round(avg(attended.map(r=>r.phy_m))):0;
+  const chemAvg=attended.length?Math.round(avg(attended.map(r=>r.chem_m))):0;
+  const mathAvg=attended.length?Math.round(avg(attended.map(r=>r.math_m))):0;
+  $('statStrip').innerHTML=[
+    {v:attended.length,l:'Entries'},
+    {v:batchAvg,l:'Batch Avg'},
+    {v:topScore,l:'Top Score'},
+    {v:lowScore,l:'Lowest'},
+    {v:above,l:'Above Avg'},
+    {v:avgAcc+'%',l:'Avg Accuracy'},
+    {v:phyAvg,l:'Avg Physics'},
+    {v:chemAvg,l:'Avg Chem'},
+    {v:mathAvg,l:'Avg Maths'},
+  ].map(({v,l})=>`<div class="ss-item"><div class="ss-val">${v}</div><div class="ss-label">${l}</div></div>`).join('');
+}
+
+/* ── PODIUM ── */
+function buildPodium(jut){
+  // Rank students: if specific JUT, by score in that JUT; if ALL, by avg score
+  let ranked;
+  if(jut==='ALL'){
+    ranked=Object.values(studentMap)
+      .filter(s=>s.stats.attended>=1)
+      .sort((a,b)=>b.stats.avgScore-a.stats.avgScore)
+      .slice(0,3);
+  } else {
+    const jutRows=testMap[jut]||[];
+    const byStudent={};
+    jutRows.filter(r=>r.total>0||r.tot_a>0).forEach(r=>{byStudent[r.name]=r;});
+    ranked=Object.values(byStudent)
+      .sort((a,b)=>b.total-a.total)
+      .slice(0,3)
+      .map(r=>({name:r.name,score:r.total,label:jut==='ALL'?r.total.toFixed(0):r.total}));
+  }
+  const pod=$('podium');pod.innerHTML='';
+  if(!ranked.length){pod.innerHTML='<div style="color:var(--muted);font-size:0.7rem;letter-spacing:0.2em;text-align:center;padding:2rem;">No data</div>';return;}
+  const order=[ranked[1],ranked[0],ranked[2]].filter(Boolean);
+  const classes=['pod-2','pod-1','pod-3'];
+  const heights=[115,150,88];
+  const colors=['var(--silver)','var(--gold)','var(--bronze)'];
+  const bgs=['linear-gradient(135deg,#94a3b8,#64748b)','linear-gradient(135deg,#fbbf24,#f59e0b)','linear-gradient(135deg,#cd7f32,#a0632a)'];
+  const medals=['\u{1F948}','\u{1F947}','\u{1F949}'];
+  order.forEach((s,i)=>{
+    const score=jut==='ALL'?Math.round(s.stats.avgScore):(s.score||s.total||0);
+    const subLabel=jut==='ALL'?`avg · best: ${s.stats.bestScore}`:`score in ${shortLabel(jut)}`;
+    const card=document.createElement('a');
+    card.className=`pod-card ${classes[i]}`;
+    card.href=`/student?student=${encodeURIComponent(s.name)}`;
+    card.innerHTML=`
+      <div class="pod-name">${s.name}</div>
+      <div class="pod-score" style="color:${colors[i]}">${score}</div>
+      <div class="pod-sub">${subLabel}</div>
+      <div class="pod-block" style="height:${heights[i]}px;background:${bgs[i]}">${medals[i]}</div>`;
+    pod.appendChild(card);
+  });
+}
+
+/* ── LEADERBOARD ── */
+let lbData=[], lbSort='avg', lbDir=-1, lbFilter='';
+
+function buildLeaderboard(jut){
+  // Build per-student data for the selected JUT context
+  if(jut==='ALL'){
+    lbData=Object.values(studentMap).map(s=>({
+      name:s.name,
+      avg:s.stats.avgScore,
+      best:s.stats.bestScore,
+      phy:s.stats.avgPhy,
+      chem:s.stats.avgChem,
+      math:s.stats.avgMath,
+      acc:s.stats.avgAcc,
+      cons:s.stats.consistency,
+      trend:s.stats.trend,
+      att:s.stats.attended,
+      total:s.stats.total,
+    }));
+  } else {
+    const jutRows=testMap[jut]||[];
+    const byStudent={};
+    jutRows.filter(r=>r.total>0||r.tot_a>0).forEach(r=>{
+      byStudent[r.name]={
+        name:r.name,avg:r.total,best:r.total,
+        phy:r.phy_m,chem:r.chem_m,math:r.math_m,
+        acc:pct(r.tot_c,r.tot_a),cons:null,trend:0,att:1,total:1,
+      };
+    });
+    lbData=Object.values(byStudent);
+  }
+  renderLeaderboard();
+}
+
+function renderLeaderboard(){
+  let data=[...lbData];
+  if(lbFilter)data=data.filter(s=>s.name.includes(lbFilter.toUpperCase()));
+  const sortKey={avg:'avg',best:'best',phy:'phy',chem:'chem',math:'math',acc:'acc',cons:'cons',att:'att'};
+  data.sort((a,b)=>{
+    const av=a[sortKey[lbSort]]??-1,bv=b[sortKey[lbSort]]??-1;
+    return lbDir*(av-bv);
+  });
+  // assign display ranks by avg (or score)
+  const ranked=[...lbData].sort((a,b)=>b.avg-a.avg);
+  const rankMap={};ranked.forEach((s,i)=>{rankMap[s.name]=i+1;});
+  const maxAvg=ranked.length?ranked[0].avg:300;
+
+  const tbody=$('lbBody');tbody.innerHTML='';
+  data.forEach((s)=>{
+    const r=rankMap[s.name]||'—';
+    const rc=r===1?'r1':r===2?'r2':r===3?'r3':'rn';
+    const sc=s.avg>=maxAvg*0.8?'var(--accent2)':s.avg>=maxAvg*0.6?'var(--accent)':s.avg>=maxAvg*0.4?'var(--math)':'var(--accent3)';
+    const tierClass=r===1?'top1':r<=3?'top3':r<=10?'top10':'';
+    const trendStr=s.trend>1?`<span class="trend-up">↑ ${s.trend.toFixed(1)}/test</span>`:s.trend<-1?`<span class="trend-dn">↓ ${Math.abs(s.trend).toFixed(1)}/test</span>`:`<span class="trend-fl">→ stable</span>`;
+    const consStr=s.cons!==null?s.cons+'%':'—';
+    const consColor=s.cons===null?'var(--muted)':s.cons>=70?'var(--green)':s.cons>=50?'var(--accent)':'var(--accent3)';
+    const phyW=(s.phy/100*80).toFixed(0),chemW=(s.chem/100*80).toFixed(0),mathW=(s.math/100*80).toFixed(0);
+    const tr=document.createElement('tr');tr.className=`lbr ${tierClass}`;
+    tr.innerHTML=`
+      <td><span class="rnk ${rc}">${r}</span></td>
+      <td><a class="name-link" href="/student?student=${encodeURIComponent(s.name)}">${s.name}</a></td>
+      <td><span class="score-chip" style="background:${sc}22;color:${sc}">${Math.round(s.avg)}</span></td>
+      <td style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:1.2rem;">${s.best}</td>
+      <td>
+        <div class="mini-bars">
+          <div class="mini-bar" style="width:${phyW}px;background:var(--phy)"></div>
+          <div class="mini-bar" style="width:${chemW}px;background:var(--chem)"></div>
+          <div class="mini-bar" style="width:${mathW}px;background:var(--math)"></div>
+        </div>
+        <div style="font-size:0.57rem;color:var(--muted);margin-top:2px;">P:${Math.round(s.phy)} · C:${Math.round(s.chem)} · M:${Math.round(s.math)}</div>
+      </td>
+      <td style="color:${s.acc>=60?'var(--accent2)':s.acc>=40?'var(--accent)':'var(--accent3)'}">${Math.round(s.acc)}%</td>
+      <td style="color:${consColor}">${consStr}</td>
+      <td>${trendStr}</td>
+      <td style="color:var(--muted)">${s.att}${s.total>s.att?'/<span style="color:var(--muted)">'+s.total+'</span>':''}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// sort buttons
+document.querySelectorAll('.sort-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const sv=btn.dataset.sort;
+    if(sv===lbSort)lbDir*=-1;else{lbSort=sv;lbDir=-1;}
+    document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderLeaderboard();
+  });
+});
+$('lbSearch').addEventListener('input',e=>{
+  lbFilter=e.target.value.trim().toUpperCase();
+  renderLeaderboard();
+});
+
+/* ── SUBJECT CARDS ── */
+function buildSubjectCards(attended){
+  function card(id,label,key,max){
+    const vals=attended.map(r=>r[key]);
+    if(!vals.length){$(`s${id}`).innerHTML=`<div class="subj-name">${label}</div><div style="color:var(--muted);font-size:0.65rem;">No data</div>`;return;}
+    const a=avg(vals),mx=Math.max(...vals),mn=Math.min(...vals);
+    const above=vals.filter(v=>v>a).length;
+    const pctAbove=Math.round(above/vals.length*100);
+    $(`s${id}`).innerHTML=`<div class="subj-name">${label}</div>
+      ${[
+        ['Batch Average',rnd(a)],
+        ['Highest',mx],
+        ['Lowest',mn],
+        ['Above Avg',`${above} (${pctAbove}%)`],
+        ['Std Dev',rnd(Math.sqrt(avg(vals.map(v=>(v-a)**2))))],
+        ['Median',vals.sort((a,b)=>a-b)[Math.floor(vals.length/2)]],
+      ].map(([k,v])=>`<div class="subj-row"><span class="subj-key">${k}</span><span class="subj-val">${v}</span></div>`).join('')}`;
+  }
+  card('Physics','Physics','phy_m',100);
+  card('Chem','Chemistry','chem_m',100);
+  card('Math','Maths','math_m',100);
+}
+
+/* ── CHARTS ── */
+function buildCharts(jut,attended){
+  buildBatchTrend();
+  buildDistBars(attended);
+  buildRadar(attended);
+  buildTopBar(jut);
+  buildAccDist(attended);
+}
+
+function buildBatchTrend(){
+  destroyChart('batchTrend');
+  const labels=allTests.map(shortLabel);
+  const data=allTests.map(t=>{
+    const rows=(testMap[t]||[]).filter(r=>r.total>0||r.tot_a>0);
+    return rows.length?Math.round(avg(rows.map(r=>r.total))):null;
+  });
+  const phyD=allTests.map(t=>{const rows=(testMap[t]||[]).filter(r=>r.total>0||r.tot_a>0);return rows.length?Math.round(avg(rows.map(r=>r.phy_m))):null;});
+  const chemD=allTests.map(t=>{const rows=(testMap[t]||[]).filter(r=>r.total>0||r.tot_a>0);return rows.length?Math.round(avg(rows.map(r=>r.chem_m))):null;});
+  const mathD=allTests.map(t=>{const rows=(testMap[t]||[]).filter(r=>r.total>0||r.tot_a>0);return rows.length?Math.round(avg(rows.map(r=>r.math_m))):null;});
+  charts.batchTrend=new Chart($('chartBatchTrend'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Total Avg',data,borderColor:'#e8c547',backgroundColor:'rgba(232,197,71,0.07)',borderWidth:2.5,pointRadius:5,tension:0.35,spanGaps:true},
+      {label:'Physics Avg',data:phyD,borderColor:'#4fc3f7',borderWidth:1.5,pointRadius:3,tension:0.35,spanGaps:true,borderDash:[4,3]},
+      {label:'Chem Avg',data:chemD,borderColor:'#a78bfa',borderWidth:1.5,pointRadius:3,tension:0.35,spanGaps:true,borderDash:[4,3]},
+      {label:'Maths Avg',data:mathD,borderColor:'#fb923c',borderWidth:1.5,pointRadius:3,tension:0.35,spanGaps:true,borderDash:[4,3]},
+    ]},
+    options:{maintainAspectRatio:false,scales:{x:{ticks:{color:'#6b6b8a',maxRotation:0,font:{size:9}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#6b6b8a'},grid:{color:'#1e1e2e'},min:0}},plugins:{legend:{labels:{color:'#6b6b8a',font:{size:9}}}}}
+  });
+}
+
+function buildDistBars(attended){
+  const scores=attended.map(r=>r.total);
+  const wrap=$('distWrap');wrap.innerHTML='';
+  if(!scores.length){wrap.innerHTML='<div style="color:var(--muted);font-size:0.65rem;">No data</div>';return;}
+  const mx=Math.max(...scores);
+  const step=Math.ceil(mx/6)||50;
+  const ranges=[];
+  for(let i=5;i>=0;i--)ranges.push([i*step,(i+1)*step-1]);
+  const colors=['#47e8c5','#e8c547','#fb923c','#a78bfa','#e847a0','#4fc3f7'];
+  const counts=ranges.map(([lo,hi])=>scores.filter(s=>s>=lo&&s<=hi).length);
+  const maxC=Math.max(...counts,1);
+  ranges.forEach(([lo,hi],i)=>{
+    const p=(counts[i]/maxC*100).toFixed(1);
+    const row=document.createElement('div');row.className='dist-row';
+    row.innerHTML=`<div class="dist-lbl">${lo}–${hi}</div>
+      <div class="dist-outer"><div class="dist-inner" style="background:${colors[i]};width:0%" data-pct="${p}">${counts[i]>0?counts[i]+' students':''}</div></div>
+      <div class="dist-cnt">${counts[i]}</div>`;
+    wrap.appendChild(row);
+  });
+  setTimeout(()=>{document.querySelectorAll('.dist-inner').forEach(b=>{b.style.width=b.dataset.pct+'%';});},300);
+}
+
+function buildRadar(attended){
+  destroyChart('radar');
+  const phyA=attended.length?avg(attended.map(r=>r.phy_m)):0;
+  const chemA=attended.length?avg(attended.map(r=>r.chem_m)):0;
+  const mathA=attended.length?avg(attended.map(r=>r.math_m)):0;
+  charts.radar=new Chart($('chartRadar'),{
+    type:'radar',
+    data:{labels:['Physics','Chemistry','Maths'],datasets:[{label:'Batch Avg',data:[rnd(phyA),rnd(chemA),rnd(mathA)],borderColor:'#e8c547',backgroundColor:'rgba(232,197,71,0.1)',pointBackgroundColor:['#4fc3f7','#a78bfa','#fb923c'],pointRadius:6,borderWidth:2}]},
+    options:{maintainAspectRatio:false,scales:{r:{grid:{color:'#1e1e2e'},ticks:{display:false},pointLabels:{color:'#e8e8f0',font:{size:11}}}},plugins:{legend:{display:false}}}
+  });
+}
+
+function buildTopBar(jut){
+  destroyChart('topBar');
+  let top;
+  if(jut==='ALL'){
+    top=Object.values(studentMap)
+      .filter(s=>s.stats.attended>=1)
+      .sort((a,b)=>b.stats.avgScore-a.stats.avgScore)
+      .slice(0,15);
+  } else {
+    const jutRows=(testMap[jut]||[]).filter(r=>r.total>0||r.tot_a>0).sort((a,b)=>b.total-a.total).slice(0,15);
+    top=jutRows.map(r=>({name:r.name,stats:{avgScore:r.total,avgPhy:r.phy_m,avgChem:r.chem_m,avgMath:r.math_m}}));
+  }
+  const labels=top.map(s=>s.name.split(' ')[0]);
+  const avgs=top.map(s=>Math.round(s.stats.avgScore));
+  charts.topBar=new Chart($('chartTopBar'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Avg Score',data:avgs,backgroundColor:avgs.map((_,i)=>i===0?'#fbbf24aa':i<3?'#e8c547aa':'#47e8c5aa'),borderRadius:3},
+    ]},
+    options:{maintainAspectRatio:false,indexAxis:'y',scales:{x:{ticks:{color:'#6b6b8a',font:{size:9}},grid:{color:'#1e1e2e'},min:0},y:{ticks:{color:'#6b6b8a',font:{size:9}},grid:{color:'transparent'}}},plugins:{legend:{display:false}}}
+  });
+}
+
+function buildAccDist(attended){
+  destroyChart('accDist');
+  const accs=attended.map(r=>pct(r.tot_c,r.tot_a)).filter(a=>a>0);
+  const buckets=[0,10,20,30,40,50,60,70,80,90,100];
+  const counts=buckets.slice(0,-1).map((lo,i)=>accs.filter(a=>a>=lo&&a<buckets[i+1]).length);
+  const labels=buckets.slice(0,-1).map((lo,i)=>`${lo}-${buckets[i+1]}%`);
+  charts.accDist=new Chart($('chartAccDist'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Students',data:counts,backgroundColor:counts.map((_,i)=>i>=6?'#47e8c5aa':i>=4?'#e8c547aa':i>=2?'#fb923caa':'#e847a0aa'),borderRadius:2}]},
+    options:{maintainAspectRatio:false,scales:{x:{ticks:{color:'#6b6b8a',font:{size:9},maxRotation:30},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#6b6b8a'},grid:{color:'#1e1e2e'},min:0}},plugins:{legend:{display:false}}}
+  });
+}
+
+/* ── JUT SUMMARY TABLE ── */
+function buildJutSummary(){
+  const tbody=$('jutSummaryBody');tbody.innerHTML='';
+  allTests.forEach(t=>{
+    const rows=(testMap[t]||[]).filter(r=>r.total>0||r.tot_a>0);
+    if(!rows.length){
+      const tr=document.createElement('tr');tr.className='jtr';
+      tr.innerHTML=`<td style="font-family:'DM Serif Display',serif">${shortLabel(t)}</td><td colspan="8" style="color:var(--muted)">No data</td>`;
+      tbody.appendChild(tr);return;
+    }
+    const scores=rows.map(r=>r.total);
+    const bAvg=Math.round(avg(scores)),bMax=Math.max(...scores),bMin=Math.min(...scores);
+    const phyA=rnd(avg(rows.map(r=>r.phy_m)));
+    const chemA=rnd(avg(rows.map(r=>r.chem_m)));
+    const mathA=rnd(avg(rows.map(r=>r.math_m)));
+    const accA=Math.round(avg(rows.map(r=>pct(r.tot_c,r.tot_a))));
+    const tr=document.createElement('tr');tr.className='jtr';
+    tr.style.cursor='pointer';
+    tr.addEventListener('click',()=>setActiveJut(t));
+    tr.innerHTML=`
+      <td style="font-family:'DM Serif Display',serif;color:var(--accent)">${shortLabel(t)}</td>
+      <td style="color:var(--muted)">${rows.length}</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--accent)">${bAvg}</td>
+      <td style="color:var(--green)">${bMax}</td>
+      <td style="color:var(--red)">${bMin}</td>
+      <td style="color:var(--phy)">${phyA}</td>
+      <td style="color:var(--chem)">${chemA}</td>
+      <td style="color:var(--math)">${mathA}</td>
+      <td style="color:${accA>=60?'var(--accent2)':accA>=40?'var(--accent)':'var(--accent3)'}">${accA}%</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ── CONSISTENCY ── */
+function buildConsistency(){
+  const eligible=Object.values(studentMap)
+    .filter(s=>s.stats.consistency!==null&&s.stats.attended>=3)
+    .sort((a,b)=>b.stats.consistency-a.stats.consistency)
+    .slice(0,24);
+  const grid=$('consGrid');grid.innerHTML='';
+  const colors=['#fbbf24','#94a3b8','#cd7f32'];
+  eligible.forEach((s,i)=>{
+    const c=s.stats.consistency;
+    const color=c>=70?'var(--green)':c>=50?'var(--accent)':'var(--accent3)';
+    const rankColor=i<3?colors[i]:'var(--muted)';
+    const card=document.createElement('a');
+    card.className='cons-card';
+    card.href=`/student?student=${encodeURIComponent(s.name)}`;
+    card.innerHTML=`
+      <div class="cons-rank" style="color:${rankColor}">${i+1}</div>
+      <div class="cons-info">
+        <div class="cons-name">${s.name}</div>
+        <div style="font-size:0.55rem;color:var(--muted);letter-spacing:0.1em;">${s.stats.attended} JUTs · avg ${Math.round(s.stats.avgScore)}</div>
+        <div class="cons-bar-outer"><div class="cons-bar-inner" style="background:${color};width:0%" data-pct="${c}"></div></div>
+      </div>
+      <div class="cons-score" style="color:${color}">${c}%</div>`;
+    grid.appendChild(card);
+  });
+  setTimeout(()=>{document.querySelectorAll('.cons-bar-inner').forEach(b=>{b.style.width=b.dataset.pct+'%';});},400);
+}
+
+/* ── REVEAL ── */
+function initReveal(){
+  const io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis');});},{threshold:0.05});
+  document.querySelectorAll('.reveal').forEach(el=>{el.classList.remove('vis');io.observe(el);});
+}
+
+loadData();
+</script>
+</body>
+</html>
+"""
+
+
+@app.get("/overview")
+def overview_page():
+    return app.response_class(OVERVIEW_HTML, mimetype='text/html')
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  HOME PAGE
 # ══════════════════════════════════════════════════════════════════════════════
