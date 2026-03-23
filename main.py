@@ -99,7 +99,8 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 .hero-rank-bg{position:absolute;right:3rem;top:50%;transform:translateY(-50%);font-family:'Bebas Neue',sans-serif;font-size:clamp(10rem,22vw,20rem);line-height:1;-webkit-text-stroke:1px rgba(232,197,71,0.08);color:transparent;user-select:none;pointer-events:none;opacity:0;animation:fadeIn 1.2s 0.5s forwards;}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .hero-content{position:relative;z-index:5;}
-.hero-eyebrow{font-size:0.62rem;letter-spacing:0.2em;color:var(--accent2);text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:slideUp 0.6s 0.2s forwards;display:flex;align-items:center;gap:0.8rem;}
+.hero-eyebrow{font-size:0.62rem;letter-spacing:0.4em;color:var(--accent2);text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:slideUp 0.6s 0.2s forwards;display:flex;align-items:center;gap:0.8rem;}
+.hero-eyebrow::before{content:'';display:block;width:36px;height:1px;background:var(--accent2);}
 .hero-name{font-family:'Bebas Neue',sans-serif;font-size:clamp(3.5rem,11vw,8.5rem);line-height:0.88;letter-spacing:0.02em;opacity:0;animation:slideUp 0.8s 0.35s forwards;}
 .hero-name .outline{-webkit-text-stroke:1.5px var(--accent);color:transparent;display:block;}
 .hero-tagline{font-size:0.7rem;color:var(--muted);letter-spacing:0.18em;margin-top:1.2rem;opacity:0;animation:slideUp 0.7s 0.55s forwards;}
@@ -494,15 +495,19 @@ function destroyCharts(){Object.values(charts).forEach(c=>{try{c.destroy();}catc
 
 /* ── selector ── */
 let allRows=[], allStudents=[];
+// Normalize name: trim, collapse internal whitespace, uppercase
+// "Ayush  R  Mendon" and "AYUSH R MENDON" both become "AYUSH R MENDON"
+function normName(n){ return n.trim().replace(/\s+/g,' ').toUpperCase(); }
 
 async function loadSelector(){
   try{
     const res=await fetch('/api/master-data');
     if(!res.ok)throw new Error('HTTP '+res.status);
     const raw=await res.json();
-    allRows=raw.map(mapRow);
+    // Normalize all names on ingest so duplicates collapse
+    allRows=raw.map(r=>{const m=mapRow(r);m.name=normName(m.name)||m.name;return m;});
     const ns={};
-    allRows.forEach(r=>{if(!ns[r.name.toLowerCase()])ns[r.name.toLowerCase()]=r.name;});
+    allRows.forEach(r=>{const k=normName(r.name);if(!ns[k])ns[k]=r.name;});
     allStudents=Object.values(ns).sort();
     renderSelList(allStudents);
   }catch(e){
@@ -527,7 +532,7 @@ function renderSelList(students){
 
 $('selSearch').addEventListener('input',e=>{
   const q=e.target.value.toLowerCase();
-  renderSelList(allStudents.filter(n=>n.toLowerCase().includes(q)));
+  renderSelList(allStudents.filter(n=>normName(n).includes(q.toUpperCase())));
 });
 
 async function loadProfile(name){
@@ -539,7 +544,7 @@ async function loadProfile(name){
 
 /* ── PROFILE BUILDER ── */
 function buildProfile(studentName,masterRows){
-  const sRows=masterRows.filter(r=>r.name.toLowerCase()===studentName.toLowerCase());
+  const sRows=masterRows.filter(r=>normName(r.name)===normName(studentName));
   const testMap={};
   masterRows.forEach(r=>{if(!testMap[r.test])testMap[r.test]=[];testMap[r.test].push(r);});
   const allTests=Object.keys(testMap).sort();
@@ -896,7 +901,7 @@ function buildProfile(studentName,masterRows){
     const tr=document.createElement('tr');tr.className='rr';
     tr.innerHTML=`
       <td style="font-family:'DM Serif Display',serif;font-size:0.78rem;">${shortLabel(t.testName)}</td>
-      <td>${t.absent?`<span class="tl-badge b-abs">Absent</span>`:`<span class="tl-badge b-good">✓Present</span>`}</td>
+      <td>${t.absent?`<span class="tl-badge b-abs">Absent</span>`:`<span class="tl-badge b-good">✓ Present</span>`}</td>
       <td><span style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${sc}">${t.absent?'—':t.total}</span></td>
       <td>${rankBadge}${!t.absent&&t.rank?`<span style="font-size:0.58rem;color:var(--muted)"> / ${t.batchSize}</span>`:''}</td>
       <td style="color:var(--muted)">${t.batchAvg}</td>
@@ -920,7 +925,7 @@ function nullEntry(){return{total:0,rank:null,percentile:0,phy_a:0,chem_a:0,math
   const params=new URLSearchParams(window.location.search);
   const sp=params.get('student');
   if(sp){
-    const matched=allStudents.find(n=>n.toLowerCase()===sp.toLowerCase());
+    const matched=allStudents.find(n=>normName(n)===normName(sp));
     if(matched)await loadProfile(matched);
     else{$('selSearch').value=sp;$('selSearch').dispatchEvent(new Event('input'));}
   }
