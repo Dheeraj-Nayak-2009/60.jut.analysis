@@ -309,7 +309,7 @@ section{padding:4.5rem 0;}
       <div><div class="hero-metric-val" id="hmBest">—</div><div class="hero-metric-label">Best Score</div></div>
       <div><div class="hero-metric-val" id="hmAvg">—</div><div class="hero-metric-label">Avg Score</div></div>
       <div><div class="hero-metric-val" id="hmTests">—</div><div class="hero-metric-label">Tests Attended</div></div>
-      <div><div class="hero-metric-val" id="hmRank">—</div><div class="hero-metric-label">Avg Rank</div></div>
+      <div><div class="hero-metric-val" id="hmRank">—</div><div class="hero-metric-label">Overall Rank</div></div>
     </div>
   </div>
   <div class="ring-cluster" id="ringCluster"></div>
@@ -575,9 +575,23 @@ function buildProfile(studentName,masterRows){
   const bestRank=attended.filter(t=>t.rank).length?Math.min(...attended.filter(t=>t.rank).map(t=>t.rank)):'—';
   const overallAcc=attended.length?Math.round(avg(attended.map(t=>pct(t.tot_c,t.tot_a)))):0;
 
-  // AVERAGE RANK across all attended tests
-  const rankList=attended.filter(t=>t.rank).map(t=>t.rank);
-  const avgRank=rankList.length?Math.round(avg(rankList)):'—';
+  // ── TRUE OVERALL RANK: rank by avg score across all students (matches overview) ──
+  // Build every student's avg score from masterRows
+  const _studentAvgs = {};
+  masterRows.forEach(r => {
+    if(!_studentAvgs[normName(r.name)]) _studentAvgs[normName(r.name)] = {scores:[], name:r.name};
+    if(r.total > 0 || r.tot_a > 0) _studentAvgs[normName(r.name)].scores.push(r.total);
+  });
+  // Sort all students by their avg score descending
+  const _allAvgs = Object.values(_studentAvgs)
+    .filter(s => s.scores.length > 0)
+    .map(s => ({name: s.name, avgScore: avg(s.scores)}))
+    .sort((a, b) => b.avgScore - a.avgScore);
+  // Find this student's position (1-based)
+  const _myKey = normName(studentName);
+  const _myIdx = _allAvgs.findIndex(s => normName(s.name) === _myKey);
+  const avgRank = _myIdx >= 0 ? _myIdx + 1 : '—';
+  // Best rank: best position achieved in any single JUT
   const avgPct=attended.filter(t=>t.percentile!=null).length?Math.round(avg(attended.filter(t=>!t.absent).map(t=>t.percentile))):'—';
 
   /* ── HERO ── */
@@ -628,7 +642,7 @@ function buildProfile(studentName,masterRows){
   const pills=$('ppills');pills.innerHTML='';
   const pillData=[
     {cls:'ppill-y',t:`Best: ${bestScore}`},
-    {cls:'ppill-g',t:`Avg Rank: #${avgRank}`},
+    {cls:'ppill-g',t:`Overall Rank: #${avgRank}`},
     {cls:'ppill-t',t:`Avg Accuracy: ${overallAcc}%`},
     {cls:'ppill-p',t:`Avg Percentile: ${avgPct}%`},
     {cls:'ppill-b',t:`Attendance: ${Math.round(pct(attended.length,allTests.length))}%`},
@@ -648,7 +662,7 @@ function buildProfile(studentName,masterRows){
   const mathBest=attended.length?Math.max(...attended.map(t=>t.math_m)):0;
   $('statGrid').innerHTML=[
     {cls:'sc-y',lbl:'Best Total',val:bestScore,sub:`Avg: ${avgScore}`,tr:trend(attended.map(t=>t.total))},
-    {cls:'sc-r',lbl:'Avg Rank',val:'#'+avgRank,sub:`Best Rank: #${bestRank}`,tr:''},
+    {cls:'sc-r',lbl:'Overall Rank',val:'#'+avgRank,sub:`Ranked by avg score · best in a test: #${bestRank}`,tr:''},
     {cls:'sc-n',lbl:'Avg Percentile',val:avgPct+'%',sub:`Based on ${attended.length} tests`,tr:''},
     {cls:'sc-p',lbl:'Avg Physics',val:Math.round(phyA),sub:`Best: ${phyBest}`,tr:trend(attended.map(t=>t.phy_m))},
     {cls:'sc-c',lbl:'Avg Chemistry',val:Math.round(chemA),sub:`Best: ${chemBest}`,tr:trend(attended.map(t=>t.chem_m))},
