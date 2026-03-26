@@ -83,6 +83,32 @@ html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden;}
 body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.4;}
 
+
+/* SCROLLABLE CHART CONTAINER */
+.chart-scroll-outer{overflow-x:auto;overflow-y:hidden;}
+.chart-scroll-outer::-webkit-scrollbar{height:3px;}
+.chart-scroll-outer::-webkit-scrollbar-track{background:transparent;}
+.chart-scroll-outer::-webkit-scrollbar-thumb{background:rgba(232,197,71,0.2);border-radius:2px;}
+.chart-scroll-outer{scrollbar-width:thin;scrollbar-color:rgba(232,197,71,0.2) transparent;}
+.chart-scroll-inner{position:relative;height:280px;min-width:600px;}
+.chart-scroll-inner.tall{height:340px;}
+.chart-scroll-inner.short{height:220px;}
+/* min-width scales with number of data points */
+.chart-scroll-inner canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
+
+
+/* SCROLLABLE CHART CONTAINER */
+.chart-scroll-outer{overflow-x:auto;overflow-y:hidden;}
+.chart-scroll-outer::-webkit-scrollbar{height:3px;}
+.chart-scroll-outer::-webkit-scrollbar-track{background:transparent;}
+.chart-scroll-outer::-webkit-scrollbar-thumb{background:rgba(232,197,71,0.2);border-radius:2px;}
+.chart-scroll-outer{scrollbar-width:thin;scrollbar-color:rgba(232,197,71,0.2) transparent;}
+.chart-scroll-inner{position:relative;height:280px;min-width:600px;}
+.chart-scroll-inner.tall{height:340px;}
+.chart-scroll-inner.short{height:220px;}
+/* min-width scales with number of data points */
+.chart-scroll-inner canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
+
 /* NAV */
 .topnav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(10,10,15,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0.9rem 2rem;}
 .topnav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.08em;color:var(--text);text-decoration:none;}
@@ -369,7 +395,7 @@ section{padding:4.5rem 0;}
   <div class="charts-grid">
     <div class="chart-card full-w reveal">
       <div class="chart-title">Score Across All JUTs vs Batch Average</div>
-      <div class="chart-wrap"><canvas id="progressChart"></canvas></div>
+      <div class="chart-scroll-outer"><div class="chart-scroll-inner short" id="progressWrap"><canvas id="progressChart"></canvas></div></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Subject Breakdown — Average Marks</div>
@@ -377,19 +403,19 @@ section{padding:4.5rem 0;}
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Correct · Wrong · Unattempted per JUT</div>
-      <div class="chart-wrap"><canvas id="stackedChart"></canvas></div>
+      <div class="chart-scroll-outer"><div class="chart-scroll-inner" id="stackedWrap"><canvas id="stackedChart"></canvas></div></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Accuracy % per JUT</div>
-      <div class="chart-wrap"><canvas id="accChart"></canvas></div>
+      <div class="chart-scroll-outer"><div class="chart-scroll-inner" id="accWrap"><canvas id="accChart"></canvas></div></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Subject Marks per JUT</div>
-      <div class="chart-wrap"><canvas id="subjChart"></canvas></div>
+      <div class="chart-scroll-outer"><div class="chart-scroll-inner" id="subjWrap"><canvas id="subjChart"></canvas></div></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Your Rank per JUT (lower = better)</div>
-      <div class="chart-wrap"><canvas id="rankChart"></canvas></div>
+      <div class="chart-scroll-outer"><div class="chart-scroll-inner" id="rankWrap"><canvas id="rankChart"></canvas></div></div>
     </div>
   </div>
 </section>
@@ -800,6 +826,13 @@ function buildProfile(studentName,masterRows){
   const batchLine=perTest.map(t=>t.batchAvg);
 
   // Score progress
+  // Set scroll widths proportional to number of JUTs
+  const _jutCount=shortLabels.length;
+  const _minW=Math.max(600, _jutCount*70);
+  ['progressWrap','stackedWrap','accWrap','subjWrap','rankWrap'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.minWidth=_minW+'px';
+  });
   charts.prog=new Chart($('progressChart'),{
     type:'line',
     data:{labels:shortLabels,datasets:[
@@ -977,6 +1010,32 @@ html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden;}
 body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.4;}
 
+
+/* SCROLLABLE CHART CONTAINER */
+.chart-scroll-outer{overflow-x:auto;overflow-y:hidden;}
+.chart-scroll-outer::-webkit-scrollbar{height:3px;}
+.chart-scroll-outer::-webkit-scrollbar-track{background:transparent;}
+.chart-scroll-outer::-webkit-scrollbar-thumb{background:rgba(232,197,71,0.2);border-radius:2px;}
+.chart-scroll-outer{scrollbar-width:thin;scrollbar-color:rgba(232,197,71,0.2) transparent;}
+.chart-scroll-inner{position:relative;height:280px;min-width:600px;}
+.chart-scroll-inner.tall{height:340px;}
+.chart-scroll-inner.short{height:220px;}
+/* min-width scales with number of data points */
+.chart-scroll-inner canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
+
+
+/* SCROLLABLE CHART CONTAINER */
+.chart-scroll-outer{overflow-x:auto;overflow-y:hidden;}
+.chart-scroll-outer::-webkit-scrollbar{height:3px;}
+.chart-scroll-outer::-webkit-scrollbar-track{background:transparent;}
+.chart-scroll-outer::-webkit-scrollbar-thumb{background:rgba(232,197,71,0.2);border-radius:2px;}
+.chart-scroll-outer{scrollbar-width:thin;scrollbar-color:rgba(232,197,71,0.2) transparent;}
+.chart-scroll-inner{position:relative;height:280px;min-width:600px;}
+.chart-scroll-inner.tall{height:340px;}
+.chart-scroll-inner.short{height:220px;}
+/* min-width scales with number of data points */
+.chart-scroll-inner canvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
+
 /* NAV */
 .topnav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(10,10,15,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0.9rem 2rem;gap:1rem;}
 .topnav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.08em;color:var(--text);text-decoration:none;flex-shrink:0;}
@@ -1126,6 +1185,14 @@ section{padding:4rem 0;}
 .jut-trend-table tr.jtr:hover{background:var(--surface2);}
 .jut-trend-table td{padding:0.6rem 0.7rem;font-size:0.68rem;}
 
+
+/* INSTITUTION CHIP */
+.inst-chip{display:inline-block;font-size:0.5rem;letter-spacing:0.15em;padding:0.18rem 0.5rem;border-radius:2px;font-weight:600;text-transform:uppercase;flex-shrink:0;}
+.inst-kjs{background:rgba(79,195,247,0.15);color:#4fc3f7;}
+.inst-mjs{background:rgba(167,139,250,0.15);color:#a78bfa;}
+.inst-ujs{background:rgba(251,146,60,0.15);color:#fb923c;}
+.inst-unk{background:rgba(107,107,138,0.1);color:var(--muted);}
+
 /* LOADING */
 .loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:1rem;}
 .loading-dots{display:flex;gap:6px;}
@@ -1213,7 +1280,7 @@ section{padding:4rem 0;}
   <div class="reveal" style="overflow-x:auto;">
     <table class="lb-table">
       <thead><tr>
-        <th>#</th><th>Student</th><th>Avg Score</th><th>Best</th>
+        <th>#</th><th>Student</th><th>Inst</th><th>Avg Score</th><th>Best</th>
         <th>Subjects (avg P·C·M)</th><th>Avg Acc</th><th>Consistency</th><th>Trend</th><th>Attended</th>
       </tr></thead>
       <tbody id="lbBody"></tbody>
@@ -1243,7 +1310,7 @@ section{padding:4rem 0;}
   <div class="charts-2">
     <div class="chart-card full reveal">
       <div class="chart-title">Batch Average Score per JUT</div>
-      <div class="chart-wrap short"><canvas id="chartBatchTrend"></canvas></div>
+      <div class="chart-scroll-outer"><div class="chart-scroll-inner short" id="batchTrendWrap"><canvas id="chartBatchTrend"></canvas></div></div>
     </div>
     <div class="chart-card reveal">
       <div class="chart-title">Score Distribution (selected JUT / all)</div>
@@ -1318,12 +1385,22 @@ function shortLabel(s){
   return s.length>12?s.slice(0,12)+'…':s;
 }
 
+function getInstitution(fileVal){
+  if(!fileVal) return '';
+  const f=fileVal.trim().toUpperCase();
+  if(f.startsWith('K')) return 'KJS';
+  if(f.startsWith('U')) return 'UJS';
+  if(f.startsWith('M')) return 'MJS';
+  return '';
+}
 function mapRow(r){
   const g=(...ks)=>{for(const k of ks){if(r[k]!==undefined&&r[k]!=='')return r[k];}return'0';};
   const gs=(...ks)=>{for(const k of ks){if(r[k]!==undefined&&r[k]!=='')return r[k];}return'';};
+  const fileVal=gs('file','filename');
   return{
     name:normName(gs('name')||'Unknown'),
-    test:gs('test','test_name','filename','jut','jut_name')||'Unknown',
+    test:gs('test','test_name','jut','jut_name')||'Unknown',
+    inst:getInstitution(fileVal),
     total:n(g('total_marks','total_score','total')),
     tot_a:n(g('total_attempt')),
     tot_c:n(g('total_correct')),
@@ -1390,13 +1467,18 @@ async function loadData(){
     // group by student
     allRows.forEach(r=>{
       const k=r.name;
-      if(!studentMap[k])studentMap[k]={name:r.name,rows:[]};
+      if(!studentMap[k])studentMap[k]={name:r.name,rows:[],inst:r.inst||''};
       studentMap[k].rows.push(r);
+      // keep inst if not already set
+      if(!studentMap[k].inst && r.inst) studentMap[k].inst=r.inst;
     });
     // compute stats for each student
     Object.values(studentMap).forEach(s=>{s.stats=buildStudentStats(s.rows);});
     allStudentNames=Object.keys(studentMap).sort();
 
+    // wire the static All JUTs button
+    const allBtn=document.querySelector('.jut-tab[data-jut="ALL"]');
+    if(allBtn) allBtn.addEventListener('click',()=>setActiveJut('ALL'));
     // populate JUT tabs
     const bar=$('jutBar');
     allTests.forEach(t=>{
@@ -1461,7 +1543,7 @@ function buildStatStrip(jut,attended){
   const chemAvg=attended.length?Math.round(avg(attended.map(r=>r.chem_m))):0;
   const mathAvg=attended.length?Math.round(avg(attended.map(r=>r.math_m))):0;
   $('statStrip').innerHTML=[
-    {v:attended.length,l:'Entries'},
+    {v:new Set(attended.map(r=>r.name)).size,l:'Students'},
     {v:batchAvg,l:'Batch Avg'},
     {v:topScore,l:'Top Score'},
     {v:lowScore,l:'Lowest'},
@@ -1522,6 +1604,7 @@ function buildLeaderboard(jut){
   if(jut==='ALL'){
     lbData=Object.values(studentMap).map(s=>({
       name:s.name,
+      inst:s.inst||'',
       avg:s.stats.avgScore,
       best:s.stats.bestScore,
       phy:s.stats.avgPhy,
@@ -1538,7 +1621,7 @@ function buildLeaderboard(jut){
     const byStudent={};
     jutRows.filter(r=>r.total>0||r.tot_a>0).forEach(r=>{
       byStudent[r.name]={
-        name:r.name,avg:r.total,best:r.total,
+        name:r.name,inst:r.inst||studentMap[r.name]?.inst||'',avg:r.total,best:r.total,
         phy:r.phy_m,chem:r.chem_m,math:r.math_m,
         acc:pct(r.tot_c,r.tot_a),cons:null,trend:0,att:1,total:1,
       };
@@ -1571,10 +1654,13 @@ function renderLeaderboard(){
     const consStr=s.cons!==null?s.cons+'%':'—';
     const consColor=s.cons===null?'var(--muted)':s.cons>=70?'var(--green)':s.cons>=50?'var(--accent)':'var(--accent3)';
     const phyW=(s.phy/100*80).toFixed(0),chemW=(s.chem/100*80).toFixed(0),mathW=(s.math/100*80).toFixed(0);
+    const instKey=(s.inst||'').toLowerCase();
+    const instCls=instKey==='kjs'?'inst-kjs':instKey==='mjs'?'inst-mjs':instKey==='ujs'?'inst-ujs':'inst-unk';
     const tr=document.createElement('tr');tr.className=`lbr ${tierClass}`;
     tr.innerHTML=`
       <td><span class="rnk ${rc}">${r}</span></td>
       <td><a class="name-link" href="/student?student=${encodeURIComponent(s.name)}">${s.name}</a></td>
+      <td>${s.inst?`<span class="inst-chip ${instCls}">${s.inst}</span>`:''}</td>
       <td><span class="score-chip" style="background:${sc}22;color:${sc}">${Math.round(s.avg)}</span></td>
       <td style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:1.2rem;">${s.best}</td>
       <td>
@@ -1643,6 +1729,9 @@ function buildCharts(jut,attended){
 function buildBatchTrend(){
   destroyChart('batchTrend');
   const labels=allTests.map(shortLabel);
+  const _minW=Math.max(600,allTests.length*80);
+  const wrap=document.getElementById('batchTrendWrap');
+  if(wrap) wrap.style.minWidth=_minW+'px';
   const data=allTests.map(t=>{
     const rows=(testMap[t]||[]).filter(r=>r.total>0||r.tot_a>0);
     return rows.length?Math.round(avg(rows.map(r=>r.total))):null;
@@ -1663,7 +1752,14 @@ function buildBatchTrend(){
 }
 
 function buildDistBars(attended){
-  const scores=attended.map(r=>r.total);
+  // Use ONE average score per student, not one row per test-entry
+  const studentScoreMap={};
+  attended.forEach(r=>{
+    const k=r.name||normName(r.name||'');
+    if(!studentScoreMap[k])studentScoreMap[k]=[];
+    studentScoreMap[k].push(r.total);
+  });
+  const scores=Object.values(studentScoreMap).map(arr=>Math.round(avg(arr)));
   const wrap=$('distWrap');wrap.innerHTML='';
   if(!scores.length){wrap.innerHTML='<div style="color:var(--muted);font-size:0.65rem;">No data</div>';return;}
   const mx=Math.max(...scores);
@@ -2649,6 +2745,10 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
     color: var(--accent);
     border-color: var(--accent);
   }
+  .inst-chip{display:inline-block;font-size:0.5rem;letter-spacing:0.15em;padding:0.18rem 0.5rem;border-radius:2px;font-weight:600;text-transform:uppercase;}
+  .inst-kjs{background:rgba(79,195,247,0.15);color:#4fc3f7;}
+  .inst-mjs{background:rgba(167,139,250,0.15);color:#a78bfa;}
+  .inst-ujs{background:rgba(251,146,60,0.15);color:#fb923c;}
 
   .charts-grid {
     display: grid;
@@ -3010,7 +3110,7 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
     <table class="leaderboard-table">
       <thead>
         <tr>
-          <th>#</th><th>Student</th><th>Score</th><th>Subject Breakdown</th><th>Accuracy</th><th>Attempted</th>
+          <th>#</th><th>Student</th><th>Inst</th><th>Score</th><th>Subject Breakdown</th><th>Accuracy</th><th>Attempted</th>
         </tr>
       </thead>
       <tbody id="leaderboardBody"></tbody>
@@ -3102,10 +3202,20 @@ function parseCSV(text) {
 
 function n(v) { return parseFloat(v) || 0; }
 
+function getInstA(fileVal){
+  if(!fileVal) return '';
+  const f=(fileVal+'').trim().toUpperCase();
+  if(f.startsWith('K')) return 'KJS';
+  if(f.startsWith('U')) return 'UJS';
+  if(f.startsWith('M')) return 'MJS';
+  return '';
+}
 function mapRow(r) {
   const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined) return r[k]; } return '0'; };
+  const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined) return r[k]; } return ''; };
   return {
-    name:   get('name') || 'Unknown',
+    name:   getS('name') || 'Unknown',
+    inst:   getInstA(getS('file','filename')),
     total:  n(get('total_marks','total_score','total')),
     rank:   n(get('rank')),
     phy_a:  n(get('phy_attempt','physics_attempt')),
@@ -3197,6 +3307,7 @@ function buildDashboard(raw, filename) {
       tr.innerHTML =
         '<td><span class="rank-badge ' + rankClass + '">' + localRank + '</span></td>' +
         '<td><div class="name-cell"><a href="/student?student=' + encodeURIComponent(s.name) + '">' + s.name + '</a></div></td>' +
+        '<td>' + (s.inst ? '<span class="inst-chip inst-'+(s.inst||'').toLowerCase()+'">' + s.inst + '</span>' : '') + '</td>' +
         '<td><span class="score-pill" style="background:' + scoreColor + '22;color:' + scoreColor + '">' + s.total + '</span></td>' +
         '<td><div class="mini-bar-wrap">' +
           '<div class="mini-bar" style="width:' + (phyPct*2) + 'px;background:var(--phy)"></div>' +
