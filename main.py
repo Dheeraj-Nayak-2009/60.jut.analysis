@@ -3813,8 +3813,8 @@ let students = [];
 let charts = {};
 
 function parseCSV(csvText) {
-  const lines = csvText.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
+const lines = csvText.trim().split(new RegExp('\r?\n'));
+if (lines.length < 2) return [];
   const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
   return lines.slice(1).map(line => {
     const vals = line.split(',');
