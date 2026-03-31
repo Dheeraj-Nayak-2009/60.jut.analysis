@@ -4034,14 +4034,15 @@ function loadCSVAndAnalyze(csvText) {
   return true;
 }
 
-document.getElementById('loadCsvBtn').onclick = () => {
-  const csvText = document.getElementById('csvTextarea').value;
-  if (!csvText.trim()) { alert("Please paste CSV data first!"); return; }
-  loadCSVAndAnalyze(csvText);
-};
+
 
 // click loadsample on entering page:
 document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('loadCsvBtn').onclick = () => {
+        const csvText = document.getElementById('csvTextarea').value;
+        if (!csvText.trim()) { alert("Please paste CSV data first!"); return; }
+        loadCSVAndAnalyze(csvText);
+};
   document.getElementById('loadSampleBtn').click();
 });
 
