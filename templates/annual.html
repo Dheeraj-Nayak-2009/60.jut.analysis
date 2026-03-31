@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANNUAL EXAM ANALYSIS · GOD MODE</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #e8c547;
+    --accent2: #47e8c5;
+    --accent3: #e847a0;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --phy: #4fc3f7;
+    --chem: #a78bfa;
+    --math: #fb923c;
+    --bio: #2ecc71;
+    --eng: #f1c40f;
+    --lang: #e84393;
+    --gold: #fbbf24;
+    --silver: #94a3b8;
+    --bronze: #cd7f32;
+    --green: #4ade80;
+    --red: #f87171;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  .grid-bg {
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridDrift 30s linear infinite;
+  }
+  @keyframes gridDrift { 0% { background-position: 0 0; } 100% { background-position: 60px 60px; } }
+
+  .glow-1, .glow-2, .glow-3 {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .glow-1 { width: 700px; height: 700px; background: radial-gradient(circle, rgba(232,197,71,0.07) 0%, transparent 70%); top: -200px; left: -200px; animation: floatA 18s ease-in-out infinite; }
+  .glow-2 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(71,232,197,0.05) 0%, transparent 70%); bottom: -100px; right: -100px; animation: floatB 22s ease-in-out infinite; }
+  .glow-3 { width: 400px; height: 400px; background: radial-gradient(circle, rgba(232,71,160,0.04) 0%, transparent 70%); top: 50%; right: 20%; animation: floatC 26s ease-in-out infinite; }
+  @keyframes floatA { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,40px)} }
+  @keyframes floatB { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-50px,-30px)} }
+  @keyframes floatC { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-50px)} }
+
+  .topnav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+    background: rgba(10,10,15,0.95); backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 2rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .topnav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.08em; color: var(--text); text-decoration: none; }
+  .topnav-logo span { color: var(--accent); }
+  .topnav-badge { font-size: 0.55rem; letter-spacing: 0.2em; color: var(--accent2); text-transform: uppercase; background: rgba(71,232,197,0.12); padding: 0.3rem 0.8rem; border-radius: 20px; }
+  .data-status { font-size: 0.5rem; color: var(--muted); background: var(--surface); padding: 0.3rem 0.8rem; border-radius: 20px; }
+
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; position: relative; padding: 7rem 2rem 4rem;
+  }
+  .hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 50% at 20% 40%, rgba(232,197,71,0.08) 0%, transparent 60%), radial-gradient(ellipse 60% 60% at 80% 60%, rgba(71,232,197,0.06) 0%, transparent 60%); }
+  .hero-tag { font-size: 0.7rem; letter-spacing: 0.3em; color: var(--accent); text-transform: uppercase; margin-bottom: 1.5rem; animation: fadeUp 0.6s 0.2s forwards; }
+  .hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(4rem, 12vw, 10rem); line-height: 0.9; letter-spacing: 0.02em; animation: fadeUp 0.8s 0.4s forwards; }
+  .hero-title span { -webkit-text-stroke: 1px var(--accent); color: transparent; }
+  .hero-sub { font-size: 0.85rem; color: var(--muted); letter-spacing: 0.15em; margin-top: 1.5rem; animation: fadeUp 0.8s 0.6s forwards; }
+  .hero-stats { display: flex; gap: 3rem; margin-top: 3rem; flex-wrap: wrap; justify-content: center; animation: fadeUp 0.8s 0.8s forwards; }
+  .hero-stat { text-align: center; }
+  .hero-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: var(--accent); line-height: 1; }
+  .hero-stat-label { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; margin-top: 0.3rem; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+  section { padding: 5rem 2rem; max-width: 1600px; margin: 0 auto; }
+  .section-label { font-size: 0.65rem; letter-spacing: 0.4em; color: var(--accent); text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.8rem; }
+  .section-label::before { content: ''; display: block; width: 28px; height: 1px; background: var(--accent); }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.1; margin-bottom: 3rem; }
+
+  .podium-section { background: var(--surface); position: relative; overflow: hidden; padding: 4rem 2rem; }
+  .podium { display: flex; align-items: flex-end; justify-content: center; gap: 0; margin-top: 2rem; flex-wrap: wrap; }
+  .podium-card { flex: 1; max-width: 280px; text-align: center; transition: transform 0.3s; }
+  .podium-card:hover { transform: translateY(-8px); }
+  .podium-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; margin-bottom: 0.3rem; }
+  .podium-score { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; line-height: 1; }
+  .podium-rank-label { font-size: 0.6rem; letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase; margin-top: 0.3rem; }
+  .podium-block { margin-top: 1rem; border-radius: 4px 4px 0 0; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; }
+  .p1 .podium-score { color: var(--gold); } .p1 .podium-block { background: linear-gradient(135deg, #fbbf24, #f59e0b); height: 160px; }
+  .p2 .podium-score { color: var(--silver); } .p2 .podium-block { background: linear-gradient(135deg, #94a3b8, #64748b); height: 120px; }
+  .p3 .podium-score { color: var(--bronze); } .p3 .podium-block { background: linear-gradient(135deg, #cd7f32, #a0632a); height: 90px; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; transition: transform 0.2s; position: relative; }
+  .stat-card:hover { transform: translateY(-4px); border-color: rgba(232,197,71,0.4); }
+  .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .stat-label-sm { font-size: 0.55rem; letter-spacing: 0.28em; color: var(--muted); text-transform: uppercase; margin-bottom: 0.7rem; }
+  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; line-height: 1; color: var(--accent); }
+  .stat-sub { font-size: 0.58rem; color: var(--muted); margin-top: 0.3rem; }
+
+  .charts-grid-2, .charts-grid-3 { display: grid; gap: 1.5rem; margin-top: 2rem; }
+  .charts-grid-2 { grid-template-columns: 1fr 1fr; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; position: relative; overflow: hidden; }
+  .chart-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .chart-title { font-size: 0.6rem; letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase; margin-bottom: 1rem; }
+  canvas { max-height: 280px; width: 100% !important; }
+
+  .subject-grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2rem; }
+  .subj-card { background: var(--surface); border: 1px solid var(--border); padding: 1.2rem; border-radius: 6px; transition: transform 0.2s; }
+  .subj-card:hover { transform: translateY(-4px); }
+  .subj-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; margin-bottom: 0.5rem; }
+  .subj-row { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid var(--border); font-size: 0.65rem; }
+
+  .filter-bar { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; }
+  .search-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; font-family: monospace; font-size: 0.72rem; border-radius: 2px; flex: 1; min-width: 200px; outline: none; }
+  .search-input:focus { border-color: var(--accent); }
+  .sort-btn { background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 0.5rem 1rem; font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; border-radius: 2px; transition: all 0.2s; }
+  .sort-btn:hover, .sort-btn.active { border-color: var(--accent); color: var(--accent); }
+
+  .leaderboard-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; }
+  .leaderboard-table th { font-size: 0.55rem; letter-spacing: 0.2em; color: var(--muted); padding: 0.5rem 0.8rem; text-align: left; }
+  .leaderboard-table tr.row { background: var(--surface); transition: all 0.2s; }
+  .leaderboard-table tr.row:hover { background: var(--surface2); transform: translateX(4px); }
+  .leaderboard-table td { padding: 0.7rem 0.8rem; font-size: 0.7rem; }
+  .rank-badge { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; width: 32px; display: inline-block; }
+  .rank-1 { color: var(--gold); } .rank-2 { color: var(--silver); } .rank-3 { color: var(--bronze); }
+  .score-pill { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 2px; font-family: 'Bebas Neue', sans-serif; font-size: 1rem; }
+
+  .dist-bar-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.6rem; }
+  .dist-range { font-size: 0.65rem; color: var(--muted); width: 80px; }
+  .dist-bar-outer { flex: 1; height: 28px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .dist-bar-inner { height: 100%; border-radius: 2px; display: flex; align-items: center; padding-left: 8px; font-size: 0.6rem; font-weight: 600; color: rgba(0,0,0,0.7); transition: width 1.2s; width: 0; }
+  .dist-count { font-size: 0.7rem; color: var(--muted); width: 30px; text-align: right; }
+
+  .insight-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 2rem; }
+  .insight-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; text-align: center; transition: transform 0.2s; }
+  .insight-card:hover { transform: translateY(-3px); border-color: var(--accent2); }
+  .insight-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .insight-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: var(--accent); }
+  .insight-desc { font-size: 0.6rem; color: var(--muted); margin-top: 0.3rem; }
+
+  .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s, transform 0.7s; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  footer { text-align: center; padding: 3rem; color: var(--muted); font-size: 0.6rem; letter-spacing: 0.2em; border-top: 1px solid var(--border); }
+
+  .insight-desc {
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+  @media (max-width: 1000px) { .charts-grid-2, .subject-grid-6 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="glow-1"></div><div class="glow-2"></div><div class="glow-3"></div>
+
+<nav class="topnav">
+  <a class="topnav-logo" href="#">ANNUAL<span>·</span>EXAM</a>
+  <div class="topnav-badge">6 SUB · 600 MARKS · GOD MODE</div>
+  <div class="data-status">📊 LIVE ANALYSIS · 2025</div>
+</nav>
+
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-tag">🔥 COMPLETE 6-SUBJECT ARMAGEDDON 🔥</div>
+  <div class="hero-title">FULL <span>ANALYSIS</span><br>600 MARKS</div>
+  <div class="hero-sub">Physics · Chemistry · Mathematics · Biology/CSC · English · Second Language</div>
+  <div class="hero-stats" id="heroStats"></div>
+</div>
+
+<div id="mainContent">
+  <div class="podium-section">
+    <div class="section-label reveal">🏆 LEGENDARY TOPPERS 🏆</div>
+    <div class="section-title reveal">The Pantheon of 600</div>
+    <div class="podium reveal" id="podium"></div>
+  </div>
+
+  <section>
+    <div class="section-label reveal">📊 6-SUBJECT MASTER STATS</div>
+    <div class="section-title reveal">Complete Academic Metrics</div>
+    <div class="stat-grid reveal" id="statGrid"></div>
+  </section>
+
+  <section>
+    <div class="section-label reveal">🧠 PER-SUBJECT DOMINATION (ALL 6)</div>
+    <div class="section-title reveal">Subject-wise Hellscape</div>
+    <div class="subject-grid-6 reveal" id="subjectGrid"></div>
+  </section>
+
+  <section>
+    <div class="section-label reveal">📈 10+ VISUAL INSANITY CHARTS</div>
+    <div class="section-title reveal">Analytics Overload</div>
+    <div class="charts-grid-2">
+      <div class="chart-card reveal"><div class="chart-title">🎯 Total Score Distribution (600 max)</div><div id="distBars"></div></div>
+      <div class="chart-card reveal"><div class="chart-title">⚔️ All 6 Subjects Average Comparison</div><canvas id="radarChart6"></canvas></div>
+      <div class="chart-card reveal"><div class="chart-title">📊 PCMB vs PCMC Domination</div><canvas id="comboChart"></canvas></div>
+      <div class="chart-card reveal"><div class="chart-title">🏅 Top 15 Academic Gods</div><canvas id="top15Chart"></canvas></div>
+      <div class="chart-card reveal"><div class="chart-title">📈 Subject-wise Performance Heat (Avg Marks)</div><canvas id="barChart6"></canvas></div>
+      <div class="chart-card reveal"><div class="chart-title">🎓 Grade Distribution (A+, A, B, C, D, F)</div><canvas id="gradeChart"></canvas></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label reveal">📊 FULL LEADERBOARD</div>
+    <div class="section-title reveal">Ranked by Total (600 max)</div>
+    <div class="filter-bar reveal">
+      <input class="search-input" id="searchInput" type="text" placeholder="Search student...">
+      <button class="sort-btn active" data-sort="total">Total ↕</button>
+      <button class="sort-btn" data-sort="phy">Physics ↕</button>
+      <button class="sort-btn" data-sort="chem">Chemistry ↕</button>
+      <button class="sort-btn" data-sort="math">Maths ↕</button>
+      <button class="sort-btn" data-sort="sub4">Bio/CSC ↕</button>
+      <button class="sort-btn" data-sort="eng">English ↕</button>
+      <button class="sort-btn" data-sort="lang">Lang2 ↕</button>
+    </div>
+    <div style="overflow-x:auto" class="reveal">
+      <table class="leaderboard-table">
+        <thead><tr><th>#</th><th>Student</th><th>Comb</th><th>Total</th><th>P</th><th>C</th><th>M</th><th>4th</th><th>Eng</th><th>Lang</th><th>%</th></tr></thead>
+        <tbody id="leaderboardBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label reveal">💀 15+ CRAZY INSIGHTS</div>
+    <div class="section-title reveal">Mind-Blowing Facts</div>
+    <div class="insight-grid reveal" id="insightGrid"></div>
+  </section>
+
+  <footer>🔥 GOD MODE · 6 SUBJECTS · 600 MARKS · FULL CHAOS ANALYSIS 🔥</footer>
+</div>
+
+<script>
+// --------------------------------------------------------------
+// HARDCODED SAMPLE DATA (DIRECT LOAD) - NO CSV INPUT, IMMEDIATE RENDER
+// --------------------------------------------------------------
+const SAMPLE_CSV = `roll_no,contact_no,name,class,combination,physics,chemistry,mathematics,subject4,subject4_name,english,language2,language2_name,total
+25001,8310669725,ABHIJNA S SHETTY,I PUC - PCMB,PCMB,94,76,84,95,BIOLOGY,99,100,HINDI,548
+25002,8073465428,ANVITHA N,I PUC - PCMB,PCMB,93,88,91,90,BIOLOGY,98,98,HINDI,558
+25003,7022910180,AYESHA SAMRA,I PUC - PCMB,PCMB,95,98,94,97,BIOLOGY,99,98,HINDI,581
+25004,9480579398,BHUVAN,I PUC - PCMB,PCMB,94,92,80,88,BIOLOGY,91,95,HINDI,540
+25005,9029091231,CHARVI LAKSHMIKANT SALIAN,I PUC - PCMB,PCMB,79,71,79,67,BIOLOGY,88,89,HINDI,473
+25006,8095924323,GAYATHRI M DEVADIGA,I PUC - PCMB,PCMB,94,96,96,98,BIOLOGY,98,100,HINDI,582
+25007,6360537202,HARDHIKA SHETTY,I PUC - PCMB,PCMB,97,95,97,96,BIOLOGY,99,100,HINDI,584
+25008,7219146397,ICCHA NIRANJAN SHETTY,I PUC - PCMB,PCMB,94,98,95,97,BIOLOGY,99,96,HINDI,579
+25009,9845452133,KAPTHI MOHAMMED ATUF,I PUC - PCMB,PCMB,69,84,70,61,BIOLOGY,92,65,HINDI,441
+25010,9742681144,KARAN VISHWAKARMA,I PUC - PCMB,PCMB,90,84,90,81,BIOLOGY,92,89,HINDI,526
+25011,9741638256,KAUSHIKI S POOJARY,I PUC - PCMB,PCMB,94,74,91,87,BIOLOGY,97,98,HINDI,541
+25012,7506705313,M POOJITHAKRISHNA,I PUC - PCMB,PCMB,98,100,95,98,BIOLOGY,99,100,HINDI,590
+25013,8548010285,MANYA G SUVARNA,I PUC - PCMB,PCMB,78,72,68,90,BIOLOGY,99,99,HINDI,506
+25014,8050025175,MOHAMMAD DANIYAL,I PUC - PCMB,PCMB,93,100,97,94,BIOLOGY,98,100,HINDI,582
+25015,8747896067,MONISH B S,I PUC - PCMB,PCMB,87,91,80,89,BIOLOGY,99,81,HINDI,527
+25016,9964142988,N G VIJAYALAKSHMI,I PUC - PCMB,PCMB,91,86,89,92,BIOLOGY,97,100,HINDI,555
+25017,7760249403,NAITHIK SHETTY,I PUC - PCMB,PCMB,75,73,85,92,BIOLOGY,96,94,HINDI,515
+25018,9448820346,NEHA CHETAN NAIK,I PUC - PCMB,PCMB,99,100,99,100,BIOLOGY,99,100,HINDI,597
+25019,8884013973,NIDHI PAI M,I PUC - PCMB,PCMB,97,99,99,97,BIOLOGY,98,100,HINDI,590
+25020,9448820346,NISHA CHETAN NAIK,I PUC - PCMB,PCMB,98,100,96,96,BIOLOGY,99,100,HINDI,589
+25021,9731569614,NITHIKSHA D KANCHAN,I PUC - PCMB,PCMB,78,69,87,83,BIOLOGY,87,89,HINDI,493
+25022,7019904869,PARNIKA V SHETTY,I PUC - PCMB,PCMB,74,79,70,81,BIOLOGY,96,93,HINDI,493
+25023,9611186851,PAVITRA SHANKAR PRABHU,I PUC - PCMB,PCMB,92,83,76,90,BIOLOGY,96,99,HINDI,536
+25024,9886474805,PRANAMYA K,I PUC - PCMB,PCMB,98,89,97,93,BIOLOGY,95,99,HINDI,571
+25025,9008510021,PRANAV NARAYAN S M,I PUC - PCMB,PCMB,92,91,97,92,BIOLOGY,98,98,HINDI,568
+25026,9448501043,PRAPTI MUKESH SHET,I PUC - PCMB,PCMB,97,99,98,95,BIOLOGY,99,100,HINDI,588
+25027,8806360732,PRARTHANA,I PUC - PCMB,PCMB,74,79,78,81,BIOLOGY,93,82,HINDI,487
+25028,8971955734,PRISHA P SHETTY,I PUC - PCMB,PCMB,91,89,99,83,BIOLOGY,98,92,HINDI,552
+25029,9901657094,PRIYA,I PUC - PCMB,PCMB,98,96,94,95,BIOLOGY,98,100,HINDI,581
+25030,7975340057,ALVA PUNYA CHANDRASHEKHAR,I PUC - PCMB,PCMB,80,72,82,83,BIOLOGY,94,95,HINDI,506
+25031,9845247019,PUSHKARAN K,I PUC - PCMB,PCMB,88,80,87,82,BIOLOGY,94,93,HINDI,524
+25032,9731488745,R SUDHANVA NAVADA,I PUC - PCMB,PCMB,77,86,83,80,BIOLOGY,91,92,HINDI,509
+25033,9731434538,RANJANA N,I PUC - PCMB,PCMB,86,90,89,95,BIOLOGY,95,89,HINDI,544
+25034,9886367003,RAUNAK MOHAN AMBERKAR,I PUC - PCMB,PCMB,93,87,93,93,BIOLOGY,95,91,HINDI,552
+25035,9844897877,RISHA D RAI,I PUC - PCMB,PCMB,64,68,72,82,BIOLOGY,97,83,HINDI,466
+25036,8660960117,SAANVI D KUNDER,I PUC - PCMB,PCMB,91,98,97,96,BIOLOGY,99,98,HINDI,579
+25037,9486656059,SAANVI NITIN BILAGI,I PUC - PCMB,PCMB,92,96,99,93,BIOLOGY,95,96,HINDI,571
+25038,9901659784,SAHANA R MENDON,I PUC - PCMB,PCMB,86,82,94,81,BIOLOGY,96,99,HINDI,538
+25039,9986176634,SAI CHIRAG K N,I PUC - PCMB,PCMB,100,100,99,99,BIOLOGY,99,98,HINDI,595
+25040,9448152139,SAMBRAM R KANJARPANE,I PUC - PCMB,PCMB,100,98,99,92,BIOLOGY,97,96,HINDI,582
+25041,9900490696,SAMVITH RATHISH THANTRY,I PUC - PCMB,PCMB,70,68,76,80,BIOLOGY,95,97,HINDI,486
+25042,8073959914,SANIKA SHETTY,I PUC - PCMB,PCMB,77,86,84,81,BIOLOGY,96,99,HINDI,523
+25043,9740541812,SANVI A SHETTY,I PUC - PCMB,PCMB,58,50,46,69,BIOLOGY,94,88,HINDI,405
+25044,9448094204,SANVI S SHETTY,I PUC - PCMB,PCMB,83,81,87,82,BIOLOGY,94,100,HINDI,527
+25045,9480727992,SATHVIK BHAT A,I PUC - PCMB,PCMB,80,92,92,96,BIOLOGY,98,98,HINDI,556
+25046,9886053977,SHARVARI RADHESH BEKAL,I PUC - PCMB,PCMB,96,94,92,92,BIOLOGY,99,92,HINDI,565
+25047,9845370730,SHARVARI S S,I PUC - PCMB,PCMB,86,80,89,85,BIOLOGY,94,85,HINDI,519
+25048,8861530531,SHRINIDHI V SHETTY,I PUC - PCMB,PCMB,54,65,63,59,BIOLOGY,91,85,HINDI,417
+25049,7899491980,SNEHAL VENORA MENDONCA,I PUC - PCMB,PCMB,78,86,79,86,BIOLOGY,97,92,HINDI,518
+25050,9686448802,SUDHANVA U MUNDKUR,I PUC - PCMB,PCMB,99,98,100,99,BIOLOGY,99,100,HINDI,595
+25051,9738934943,SUMITH SHRIKANTH HUNALLI,I PUC - PCMB,PCMB,76,88,94,91,BIOLOGY,90,91,HINDI,530
+25052,8197120018,SUMUKHA RAO B S,I PUC - PCMB,PCMB,98,93,98,98,BIOLOGY,96,100,HINDI,583
+25053,9986566211,SUPRAJ U,I PUC - PCMB,PCMB,94,92,92,95,BIOLOGY,96,98,HINDI,567
+25054,9831089289,SWAPNIL SEAL,I PUC - PCMB,PCMB,71,69,62,78,BIOLOGY,88,90,HINDI,458
+25055,9980899168,TUSHARA SHANKARA,I PUC - PCMB,PCMB,88,88,92,89,BIOLOGY,99,86,HINDI,542
+25056,9844773573,VAMSHI KRISHNA DEVARAMANE,I PUC - PCMB,PCMB,99,100,100,97,BIOLOGY,99,100,HINDI,595
+25057,9844733847,VARSHINI S MOHARER,I PUC - PCMB,PCMB,99,97,92,97,BIOLOGY,99,99,HINDI,583
+25058,7019001843,YASH SHETTY,I PUC - PCMB,PCMB,87,90,89,96,BIOLOGY,97,95,HINDI,554
+25059,9481250027,AARNAV NIKIN SHETTY,I PUC - PCMB,PCMB,88,82,76,86,BIOLOGY,93,56,HINDI,481
+25060,9482625925,ADARSH B R,I PUC - PCMB,PCMB,91,84,82,75,BIOLOGY,89,98,HINDI,519
+25061,8884599266,ALAA TAYYABA SHEIKH,I PUC - PCMB,PCMB,88,91,81,90,BIOLOGY,93,99,HINDI,542
+25062,9945797188,ALENA RITA FERNANDES,I PUC - PCMB,PCMB,99,98,100,99,BIOLOGY,99,99,HINDI,594
+25063,8277615108,AMOGH RAVINDRA BABLESHWAR,I PUC - PCMB,PCMB,47,46,42,54,BIOLOGY,70,82,HINDI,341
+25064,9448251515,AMRUTHA D,I PUC - PCMB,PCMB,93,83,87,91,BIOLOGY,92,100,HINDI,546
+25065,8217308239,ANSHUL P BHANDARY,I PUC - PCMB,PCMB,91,86,94,85,BIOLOGY,92,95,HINDI,543
+25066,9902378399,ANVESH SHETTY,I PUC - PCMB,PCMB,92,93,90,98,BIOLOGY,96,98,HINDI,567
+25067,9448621930,ANVESH U SHETTY,I PUC - PCMB,PCMB,86,91,81,89,BIOLOGY,86,93,HINDI,526
+25068,7411112345,ATHARV NAGARAJ RAO,I PUC - PCMB,PCMB,66,84,81,90,BIOLOGY,90,84,HINDI,495
+25069,9845303053,AVILASH RAO B,I PUC - PCMB,PCMB,93,89,95,90,BIOLOGY,94,98,HINDI,559
+25070,8147455647,AYAAN ASHFAQ AHMED,I PUC - PCMB,PCMB,92,91,94,98,BIOLOGY,94,86,HINDI,555
+25071,9449390257,AYUSH SHETTY,I PUC - PCMB,PCMB,99,100,97,98,BIOLOGY,94,100,HINDI,588
+25072,9110831417,BRINDA B SHETTY,I PUC - PCMB,PCMB,83,68,76,79,BIOLOGY,89,100,HINDI,495
+25073,9663115151,CEDRIC SONY,I PUC - PCMB,PCMB,83,63,60,84,BIOLOGY,90,80,HINDI,460
+25074,9686917725,CHINMAYI,I PUC - PCMB,PCMB,81,87,83,82,BIOLOGY,95,99,HINDI,527
+25075,9964499939,CHIRAG G RAO,I PUC - PCMB,PCMB,91,85,71,91,BIOLOGY,88,82,HINDI,508
+25076,7204087407,DANICE VICTORIA KARKADA,I PUC - PCMB,PCMB,87,83,90,90,BIOLOGY,97,100,HINDI,547
+25077,9845383625,DELVIN ARYAN MUTHU,I PUC - PCMB,PCMB,74,79,72,90,BIOLOGY,93,94,HINDI,502
+25078,8600663919,EIKYATA HARISH SHETTY,I PUC - PCMB,PCMB,91,85,80,94,BIOLOGY,95,96,HINDI,541
+25079,9538653479,H MUHAMMED ZAYAAN,I PUC - PCMB,PCMB,72,62,48,78,BIOLOGY,90,59,HINDI,409
+25080,6360657970,HARSHIT DEVANAGAON,I PUC - PCMB,PCMB,93,85,79,92,BIOLOGY,91,99,HINDI,539
+25081,9972376612,HENCILA LORA DSOUZA,I PUC - PCMB,PCMB,90,89,83,89,BIOLOGY,94,98,HINDI,543
+25082,9880783491,IMAN IHSAN AHMED,I PUC - PCMB,PCMB,78,64,51,75,BIOLOGY,94,97,HINDI,459
+25083,6362782484,JELIN D ALMEIDA,I PUC - PCMB,PCMB,74,63,49,66,BIOLOGY,93,82,HINDI,427
+25084,8310598950,K KRITHIKA SOMAYAJI,I PUC - PCMB,PCMB,80,66,77,66,BIOLOGY,86,98,HINDI,473
+25085,9448953001,K PRABHAV UPADHYA,I PUC - PCMB,PCMB,98,96,100,96,BIOLOGY,96,100,HINDI,586
+25086,8073770967,KRISHNA KEERTHI K,I PUC - PCMB,PCMB,97,91,94,93,BIOLOGY,98,100,HINDI,573
+25087,9880202419,MAHIKA,I PUC - PCMB,PCMB,92,89,91,91,BIOLOGY,92,99,HINDI,554
+25088,9741150087,MANDARA B SUVARNA,I PUC - PCMB,PCMB,89,92,98,91,BIOLOGY,94,100,HINDI,564
+25089,9740070418,MANISHRI SHETTY,I PUC - PCMB,PCMB,91,85,90,92,BIOLOGY,91,98,HINDI,547
+25090,8861912353,MANYA SHIVANANDA,I PUC - PCMB,PCMB,88,80,69,82,BIOLOGY,94,86,HINDI,499
+25091,9741193462,NIKHIL RAMCHANDRA JOSHI,I PUC - PCMB,PCMB,86,81,80,82,BIOLOGY,82,94,HINDI,505
+25092,9739404485,NIRUPRASAD SHETTY,I PUC - PCMB,PCMB,90,89,86,81,BIOLOGY,90,100,HINDI,536
+25093,9901657817,NISHITA H SHETTY,I PUC - PCMB,PCMB,98,99,95,96,BIOLOGY,97,100,HINDI,585
+25094,9740087287,NIYATHI P POOJARI,I PUC - PCMB,PCMB,95,96,96,99,BIOLOGY,94,99,HINDI,579
+25095,9844219160,PARINITHA,I PUC - PCMB,PCMB,100,100,96,96,BIOLOGY,97,100,HINDI,589
+25096,8380898068,POOJA D SHET,I PUC - PCMB,PCMB,90,83,84,92,BIOLOGY,95,94,HINDI,538
+25097,9113613538,PRAJNA S NAIK,I PUC - PCMB,PCMB,93,87,99,77,BIOLOGY,97,100,HINDI,553
+25098,9980880207,PRAKYATH R RAO,I PUC - PCMB,PCMB,98,96,100,94,BIOLOGY,95,99,HINDI,582
+25099,9449454254,PRANAV R BHAT,I PUC - PCMB,PCMB,83,76,77,74,BIOLOGY,94,88,HINDI,492
+25100,9234638777,PRANEETA SHARAN,I PUC - PCMB,PCMB,99,95,97,97,BIOLOGY,97,98,HINDI,583
+25101,9535561731,PRARTHANA S POOJARY,I PUC - PCMB,PCMB,90,77,83,91,BIOLOGY,91,89,HINDI,521
+25102,9110818485,RAGHAVI R JERE,I PUC - PCMB,PCMB,63,58,60,60,BIOLOGY,86,72,HINDI,399
+25103,9986411497,REHAN S RON,I PUC - PCMB,PCMB,60,64,58,56,BIOLOGY,82,73,HINDI,393
+25104,9632093136,ROSHNI PRAMOD KARKERA,I PUC - PCMB,PCMB,89,82,92,81,BIOLOGY,88,98,HINDI,530
+25105,9686628592,S ANIRUDH,I PUC - PCMB,PCMB,94,91,94,91,BIOLOGY,95,87,HINDI,552
+25106,9844627552,SAISPARSHA K,I PUC - PCMB,PCMB,96,98,98,99,BIOLOGY,98,100,HINDI,589
+25107,9448723852,SAMHITA UPPOOR,I PUC - PCMB,PCMB,76,72,68,80,BIOLOGY,90,96,HINDI,482
+25108,8197079049,SAMRAZ SARFRAZ KHADER,I PUC - PCMB,PCMB,90,89,93,88,BIOLOGY,94,83,HINDI,537
+25109,8217520165,SANWI S RAO,I PUC - PCMB,PCMB,91,96,96,96,BIOLOGY,94,99,HINDI,572
+25110,9448843911,SHRESHTA A,I PUC - PCMB,PCMB,96,100,98,98,BIOLOGY,96,100,HINDI,588
+25111,9980272164,SOUHARDH R SHETTY,I PUC - PCMB,PCMB,90,87,95,87,BIOLOGY,93,86,HINDI,538
+25112,8123600135,SUHAN R SHETTY,I PUC - PCMB,PCMB,88,72,74,86,BIOLOGY,89,86,HINDI,495
+25113,9663642580,SUNAINA,I PUC - PCMB,PCMB,93,98,92,92,BIOLOGY,93,96,HINDI,564
+25114,9243388835,TANISHKA S NAYAK,I PUC - PCMB,PCMB,83,74,71,83,BIOLOGY,89,96,HINDI,496
+25115,9448282865,TANVI AMRTHESHA ARIGA,I PUC - PCMB,PCMB,97,99,97,98,BIOLOGY,99,100,HINDI,590
+25116,9482502956,THASMAYI A KUNDAR,I PUC - PCMB,PCMB,86,80,73,85,BIOLOGY,87,79,HINDI,490
+25117,9844993773,VARSHA SALIAN,I PUC - PCMB,PCMB,83,87,85,89,BIOLOGY,95,97,HINDI,536
+25118,9945773128,VIJETH KRISHNA KUNTAR,I PUC - PCMB,PCMB,57,51,41,71,BIOLOGY,78,90,HINDI,388
+25119,9945364820,VISHRTH,I PUC - PCMB,PCMB,99,99,99,99,BIOLOGY,97,99,HINDI,592
+25120,9845136018,YUKTHA G,I PUC - PCMB,PCMB,88,89,94,93,BIOLOGY,95,95,HINDI,554
+25201,7760950049,AADHYA S SHETTY,I PUC - PCMC,PCMC,93,72,85,95,CSC,97,95,SANSKRIT,537
+25202,9945124225,AARUSH A SHETTY,I PUC - PCMC,PCMC,99,96,98,99,CSC,99,98,SANSKRIT,589
+25203,6362266119,ACHINTHYA KRISHNA S R,I PUC - PCMC,PCMC,95,96,100,99,CSC,95,98,SANSKRIT,583
+25204,9686472067,AKARSH CHANDRA M,I PUC - PCMC,PCMC,95,96,95,100,CSC,99,93,SANSKRIT,578
+25205,9880935608,AMOGH M RAO,I PUC - PCMC,PCMC,84,76,93,99,CSC,97,99,SANSKRIT,548
+25206,9731827833,ANANYA N HEGDE,I PUC - PCMC,PCMC,97,94,95,98,CSC,98,100,SANSKRIT,582
+25207,9767789283,ASHISH U SHETTY,I PUC - PCMC,PCMC,75,69,69,94,CSC,82,81,SANSKRIT,470
+25208,9449331837,C V MOULYA,I PUC - PCMC,PCMC,96,95,98,99,CSC,98,100,SANSKRIT,586
+25209,9480159487,DHEERAJ D NAYAK,I PUC - PCMC,PCMC,98,100,99,99,CSC,98,100,SANSKRIT,594
+25210,9686434105,DHRISHA D SHETTY,I PUC - PCMC,PCMC,91,91,97,98,CSC,96,90,SANSKRIT,563
+25211,9902189585,JASHITH S SUVARNA,I PUC - PCMC,PCMC,73,76,65,94,CSC,78,88,SANSKRIT,474
+25212,9036279077,JITHESH,I PUC - PCMC,PCMC,92,87,96,97,CSC,95,95,SANSKRIT,562
+25213,9241660977,K RITHVIK KINI,I PUC - PCMC,PCMC,51,60,47,92,CSC,66,80,SANSKRIT,396
+25214,7624840704,K SHREENITH S SHERIGAR,I PUC - PCMC,PCMC,99,98,100,100,CSC,97,100,SANSKRIT,594
+25215,9035128666,K UTTAM BHAKTHA,I PUC - PCMC,PCMC,84,64,80,91,CSC,80,91,SANSKRIT,490
+25216,9740374645,KARMIN H SHETTY,I PUC - PCMC,PCMC,84,81,84,94,CSC,96,93,SANSKRIT,532
+25217,9980854016,KARTHIK G,I PUC - PCMC,PCMC,94,85,90,100,CSC,91,93,SANSKRIT,553
+25218,7812961799,LAVANYA UDUPA,I PUC - PCMC,PCMC,94,99,94,99,CSC,98,100,SANSKRIT,584
+25219,7406996947,MANYA S BALLAL,I PUC - PCMC,PCMC,94,99,98,100,CSC,97,99,SANSKRIT,587
+25220,9731418787,MIHIR B SUVARNA,I PUC - PCMC,PCMC,75,60,85,96,CSC,93,91,SANSKRIT,500
+25221,9740299360,NAGARAJA B SHETTY,I PUC - PCMC,PCMC,90,84,96,98,CSC,86,81,SANSKRIT,535
+25222,8217855705,NAMAN BASAVARAJ DESAI,I PUC - PCMC,PCMC,98,99,99,100,CSC,98,99,SANSKRIT,593
+25223,9480433743,NEHA U SALIAN,I PUC - PCMC,PCMC,93,82,90,98,CSC,96,97,SANSKRIT,556
+25225,9964069416,PRANAV RAO,I PUC - PCMC,PCMC,96,99,97,99,CSC,100,100,SANSKRIT,591
+25226,9844643293,PRATEEK,I PUC - PCMC,PCMC,,,,,,,,,
+25227,9740085455,RITHWIK S HEGDE,I PUC - PCMC,PCMC,97,82,91,98,CSC,95,94,SANSKRIT,557
+25228,8451085461,S HEMANTH,I PUC - PCMC,PCMC,95,95,98,99,CSC,97,99,SANSKRIT,583
+25229,9844210310,SAMARTH B GOWDA,I PUC - PCMC,PCMC,61,58,53,83,CSC,92,68,SANSKRIT,415
+25230,8884518789,SAMBHRAM PRASHANT MESTA,I PUC - PCMC,PCMC,71,55,60,86,CSC,84,53,SANSKRIT,409
+25231,9980127849,SAMYAK S ACHARYA,I PUC - PCMC,PCMC,88,85,93,94,CSC,84,79,SANSKRIT,523
+25232,9483862270,SANATH S KOTIAN,I PUC - PCMC,PCMC,97,100,100,100,CSC,97,100,SANSKRIT,594
+25233,8310179844,SANJAY J ACHARYA,I PUC - PCMC,PCMC,84,77,83,95,CSC,92,55,SANSKRIT,486
+25234,9611296623,SANVI SHETTY,I PUC - PCMC,PCMC,88,85,95,99,CSC,96,97,SANSKRIT,560
+25235,8197681566,SHAMAN NAIK,I PUC - PCMC,PCMC,66,72,81,93,CSC,88,91,SANSKRIT,491
+25236,9686925838,SHISHIR PRASHANTHA ACHAR,I PUC - PCMC,PCMC,66,61,58,88,CSC,86,91,SANSKRIT,450
+25237,9741116783,SOHAM A SHRIYAN,I PUC - PCMC,PCMC,51,59,56,80,CSC,76,63,SANSKRIT,385
+25238,8277766621,SRUSHTI J SHETTY,I PUC - PCMC,PCMC,59,66,60,90,CSC,88,86,SANSKRIT,449
+25239,8217784029,SRUSHTI M R,I PUC - PCMC,PCMC,90,83,91,94,CSC,93,95,SANSKRIT,546
+25240,9449464631,SUGHOSH BHARADWAJ,I PUC - PCMC,PCMC,99,100,100,99,CSC,99,100,SANSKRIT,597
+25241,9902960411,SWARNALAKSHMI K MOODUBELLE,I PUC - PCMC,PCMC,89,91,96,95,CSC,93,90,SANSKRIT,554
+25242,9731736013,TANVI SHETTY,I PUC - PCMC,PCMC,95,79,91,100,CSC,96,98,SANSKRIT,559
+25243,9148726190,TUSHAR KHARVI,I PUC - PCMC,PCMC,95,89,99,98,CSC,96,100,SANSKRIT,577
+25244,9481144853,VALLIKANTH BHAT,I PUC - PCMC,PCMC,93,83,75,95,CSC,81,92,SANSKRIT,519
+25245,9900410511,VISHWAS S K,I PUC - PCMC,PCMC,90,84,89,97,CSC,97,97,SANSKRIT,554
+25246,9972269480,ABHIMAN SHETTY,I PUC - PCMC,PCMC,88,83,69,98,CSC,82,92,SANSKRIT,512
+25247,9740862116,ABIN S,I PUC - PCMC,PCMC,76,91,81,96,CSC,89,89,SANSKRIT,522
+25248,8087629045,ADITI ARUNKUMAR CHANDAN,I PUC - PCMC,PCMC,61,76,56,90,CSC,93,88,SANSKRIT,464
+25249,9844211835,AKASH RAVINDRA PRABHU,I PUC - PCMC,PCMC,95,100,99,99,CSC,96,99,SANSKRIT,588
+25250,9900753843,AMRUTHA ASHOK,I PUC - PCMC,PCMC,58,67,53,91,CSC,86,90,SANSKRIT,445
+25251,9740948907,ARYAN U ACHARYA,I PUC - PCMC,PCMC,68,81,76,93,CSC,86,80,SANSKRIT,484
+25252,9964281312,BHAGAT RAJ M,I PUC - PCMC,PCMC,61,73,59,87,CSC,88,74,SANSKRIT,442
+25253,9342136083,BHOOMIKA H PUTHRAN,I PUC - PCMC,PCMC,99,99,99,98,CSC,99,100,SANSKRIT,594
+25254,8095577499,BRINDA J,I PUC - PCMC,PCMC,50,57,42,75,CSC,90,83,SANSKRIT,397
+25255,6364144714,CHINMAYANANDA,I PUC - PCMC,PCMC,,,,,,,,,
+25256,9740940700,DHRUTHI U S,I PUC - PCMC,PCMC,96,94,99,99,CSC,96,99,SANSKRIT,583
+25257,9740934648,GREESHAN ASHWIN BANGERA,I PUC - PCMC,PCMC,77,88,67,90,CSC,89,91,SANSKRIT,502
+25258,9632648871,HARSHITHA ASHOKA ACHARI,I PUC - PCMC,PCMC,95,95,96,98,CSC,96,98,SANSKRIT,578
+25259,8496828117,JAYADEEP POOJARY,I PUC - PCMC,PCMC,99,100,100,99,CSC,93,98,SANSKRIT,589
+25260,9845406657,K HEMANTH BHAT,I PUC - PCMC,PCMC,93,99,97,99,CSC,95,95,SANSKRIT,578
+25261,9241297658,K KRISHNA PRANAV,I PUC - PCMC,PCMC,47,62,41,88,CSC,88,91,SANSKRIT,417
+25262,9964477781,KRUTHIKA A SHETTY,I PUC - PCMC,PCMC,91,85,81,97,CSC,95,97,SANSKRIT,546
+25263,9448428676,MELRIA FERNANDES,I PUC - PCMC,PCMC,87,85,80,99,CSC,95,96,SANSKRIT,542
+25264,9901048688,MOHAMMED AFRAAZ,I PUC - PCMC,PCMC,100,100,97,98,CSC,92,97,SANSKRIT,584
+25266,8971548576,MOHAMMED SAHIL,I PUC - PCMC,PCMC,70,65,68,86,CSC,83,70,SANSKRIT,442
+25267,7899470543,NAMISH UDAYA BILLAVA,I PUC - PCMC,PCMC,100,99,100,98,CSC,98,98,SANSKRIT,593
+25268,9606355149,NILSHIKA,I PUC - PCMC,PCMC,64,75,71,95,CSC,89,93,SANSKRIT,487
+25269,9110895728,NITHIKA N KARKERA,I PUC - PCMC,PCMC,88,87,80,99,CSC,92,93,SANSKRIT,539
+25270,9483732359,PRAJWAL PRASHANTHA ACHARYA,I PUC - PCMC,PCMC,74,82,58,94,CSC,86,89,SANSKRIT,483
+25271,9945867616,PRATHVIN,I PUC - PCMC,PCMC,95,100,98,99,CSC,98,98,SANSKRIT,588
+25272,8762246703,PREKSHANA DESHPANDE,I PUC - PCMC,PCMC,69,73,70,99,CSC,85,95,SANSKRIT,491
+25273,9740059943,RAJATH PRABHU P,I PUC - PCMC,PCMC,93,86,84,96,CSC,90,98,SANSKRIT,547
+25274,9482040402,RITHIN S SHETTY,I PUC - PCMC,PCMC,100,100,100,99,CSC,95,100,SANSKRIT,594
+25275,9972130134,SAANVI JAGANNATHA SUVARNA,I PUC - PCMC,PCMC,95,93,98,98,CSC,96,99,SANSKRIT,579
+25276,9611849261,SACHIN S MARALADINNI,I PUC - PCMC,PCMC,53,57,57,82,CSC,83,60,SANSKRIT,392
+25277,9448108563,SATHWIK KUNDER,I PUC - PCMC,PCMC,71,79,78,98,CSC,86,61,SANSKRIT,473
+25278,9448532940,SATHWIK R PATEL,I PUC - PCMC,PCMC,72,68,74,83,CSC,80,84,SANSKRIT,461
+25279,9964451514,SHASHIDHARA R HEBBAR,I PUC - PCMC,PCMC,56,59,45,85,CSC,83,86,SANSKRIT,414
+25280,9901207259,SHOURYA S SALIAN,I PUC - PCMC,PCMC,99,96,98,98,CSC,94,99,SANSKRIT,584
+25281,9686126724,SHREESHA KRISHNA,I PUC - PCMC,PCMC,61,71,72,92,CSC,81,93,SANSKRIT,470
+25282,9449547947,SHRI RAMANA V UPADHYAYA,I PUC - PCMC,PCMC,53,68,63,92,CSC,84,96,SANSKRIT,456
+25283,9108052100,SOUMYA ABHISHIKTA ACHARY,I PUC - PCMC,PCMC,82,78,84,98,CSC,95,98,SANSKRIT,535
+25284,9980253227,SPOORTHI S SUVARNA,I PUC - PCMC,PCMC,98,98,97,99,CSC,97,99,SANSKRIT,588
+25285,7483549776,SRAJAN R KOTIAN,I PUC - PCMC,PCMC,65,62,65,78,CSC,85,69,SANSKRIT,424
+25287,9980439109,TANISH SHETTY,I PUC - PCMC,PCMC,93,77,68,92,CSC,88,85,SANSKRIT,503
+25288,9480758925,TANISHKA M KOTEGAR,I PUC - PCMC,PCMC,87,95,94,100,CSC,91,100,SANSKRIT,567
+25289,9449450858,VISHRUTHA M SHETTY,I PUC - PCMC,PCMC,52,56,40,57,CSC,78,59,SANSKRIT,342
+25290,8971524711,YASHIKA DEVADIGA,I PUC - PCMC,PCMC,92,91,96,99,CSC,90,97,SANSKRIT,565
+25291,9964584864,YATHARTH PRASAD,I PUC - PCMC,PCMC,70,77,68,98,CSC,93,84,SANSKRIT,490
+
+`;
+
+let students = [];
+let charts = {};
+
+function parseCSV(csvText) {
+  const lines = csvText.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+  return lines.slice(1).map(line => {
+    const vals = line.split(',');
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = vals[i] !== undefined ? vals[i].trim() : ''; });
+    return obj;
+  }).filter(r => r.total && !isNaN(parseFloat(r.total)));
+}
+
+function n(v) { return parseFloat(v) || 0; }
+
+function mapStudent(row) {
+  return {
+    name: row.name || 'Unknown',
+    roll: row.roll_no || '',
+    combination: row.combination || '',
+    total: n(row.total),
+    physics: n(row.physics),
+    chemistry: n(row.chemistry),
+    mathematics: n(row.mathematics),
+    subject4: n(row.subject4),
+    subject4_name: row.subject4_name || (row.combination === 'PCMB' ? 'BIOLOGY' : 'CSC'),
+    english: n(row.english),
+    language2: n(row.language2),
+    language2_name: row.language2_name || 'HINDI',
+  };
+}
+
+function getGrade(percentage) {
+  if (percentage >= 90) return 'A+';
+  if (percentage >= 75) return 'A';
+  if (percentage >= 60) return 'B';
+  if (percentage >= 45) return 'C';
+  if (percentage >= 35) return 'D';
+  return 'F';
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(chart => { if (chart) try { chart.destroy(); } catch(e) {} });
+  charts = {};
+}
+
+function renderDashboard(data) {
+  destroyCharts();
+  students = data.map(s => ({ ...s, percentage: (s.total / 600 * 100).toFixed(1), grade: getGrade(s.total / 600 * 100) }));
+  
+  const total = students.length;
+  const avgTotal = (students.reduce((a,b)=>a+b.total,0)/total).toFixed(1);
+  const maxTotal = Math.max(...students.map(s=>s.total));
+  const minTotal = Math.min(...students.map(s=>s.total));
+  const pcmb = students.filter(s=>s.combination === 'PCMB').length;
+  const pcmc = students.filter(s=>s.combination === 'PCMC').length;
+  const topStudent = students.find(s=>s.total === maxTotal);
+  const median = [...students].sort((a,b)=>a.total-b.total)[Math.floor(total/2)].total;
+  
+  document.getElementById('heroStats').innerHTML = `
+    <div class="hero-stat"><div class="hero-stat-val">${total}</div><div class="hero-stat-label">Students</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">${avgTotal}</div><div class="hero-stat-label">Avg /600</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">${maxTotal}</div><div class="hero-stat-label">🏆 Top</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">${minTotal}</div><div class="hero-stat-label">💀 Bottom</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">${pcmb}</div><div class="hero-stat-label">PCMB</div></div>
+    <div class="hero-stat"><div class="hero-stat-val">${pcmc}</div><div class="hero-stat-label">PCMC</div></div>
+  `;
+  
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-label-sm">Total Warriors</div><div class="stat-value">${total}</div><div class="stat-sub">PCMB:${pcmb} · PCMC:${pcmc}</div></div>
+    <div class="stat-card"><div class="stat-label-sm">Mean Total</div><div class="stat-value">${avgTotal}</div><div class="stat-sub">out of 600</div></div>
+    <div class="stat-card"><div class="stat-label-sm">Highest Scorer</div><div class="stat-value">${maxTotal}</div><div class="stat-sub">${topStudent?.name || ''}</div></div>
+    <div class="stat-card"><div class="stat-label-sm">Median Total</div><div class="stat-value">${median}</div><div class="stat-sub">Middle Warrior</div></div>
+    <div class="stat-card"><div class="stat-label-sm">Std Deviation</div><div class="stat-value">${Math.sqrt(students.reduce((a,b)=>a+Math.pow(b.total-avgTotal,2),0)/total).toFixed(1)}</div><div class="stat-sub">Volatility</div></div>
+    <div class="stat-card"><div class="stat-label-sm">Perfect 100s</div><div class="stat-value">${students.filter(s=>s.physics===100||s.chemistry===100||s.mathematics===100||s.subject4===100||s.english===100||s.language2===100).length}</div><div class="stat-sub">Subject Gods</div></div>
+  `;
+  
+  const sorted = [...students].sort((a,b)=>b.total - a.total);
+  const top3 = sorted.slice(0,3);
+  const podium = document.getElementById('podium');
+  podium.innerHTML = '';
+  const order = [top3[1], top3[0], top3[2]].filter(Boolean);
+  const classes = ['p2','p1','p3'];
+  const heights = [120,160,90];
+  const medal = ['🥈','🥇','🥉'];
+  order.forEach((s,i) => {
+    const div = document.createElement('div');
+    div.className = `podium-card ${classes[i]}`;
+    div.innerHTML = `<div class="podium-name">${s.name}</div><div class="podium-score">${s.total}</div><div class="podium-rank-label">${s.combination}</div><div class="podium-block" style="height:${heights[i]}px;">${medal[i]}</div>`;
+    podium.appendChild(div);
+  });
+  
+  const subjects = [
+    { key: 'physics', name: 'Physics', color: 'var(--phy)' },
+    { key: 'chemistry', name: 'Chemistry', color: 'var(--chem)' },
+    { key: 'mathematics', name: 'Mathematics', color: 'var(--math)' },
+    { key: 'subject4', name: 'Bio/CSC', color: 'var(--bio)' },
+    { key: 'english', name: 'English', color: 'var(--eng)' },
+    { key: 'language2', name: 'Lang2', color: 'var(--lang)' }
+  ];
+  const subjStats = subjects.map(sub => {
+    const vals = students.map(s=>s[sub.key]);
+    return { ...sub, avg: (vals.reduce((a,b)=>a+b,0)/total).toFixed(1), max: Math.max(...vals), min: Math.min(...vals) };
+  });
+  document.getElementById('subjectGrid').innerHTML = subjStats.map(s => `
+    <div class="subj-card"><div class="subj-name" style="color:${s.color}">${s.name}</div>
+    <div class="subj-row"><span>Avg</span><span>${s.avg}</span></div>
+    <div class="subj-row"><span>Highest</span><span>${s.max}</span></div>
+    <div class="subj-row"><span>Lowest</span><span>${s.min}</span></div>
+    <div class="subj-row"><span>Above 90</span><span>${students.filter(st=>st[s.key]>=90).length}</span></div>
+    <div class="subj-row"><span>Below 35</span><span>${students.filter(st=>st[s.key]<35).length}</span></div></div>
+  `).join('');
+  
+  const buckets = [{min:0,max:299,label:'<300'},{min:300,max:349,label:'300-349'},{min:350,max:399,label:'350-399'},{min:400,max:449,label:'400-449'},{min:450,max:499,label:'450-499'},{min:500,max:549,label:'500-549'},{min:550,max:599,label:'550-599'},{min:600,max:600,label:'600'}];
+  const counts = buckets.map(b => students.filter(s=>s.total>=b.min && s.total<=b.max).length);
+  const maxCount = Math.max(...counts,1);
+  const distDiv = document.getElementById('distBars');
+  distDiv.innerHTML = '';
+  const colors = ['#e847a0','#fb923c','#e8c547','#a78bfa','#47e8c5','#4fc3f7','#fbbf24','#2ecc71'];
+  buckets.forEach((b,i) => {
+    const pct = (counts[i]/maxCount)*100;
+    const row = document.createElement('div'); row.className = 'dist-bar-row';
+    row.innerHTML = `<div class="dist-range">${b.label}</div><div class="dist-bar-outer"><div class="dist-bar-inner" data-pct="${pct}" style="background:${colors[i]};width:0%">${counts[i]} students</div></div><div class="dist-count">${counts[i]}</div>`;
+    distDiv.appendChild(row);
+  });
+  setTimeout(()=>{ document.querySelectorAll('.dist-bar-inner').forEach(b=>{ b.style.width = b.dataset.pct+'%'; }); }, 200);
+  
+  charts.combo = new Chart(document.getElementById('comboChart'), { type:'pie', data:{ labels:['PCMB','PCMC'], datasets:[{ data:[pcmb, pcmc], backgroundColor:['#e8c547','#47e8c5'], borderWidth:0 }] }, options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#fff' } } } } });
+  const top15 = sorted.slice(0,15);
+  charts.top15 = new Chart(document.getElementById('top15Chart'), { type:'bar', data:{ labels:top15.map(s=>s.name.split(' ')[0]), datasets:[{ label:'Total /600', data:top15.map(s=>s.total), backgroundColor:'#facc15', borderRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{ labels:{ color:'#fff' } } } } });
+  charts.radar6 = new Chart(document.getElementById('radarChart6'), { type:'radar', data:{ labels:subjStats.map(s=>s.name), datasets:[{ label:'Avg Marks', data:subjStats.map(s=>s.avg), borderColor:'#e8c547', backgroundColor:'rgba(232,197,71,0.1)', pointBackgroundColor:['#4fc3f7','#a78bfa','#fb923c','#2ecc71','#f1c40f','#e84393'], pointRadius:5 }] }, options:{ responsive:true, scales:{ r:{ grid:{ color:'#1e1e2e' }, ticks:{ display:false }, pointLabels:{ color:'#e8e8f0', font:{ size:10 } } } }, plugins:{ legend:{ display:false } } } });
+  charts.bar6 = new Chart(document.getElementById('barChart6'), { type:'bar', data:{ labels:subjStats.map(s=>s.name), datasets:[{ label:'Average Marks', data:subjStats.map(s=>s.avg), backgroundColor:['#4fc3f7','#a78bfa','#fb923c','#2ecc71','#f1c40f','#e84393'], borderRadius:6 }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, max:100 } } } });
+  const gradeDist = { 'A+':0, 'A':0, 'B':0, 'C':0, 'D':0, 'F':0 };
+  students.forEach(s => gradeDist[s.grade]++);
+  charts.grade = new Chart(document.getElementById('gradeChart'), { type:'bar', data:{ labels:['A+ (90%+)','A (75-89)','B (60-74)','C (45-59)','D (35-44)','F (<35)'], datasets:[{ label:'Students', data:Object.values(gradeDist), backgroundColor:'#e8c547', borderRadius:6 }] }, options:{ responsive:true } });
+  
+  let currentSort = 'total', sortDir = -1, filterText = '';
+  function renderLeaderboard() {
+    let data = [...students];
+    if (filterText) data = data.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
+    const sortKey = { total:'total', phy:'physics', chem:'chemistry', math:'mathematics', sub4:'subject4', eng:'english', lang:'language2' };
+    data.sort((a,b) => sortDir * (a[sortKey[currentSort]] - b[sortKey[currentSort]]));
+    const tbody = document.getElementById('leaderboardBody');
+    tbody.innerHTML = '';
+    const rankMap = {};
+    [...students].sort((a,b)=>b.total - a.total).forEach((s,idx)=> rankMap[s.name] = idx+1);
+    data.forEach(s => {
+      const rank = rankMap[s.name];
+      const rankClass = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'';
+      const scoreColor = s.total>=550?'var(--accent2)':s.total>=500?'var(--accent)':s.total>=450?'var(--math)':'var(--accent3)';
+      const tr = document.createElement('tr'); tr.className = 'row';
+      tr.innerHTML = `<td><span class="rank-badge ${rankClass}">${rank}</span></td><td style="font-family:'DM Serif Display';">${s.name}</td><td><span style="background:rgba(232,197,71,0.12);padding:2px 6px;">${s.combination}</span></td><td><span class="score-pill" style="background:${scoreColor}22;color:${scoreColor}">${s.total}</span></td><td>${s.physics}</td><td>${s.chemistry}</td><td>${s.mathematics}</td><td>${s.subject4}</td><td>${s.english}</td><td>${s.language2}</td><td>${s.percentage}%</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  renderLeaderboard();
+  document.getElementById('searchInput').oninput = e => { filterText = e.target.value; renderLeaderboard(); };
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.onclick = () => {
+      const sv = btn.dataset.sort;
+      if (sv === currentSort) sortDir *= -1; else { currentSort = sv; sortDir = -1; }
+      document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      renderLeaderboard();
+    };
+  });
+  
+  const perfectAny = students.filter(s=>s.physics===100||s.chemistry===100||s.mathematics===100||s.subject4===100||s.english===100||s.language2===100).length;
+  const above540 = students.filter(s=>s.total>=540).length;
+  const below300 = students.filter(s=>s.total<300).length;
+  const langAvg = students.reduce((a,b)=>a+b.language2,0)/total;
+  const engAvg = students.reduce((a,b)=>a+b.english,0)/total;
+  const highestSub = subjStats.reduce((a,b)=> parseFloat(a.avg) > parseFloat(b.avg) ? a : b);
+  const lowestSub = subjStats.reduce((a,b)=> parseFloat(a.avg) < parseFloat(b.avg) ? a : b);
+  const toppersList = sorted.slice(0,5).map((s,i)=>`${i+1}. ${s.name.split(' ')[0]} (${s.total})`).join(' · ');
+  
+  document.getElementById('insightGrid').innerHTML = `
+    <div class="insight-card"><div class="insight-icon">🏆</div><div class="insight-title">${perfectAny}</div><div class="insight-desc">Students with 100 in any subject</div></div>
+    <div class="insight-card"><div class="insight-icon">⚡</div><div class="insight-title">${above540}</div><div class="insight-desc">Above 540 marks (90%+)</div></div>
+    <div class="insight-card"><div class="insight-icon">💀</div><div class="insight-title">${below300}</div><div class="insight-desc">Below 300 marks (critical zone)</div></div>
+    <div class="insight-card"><div class="insight-icon">📈</div><div class="insight-title">${highestSub.name}</div><div class="insight-desc">Highest avg: ${highestSub.avg}</div></div>
+    <div class="insight-card"><div class="insight-icon">📉</div><div class="insight-title">${lowestSub.name}</div><div class="insight-desc">Lowest avg: ${lowestSub.avg}</div></div>
+    <div class="insight-card"><div class="insight-icon">🇬🇧</div><div class="insight-title">${engAvg.toFixed(1)}</div><div class="insight-desc">English Average</div></div>
+    <div class="insight-card"><div class="insight-icon">🗣️</div><div class="insight-title">${langAvg.toFixed(1)}</div><div class="insight-desc">Second Language Avg</div></div>
+    <div class="insight-card"><div class="insight-icon">🎯</div><div class="insight-title">${students.filter(s=>s.physics>=90).length}</div><div class="insight-desc">Physics 90+ scorers</div></div>
+    <div class="insight-card"><div class="insight-icon">🧪</div><div class="insight-title">${students.filter(s=>s.chemistry>=90).length}</div><div class="insight-desc">Chemistry 90+ scorers</div></div>
+    <div class="insight-card"><div class="insight-icon">📐</div><div class="insight-title">${students.filter(s=>s.mathematics>=90).length}</div><div class="insight-desc">Maths 90+ scorers</div></div>
+    <div class="insight-card"><div class="insight-icon">🔬</div><div class="insight-title">${students.filter(s=>s.subject4>=90).length}</div><div class="insight-desc">Bio/CSC 90+ scorers</div></div>
+    <div class="insight-card"><div class="insight-icon">👑</div><div class="insight-title">Top 5</div><div class="insight-desc">${toppersList}</div></div>
+    <div class="insight-card"><div class="insight-icon">📊</div><div class="insight-title">${pcmb > pcmc ? 'PCMB' : 'PCMC'}</div><div class="insight-desc">Dominant Combination</div></div>
+    <div class="insight-card"><div class="insight-icon">⭐</div><div class="insight-title">${students.filter(s=>s.grade === 'A+').length}</div><div class="insight-desc">A+ Grade (90%+) Warriors</div></div>
+  `;
+  
+  const observer = new IntersectionObserver(entries=>{ entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); }); }, { threshold:0.05 });
+  document.querySelectorAll('.reveal').forEach(el=>{ el.classList.remove('visible'); observer.observe(el); });
+}
+
+// IMMEDIATE LOAD ON PAGE START (NO CSV UI, NO BUTTONS)
+window.addEventListener('DOMContentLoaded', () => {
+  const parsed = parseCSV(SAMPLE_CSV);
+  if (parsed.length) {
+    const mapped = parsed.map(mapStudent);
+    renderDashboard(mapped);
+  } else {
+    console.error("Failed to load internal data");
+    document.body.innerHTML = "<div style='color:red; padding:4rem;'>Error: Sample data corrupted. Please check console.</div>";
+  }
+});
+</script>
+</body>
+</html>
