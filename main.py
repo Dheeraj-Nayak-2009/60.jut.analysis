@@ -1,4 +1,4 @@
-from flask import Flask, Blueprint, jsonify, request, render_template
+from flask import Flask, Blueprint, jsonify, request
 import os
 import csv
 
@@ -3190,8 +3190,8 @@ function firstMeaningfulName(fullName) {
 }
 
 function parseCSV(text) {
-const lines = csvText.trim().split('\n');
-const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
+  const lines = text.trim().split(/\r?\n/);
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
   return lines.slice(1).map(line => {
     const vals = line.split(',');
     const obj = {};
