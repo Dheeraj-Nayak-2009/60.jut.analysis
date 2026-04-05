@@ -1,4 +1,4 @@
-from flask import Flask, Blueprint, jsonify, request, render_template
+from flask import Flask, Blueprint, jsonify, request
 import os
 import csv
 
@@ -948,7 +948,7 @@ function buildProfile(studentName,masterRows){
     const tr=document.createElement('tr');tr.className='rr';
     tr.innerHTML=`
       <td style="font-family:'DM Serif Display',serif;font-size:0.78rem;">${shortLabel(t.testName)}</td>
-      <td>${t.absent?`<span class="tl-badge b-abs">Absent</span>`:`<span class="tl-badge b-good">✓Present</span>`}</td>
+      <td>${t.absent?`<span class="tl-badge b-abs">Absent</span>`:`<span class="tl-badge b-good">✓ Present</span>`}</td>
       <td><span style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:${sc}">${t.absent?'—':t.total}</span></td>
       <td>${rankBadge}${!t.absent&&t.rank?`<span style="font-size:0.58rem;color:var(--muted)"> / ${t.batchSize}</span>`:''}</td>
       <td style="color:var(--muted)">${t.batchAvg}</td>
@@ -1193,6 +1193,16 @@ section{padding:4rem 0;}
 .inst-ujs{background:rgba(251,146,60,0.15);color:#fb923c;}
 .inst-unk{background:rgba(107,107,138,0.1);color:var(--muted);}
 
+/* INSTITUTION FILTER */
+.inst-filter-bar{display:flex;gap:0.5rem;align-items:center;padding:0.6rem 2rem;background:rgba(10,10,15,0.8);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.inst-filter-label{font-size:0.52rem;letter-spacing:0.22em;color:var(--muted);text-transform:uppercase;flex-shrink:0;}
+.inst-btn{font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;padding:0.35rem 0.85rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;transition:all 0.2s;white-space:nowrap;}
+.inst-btn:hover{border-color:var(--accent);color:var(--accent);}
+.inst-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.inst-btn.ib-kjs.active{background:#4fc3f7;border-color:#4fc3f7;color:var(--bg);}
+.inst-btn.ib-mjs.active{background:#a78bfa;border-color:#a78bfa;color:var(--bg);}
+.inst-btn.ib-ujs.active{background:#fb923c;border-color:#fb923c;color:var(--bg);}
+
 /* LOADING */
 .loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:1rem;}
 .loading-dots{display:flex;gap:6px;}
@@ -1246,6 +1256,14 @@ section{padding:4rem 0;}
 <div class="jut-bar" id="jutBar">
   <span class="jut-bar-label">Filter:</span>
   <button class="jut-tab active" data-jut="ALL">All JUTs</button>
+</div>
+
+<div class="inst-filter-bar" id="instFilterBarOv">
+  <span class="inst-filter-label">Institution:</span>
+  <button class="inst-btn active" data-inst="ALL">All</button>
+  <button class="inst-btn ib-kjs" data-inst="KJS">KJS</button>
+  <button class="inst-btn ib-mjs" data-inst="MJS">MJS</button>
+  <button class="inst-btn ib-ujs" data-inst="UJS">UJS</button>
 </div>
 
 <!-- LOADING -->
@@ -1421,7 +1439,7 @@ function destroyChart(id){if(charts[id]){try{charts[id].destroy();}catch(e){}del
 let allRows=[], allTests=[], allStudentNames=[];
 let studentMap={};  // normName → {name, rows[], stats}
 let testMap={};     // testName → rows[]
-let activeJut='ALL';
+let activeJut='ALL', instFilterOv='ALL';
 
 /* ── build student stats ── */
 function buildStudentStats(rows){
@@ -1503,6 +1521,16 @@ async function loadData(){
     $('loadingScreen').style.display='none';
     $('mainWrap').style.display='block';
 
+    // Wire institution filter buttons
+    document.querySelectorAll('#instFilterBarOv .inst-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        instFilterOv=btn.dataset.inst;
+        document.querySelectorAll('#instFilterBarOv .inst-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        buildAll(activeJut);
+      });
+    });
+
     buildAll('ALL');
     initReveal();
 
@@ -1519,7 +1547,8 @@ function setActiveJut(jut){
 
 /* ── MAIN BUILD ── */
 function buildAll(jut){
-  const rows=(jut==='ALL')?allRows:allRows.filter(r=>r.test===jut);
+  let rows=(jut==='ALL')?allRows:allRows.filter(r=>r.test===jut);
+  if(instFilterOv!=='ALL') rows=rows.filter(r=>(r.inst||'').toUpperCase()===instFilterOv);
   const attended=rows.filter(r=>r.total>0||r.tot_a>0);
 
   buildStatStrip(jut,attended);
@@ -1561,7 +1590,7 @@ function buildPodium(jut){
   let ranked;
   if(jut==='ALL'){
     ranked=Object.values(studentMap)
-      .filter(s=>s.stats.attended>=1)
+      .filter(s=>s.stats.attended>=1&&(instFilterOv==='ALL'||(s.inst||'').toUpperCase()===instFilterOv))
       .sort((a,b)=>b.stats.avgScore-a.stats.avgScore)
       .slice(0,3);
   } else {
@@ -1601,8 +1630,10 @@ let lbData=[], lbSort='avg', lbDir=-1, lbFilter='';
 
 function buildLeaderboard(jut){
   // Build per-student data for the selected JUT context
+  // Apply institution filter to student list
+  const filteredStudents=Object.values(studentMap).filter(s=>instFilterOv==='ALL'||(s.inst||'').toUpperCase()===instFilterOv);
   if(jut==='ALL'){
-    lbData=Object.values(studentMap).map(s=>({
+    lbData=filteredStudents.map(s=>({
       name:s.name,
       inst:s.inst||'',
       avg:s.stats.avgScore,
@@ -1637,7 +1668,12 @@ function renderLeaderboard(){
   const sortKey={avg:'avg',best:'best',phy:'phy',chem:'chem',math:'math',acc:'acc',cons:'cons',att:'att'};
   data.sort((a,b)=>{
     const av=a[sortKey[lbSort]]??-1,bv=b[sortKey[lbSort]]??-1;
-    return lbDir*(av-bv);
+    const diff=lbDir*(av-bv);
+    if(diff!==0)return diff;
+    // tiebreaker: best accuracy then name
+    const accDiff=lbDir*((a.acc||0)-(b.acc||0));
+    if(accDiff!==0)return accDiff;
+    return a.name.localeCompare(b.name);
   });
   // assign display ranks by avg (or score)
   const ranked=[...lbData].sort((a,b)=>b.avg-a.avg);
@@ -1797,7 +1833,7 @@ function buildTopBar(jut){
   let top;
   if(jut==='ALL'){
     top=Object.values(studentMap)
-      .filter(s=>s.stats.attended>=1)
+      .filter(s=>s.stats.attended>=1&&(instFilterOv==='ALL'||(s.inst||'').toUpperCase()===instFilterOv))
       .sort((a,b)=>b.stats.avgScore-a.stats.avgScore)
       .slice(0,15);
   } else {
@@ -1864,7 +1900,7 @@ function buildJutSummary(){
 /* ── CONSISTENCY ── */
 function buildConsistency(){
   const eligible=Object.values(studentMap)
-    .filter(s=>s.stats.consistency!==null&&s.stats.attended>=3)
+    .filter(s=>s.stats.consistency!==null&&s.stats.attended>=3&&(instFilterOv==='ALL'||(s.inst||'').toUpperCase()===instFilterOv))
     .sort((a,b)=>b.stats.consistency-a.stats.consistency)
     .slice(0,24);
   const grid=$('consGrid');grid.innerHTML='';
@@ -2970,6 +3006,15 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
 
   .sort-btn:hover, .sort-btn.active { border-color: var(--accent); color: var(--accent); }
 
+  /* INSTITUTION FILTER BAR */
+  .inst-filter-bar{display:flex;gap:0.5rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap;}
+  .inst-filter-label{font-size:0.55rem;letter-spacing:0.22em;color:var(--muted);text-transform:uppercase;}
+  .inst-btn{font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;padding:0.35rem 0.8rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;transition:all 0.2s;white-space:nowrap;}
+  .inst-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .inst-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+  .inst-btn.ib-kjs.active{background:#4fc3f7;border-color:#4fc3f7;color:var(--bg);}
+  .inst-btn.ib-mjs.active{background:#a78bfa;border-color:#a78bfa;color:var(--bg);}
+  .inst-btn.ib-ujs.active{background:#fb923c;border-color:#fb923c;color:var(--bg);}
   .tier-excellent { background: rgba(71,232,197,0.1); }
   .tier-good { background: rgba(232,197,71,0.1); }
   .tier-average { background: rgba(251,146,60,0.1); }
@@ -3098,6 +3143,13 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
 <section>
   <div class="section-label reveal">Full Results</div>
   <div class="section-title reveal">Leaderboard</div>
+  <div class="inst-filter-bar reveal" id="instFilterBar">
+    <span class="inst-filter-label">Institution:</span>
+    <button class="inst-btn active" data-inst="ALL">All</button>
+    <button class="inst-btn ib-kjs" data-inst="KJS">KJS</button>
+    <button class="inst-btn ib-mjs" data-inst="MJS">MJS</button>
+    <button class="inst-btn ib-ujs" data-inst="UJS">UJS</button>
+  </div>
   <div class="filter-bar reveal">
     <input class="search-input" id="searchInput" type="text" placeholder="Search student…">
     <button class="sort-btn active" data-sort="total">Total ↕</button>
@@ -3110,7 +3162,7 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
     <table class="leaderboard-table">
       <thead>
         <tr>
-          <th>#</th><th>Student</th><th>Inst</th><th>Score</th><th>Subject Breakdown</th><th>Accuracy</th><th>Attempted</th>
+          <th>SL</th><th>CSV Rank</th><th>#</th><th>Student</th><th>Inst</th><th>Score</th><th>Subject Breakdown</th><th>Accuracy</th><th>Attempted</th>
         </tr>
       </thead>
       <tbody id="leaderboardBody"></tbody>
@@ -3277,7 +3329,7 @@ function buildDashboard(raw, filename) {
     podiumEl.appendChild(c);
   });
 
-  let currentSort = 'total', sortDir = -1, filterText = '';
+  let currentSort = 'total', sortDir = -1, filterText = '', instFilterA = 'ALL';
 
   function getTier(score) {
     if (score >= high * 0.75) return 'tier-excellent';
@@ -3288,12 +3340,22 @@ function buildDashboard(raw, filename) {
 
   function renderLeaderboard() {
     let data = [...raw];
+    // Institution filter
+    if (instFilterA !== 'ALL') data = data.filter(s => (s.inst||'').toUpperCase() === instFilterA);
     if (filterText) data = data.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
     const valKeys = {total:'total',phy:'phy_m',chem:'chem_m',math:'math_m',acc:'accuracy'};
-    data.sort((a,b) => sortDir * (a[valKeys[currentSort]] - b[valKeys[currentSort]]));
+    data.sort((a,b) => {
+      const diff = sortDir * (a[valKeys[currentSort]] - b[valKeys[currentSort]]);
+      if (diff !== 0) return diff;
+      // Tiebreaker 1: more correct answers
+      const corrDiff = sortDir * (a.tot_c - b.tot_c);
+      if (corrDiff !== 0) return corrDiff;
+      // Tiebreaker 2: alphabetical name
+      return a.name.localeCompare(b.name);
+    });
     const tbody = document.getElementById('leaderboardBody');
     tbody.innerHTML = '';
-    data.forEach(s => {
+    data.forEach((s, slIdx) => {
       const maxScore = high || 300;
       const phyPct  = Math.max(0, (s.phy_m  / maxScore) * 100);
       const chemPct = Math.max(0, (s.chem_m / maxScore) * 100);
@@ -3302,9 +3364,12 @@ function buildDashboard(raw, filename) {
       const rankClass = localRank===1?'rank-1':localRank===2?'rank-2':localRank===3?'rank-3':'rank-other';
       const scoreColor = s.total>=high*0.75?'var(--accent2)':s.total>=high*0.5?'var(--accent)':s.total>=high*0.25?'var(--math)':'var(--accent3)';
       const accColor = s.accuracy>=60?'var(--accent2)':s.accuracy>=40?'var(--accent)':'var(--accent3)';
+      const csvRank = s.rank ? s.rank : '\u2014';
       const tr = document.createElement('tr');
       tr.className = 'row ' + getTier(s.total);
       tr.innerHTML =
+        '<td style="color:var(--muted);font-size:0.65rem;min-width:32px;">' + (slIdx+1) + '</td>' +
+        '<td style="color:var(--muted);font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;min-width:48px;">' + csvRank + '</td>' +
         '<td><span class="rank-badge ' + rankClass + '">' + localRank + '</span></td>' +
         '<td><div class="name-cell"><a href="/student?student=' + encodeURIComponent(s.name) + '">' + s.name + '</a></div></td>' +
         '<td>' + (s.inst ? '<span class="inst-chip inst-'+(s.inst||'').toLowerCase()+'">' + s.inst + '</span>' : '') + '</td>' +
@@ -3327,6 +3392,14 @@ function buildDashboard(raw, filename) {
       const sv = btn.dataset.sort;
       if (sv === currentSort) sortDir *= -1; else { currentSort = sv; sortDir = -1; }
       document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderLeaderboard();
+    };
+  });
+  document.querySelectorAll('#instFilterBar .inst-btn').forEach(btn => {
+    btn.onclick = () => {
+      instFilterA = btn.dataset.inst;
+      document.querySelectorAll('#instFilterBar .inst-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       renderLeaderboard();
     };
@@ -3522,9 +3595,6 @@ async function populatePickerMenu() {
 </body>
 </html>"""
 
-@app.route("/annual")
-def annual():
-    return render_template("annual.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
