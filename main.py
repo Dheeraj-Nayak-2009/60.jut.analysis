@@ -1670,13 +1670,16 @@ function renderLeaderboard(){
     const av=a[sortKey[lbSort]]??-1,bv=b[sortKey[lbSort]]??-1;
     const diff=lbDir*(av-bv);
     if(diff!==0)return diff;
-    // tiebreaker: best accuracy then name
-    const accDiff=lbDir*((a.acc||0)-(b.acc||0));
-    if(accDiff!==0)return accDiff;
+    // Tiebreakers always direction-neutral: accuracy desc → name asc
+    if((b.acc||0)!==(a.acc||0))return (b.acc||0)-(a.acc||0);
     return a.name.localeCompare(b.name);
   });
-  // assign display ranks by avg (or score)
-  const ranked=[...lbData].sort((a,b)=>b.avg-a.avg);
+  // assign display ranks by avg (or score) — tiebreaker: acc desc → name asc
+  const ranked=[...lbData].sort((a,b)=>{
+    if(b.avg!==a.avg)return b.avg-a.avg;
+    if((b.acc||0)!==(a.acc||0))return (b.acc||0)-(a.acc||0);
+    return a.name.localeCompare(b.name);
+  });
   const rankMap={};ranked.forEach((s,i)=>{rankMap[s.name]=i+1;});
   const maxAvg=ranked.length?ranked[0].avg:300;
 
@@ -3292,7 +3295,12 @@ let radarInst, stackedInst, accuracyInst;
 
 function buildDashboard(raw, filename) {
   raw.forEach(s => { s.accuracy = s.tot_a > 0 ? Math.round((s.tot_c / s.tot_a) * 100) : 0; });
-  const sorted = [...raw].sort((a,b) => b.total - a.total);
+  // Canonical sort: score desc → correct desc → alphabetical (used for stable localRank)
+  const sorted = [...raw].sort((a,b) => {
+    if (b.total !== a.total) return b.total - a.total;
+    if (b.tot_c !== a.tot_c) return b.tot_c - a.tot_c;
+    return a.name.localeCompare(b.name);
+  });
   const avg  = Math.round(raw.reduce((s,r) => s+r.total, 0) / raw.length);
   const high = Math.max(...raw.map(r => r.total));
   const avgAcc = Math.round(raw.reduce((s,r) => s+r.accuracy, 0) / raw.length);
@@ -3347,10 +3355,8 @@ function buildDashboard(raw, filename) {
     data.sort((a,b) => {
       const diff = sortDir * (a[valKeys[currentSort]] - b[valKeys[currentSort]]);
       if (diff !== 0) return diff;
-      // Tiebreaker 1: more correct answers
-      const corrDiff = sortDir * (a.tot_c - b.tot_c);
-      if (corrDiff !== 0) return corrDiff;
-      // Tiebreaker 2: alphabetical name
+      // Tiebreakers are always direction-neutral: more correct → alphabetical
+      if (b.tot_c !== a.tot_c) return b.tot_c - a.tot_c;
       return a.name.localeCompare(b.name);
     });
     const tbody = document.getElementById('leaderboardBody');
