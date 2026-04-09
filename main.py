@@ -3820,516 +3820,895 @@ ELITES_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JUT · Elites — Wall of Fame</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<title>JUT · Hall of Honour</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Instrument+Sans:ital,wght@0,400;0,600;1,400&family=Teko:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0a0a0f;--surface:#111118;--surface2:#16161f;--border:#1e1e2e;
-  --accent:#e8c547;--accent2:#47e8c5;--accent3:#e847a0;
-  --text:#e8e8f0;--muted:#6b6b8a;
-  --phy:#4fc3f7;--chem:#a78bfa;--math:#fb923c;
-  --gold:#fbbf24;--silver:#94a3b8;--bronze:#cd7f32;--legendary:#e8c547;
-  --green:#4ade80;--red:#f87171;
+  --ink:#0c0b09;--paper:#f5f0e8;--cream:#ede8d8;--warm:#d4c9a8;
+  --gold:#b8860b;--gold2:#e8c84a;--gold-light:#f7e98e;
+  --red:#8b1a1a;--red2:#c0392b;
+  --teal:#1a5f5f;--teal2:#2a8080;
+  --silver:#8a8a8a;--bronze:#8b5e3c;
+  --legendary:#c0920b;
+  --text-primary:#1a1510;--text-secondary:#4a3f2f;--text-muted:#8a7a60;
+  --border-heavy:#1a1510;--border-light:#c8bea0;--border-rule:#b8a880;
+  --surface:#ffffff;--surface2:#f0ead8;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-html{scroll-behavior:smooth;}
-body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden;}
-
-/* ── noise grain ── */
-body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.4;}
-
-/* ── animated grid bg ── */
-.grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px);background-size:80px 80px;animation:gridDrift 50s linear infinite;z-index:0;}
-@keyframes gridDrift{0%{background-position:0 0}100%{background-position:80px 80px}}
-
-/* ── ambient glows ── */
-.glow-gold{position:fixed;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(232,197,71,0.06) 0%,transparent 65%);top:-300px;right:-200px;pointer-events:none;animation:floatGold 22s ease-in-out infinite;}
-.glow-teal{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(71,232,197,0.05) 0%,transparent 65%);bottom:-150px;left:-100px;pointer-events:none;animation:floatTeal 28s ease-in-out infinite;}
-.glow-pink{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(232,71,160,0.04) 0%,transparent 65%);top:40%;left:40%;pointer-events:none;animation:floatPink 34s ease-in-out infinite;}
-@keyframes floatGold{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,60px)}}
-@keyframes floatTeal{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,-40px)}}
-@keyframes floatPink{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,30px)}}
-
-/* ── nav ── */
-.topnav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(10,10,15,0.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0.9rem 2rem;gap:1rem;}
-.topnav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.08em;color:var(--text);text-decoration:none;}
-.topnav-logo span{color:var(--accent);}
-.topnav-links{display:flex;gap:1.2rem;align-items:center;}
-.topnav-link{font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;padding:0.3rem 0;}
-.topnav-link:hover,.topnav-link.active{color:var(--accent);}
-.topnav-link.active{border-bottom:1px solid var(--accent);}
-
-/* ── hero ── */
-.hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:8rem 4rem 5rem;overflow:hidden;}
-.hero-scanline{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(232,197,71,0.012) 3px,rgba(232,197,71,0.012) 4px);pointer-events:none;}
-.hero-content{position:relative;z-index:2;}
-.hero-eyebrow{font-size:0.62rem;letter-spacing:0.5em;color:var(--accent2);text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:slideUp 0.6s 0.2s forwards;display:flex;align-items:center;gap:0.8rem;}
-.hero-eyebrow::before{content:'';display:block;width:42px;height:1px;background:var(--accent2);}
-.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(5rem,16vw,14rem);line-height:0.84;letter-spacing:0.01em;opacity:0;animation:slideUp 0.9s 0.35s forwards;}
-.hero-title .gold{color:var(--accent);-webkit-text-stroke:0px;display:block;}
-.hero-title .stroke{-webkit-text-stroke:1.5px rgba(232,197,71,0.5);color:transparent;display:block;}
-.hero-sub{font-size:0.75rem;color:var(--muted);letter-spacing:0.18em;margin-top:1.5rem;max-width:560px;line-height:1.8;opacity:0;animation:slideUp 0.7s 0.6s forwards;}
-.hero-kpis{display:flex;gap:3rem;margin-top:3rem;opacity:0;animation:slideUp 0.7s 0.75s forwards;flex-wrap:wrap;}
-.kpi{text-align:left;}
-.kpi-val{font-family:'Bebas Neue',sans-serif;font-size:3.8rem;color:var(--accent);line-height:1;}
-.kpi-label{font-size:0.52rem;letter-spacing:0.28em;color:var(--muted);text-transform:uppercase;margin-top:0.2rem;}
-@keyframes slideUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
-
-/* ── scrolling ticker ── */
-.ticker-wrap{position:absolute;bottom:0;left:0;right:0;z-index:3;overflow:hidden;border-top:1px solid rgba(232,197,71,0.12);height:36px;background:rgba(10,10,15,0.7);backdrop-filter:blur(8px);}
-.ticker{display:flex;align-items:center;white-space:nowrap;animation:tickerScroll 40s linear infinite;height:100%;}
-.ticker-item{font-size:0.55rem;letter-spacing:0.22em;color:rgba(232,197,71,0.5);text-transform:uppercase;padding:0 2rem;}
-.ticker-sep{color:rgba(232,197,71,0.25);padding:0 0.5rem;}
-@keyframes tickerScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-
-/* ── main layout ── */
-.main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:0 2.5rem 8rem;}
-section{padding:5rem 0;}
-.sec-label{font-size:0.6rem;letter-spacing:0.45em;color:var(--accent);text-transform:uppercase;margin-bottom:0.7rem;display:flex;align-items:center;gap:0.8rem;}
-.sec-label::before{content:'';display:block;width:28px;height:1px;background:var(--accent);}
-.sec-title{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3.5rem);margin-bottom:2.5rem;}
-.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent);}
-.reveal{opacity:0;transform:translateY(28px);transition:opacity 0.7s,transform 0.7s;}
+html{scroll-behavior:smooth;font-size:16px;}
+body{background:var(--paper);color:var(--text-primary);font-family:'Instrument Sans',sans-serif;overflow-x:hidden;min-height:100vh;}
+ 
+/* ── PRINT-PRESS TEXTURE ── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;mix-blend-mode:multiply;}
+ 
+/* ── NAV ── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:800;background:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:48px;border-bottom:2px solid var(--gold);}
+.topbar-logo{font-family:'Teko',sans-serif;font-size:1.6rem;font-weight:600;letter-spacing:0.12em;color:var(--gold2);text-decoration:none;}
+.topbar-links{display:flex;gap:0;align-items:center;}
+.topbar-link{font-family:'Instrument Sans',sans-serif;font-size:0.6rem;letter-spacing:0.28em;text-transform:uppercase;color:rgba(255,255,255,0.45);text-decoration:none;padding:0 1rem;height:48px;display:flex;align-items:center;border-right:1px solid rgba(255,255,255,0.08);transition:color 0.2s,background 0.2s;}
+.topbar-link:first-child{border-left:1px solid rgba(255,255,255,0.08);}
+.topbar-link:hover{color:var(--gold2);background:rgba(232,200,74,0.06);}
+.topbar-link.active{color:var(--gold2);border-bottom:2px solid var(--gold2);margin-bottom:-2px;}
+ 
+/* ── MASTHEAD ── */
+.masthead{padding:80px 0 0;position:relative;overflow:hidden;}
+.masthead-rule{height:3px;background:var(--border-heavy);margin:0 2rem;}
+.masthead-inner{max-width:1500px;margin:0 auto;padding:0 2rem;}
+.masthead-top{display:flex;align-items:flex-end;justify-content:space-between;padding:2rem 0 1rem;gap:2rem;border-bottom:6px double var(--border-heavy);}
+.mh-date{font-family:'Instrument Sans',sans-serif;font-size:0.62rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--text-muted);font-style:italic;}
+.mh-title-block{text-align:center;flex:1;}
+.mh-eyebrow{font-family:'Instrument Sans',sans-serif;font-size:0.6rem;letter-spacing:0.45em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.4rem;}
+.mh-title{font-family:'Playfair Display',serif;font-size:clamp(3.5rem,9vw,7.5rem);font-weight:900;line-height:0.9;letter-spacing:-0.01em;color:var(--ink);}
+.mh-title .italic{font-style:italic;color:var(--red);}
+.mh-subtitle{font-family:'Instrument Sans',sans-serif;font-size:0.65rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--text-muted);margin-top:0.6rem;}
+.mh-edition{font-family:'Teko',sans-serif;font-size:0.75rem;letter-spacing:0.2em;color:var(--text-muted);text-align:right;white-space:nowrap;}
+ 
+/* ── SORT/FILTER BAR ── */
+.control-bar{background:var(--ink);border-bottom:2px solid var(--gold);position:sticky;top:48px;z-index:700;}
+.cb-inner{max-width:1500px;margin:0 auto;padding:0 2rem;display:flex;align-items:center;gap:0;overflow-x:auto;}
+.cb-section{display:flex;align-items:center;gap:0;border-right:1px solid rgba(255,255,255,0.1);flex-shrink:0;}
+.cb-section:last-child{border-right:none;margin-left:auto;}
+.cb-label{font-family:'Instrument Sans',sans-serif;font-size:0.52rem;letter-spacing:0.3em;text-transform:uppercase;color:rgba(255,255,255,0.3);padding:0 0.8rem;white-space:nowrap;}
+.cb-btn{font-family:'Teko',sans-serif;font-size:0.9rem;letter-spacing:0.15em;text-transform:uppercase;color:rgba(255,255,255,0.5);background:transparent;border:none;cursor:pointer;padding:0 0.9rem;height:40px;display:flex;align-items:center;transition:all 0.18s;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.06);}
+.cb-btn:last-child{border-right:none;}
+.cb-btn:hover{color:var(--gold2);background:rgba(232,200,74,0.07);}
+.cb-btn.active{color:var(--gold2);background:rgba(232,200,74,0.1);border-bottom:2px solid var(--gold2);}
+.cb-search{background:rgba(255,255,255,0.06);border:none;border-left:1px solid rgba(255,255,255,0.1);color:#fff;font-family:'Instrument Sans',sans-serif;font-size:0.68rem;padding:0 1rem;height:40px;outline:none;width:180px;letter-spacing:0.05em;}
+.cb-search::placeholder{color:rgba(255,255,255,0.25);}
+.cb-search:focus{background:rgba(255,255,255,0.1);}
+ 
+/* ── MAIN LAYOUT ── */
+.page-wrap{max-width:1500px;margin:0 auto;padding:0 2rem 6rem;}
+ 
+/* ── JUT SECTION HEADER ── */
+.jut-section{margin:0 0 0;}
+.jut-header{display:flex;align-items:center;gap:0;padding:2.5rem 0 0;position:relative;}
+.jut-header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--border-heavy),var(--border-light),transparent);}
+.jut-num{font-family:'Teko',sans-serif;font-size:5rem;font-weight:700;line-height:1;color:var(--ink);opacity:0.08;position:absolute;right:0;top:1rem;letter-spacing:-0.02em;}
+.jut-name{font-family:'Playfair Display',serif;font-size:clamp(1.5rem,4vw,3rem);font-weight:700;font-style:italic;color:var(--ink);border-bottom:3px solid var(--ink);padding-bottom:0.2rem;margin-right:1.5rem;white-space:nowrap;}
+.jut-meta{font-family:'Instrument Sans',sans-serif;font-size:0.6rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--text-muted);}
+.jut-date-chip{font-family:'Teko',sans-serif;font-size:0.75rem;letter-spacing:0.18em;padding:0.15rem 0.7rem;background:var(--ink);color:var(--gold2);margin-left:auto;flex-shrink:0;}
+ 
+/* ── ENTRY ROW (main list item) ── */
+.entries-list{display:flex;flex-direction:column;}
+.entry-row{display:grid;grid-template-columns:56px 1fr auto;gap:0;border-bottom:1px solid var(--border-rule);min-height:72px;position:relative;transition:background 0.15s;cursor:pointer;text-decoration:none;color:inherit;}
+.entry-row:hover{background:rgba(184,134,11,0.04);}
+.entry-row.entry-gold{background:linear-gradient(90deg,rgba(184,134,11,0.05) 0%,transparent 60%);}
+.entry-row.entry-silver{background:linear-gradient(90deg,rgba(138,138,138,0.04) 0%,transparent 60%);}
+.entry-row.entry-bronze{background:linear-gradient(90deg,rgba(139,94,60,0.04) 0%,transparent 60%);}
+ 
+/* rank column */
+.er-rank{display:flex;align-items:center;justify-content:center;padding:0 0.5rem;border-right:2px solid var(--border-rule);flex-shrink:0;}
+.rank-num{font-family:'Teko',sans-serif;font-size:2.2rem;font-weight:700;line-height:1;color:var(--text-muted);}
+.rank-num.r1{color:var(--gold);font-size:2.5rem;}
+.rank-num.r2{color:var(--silver);font-size:2.3rem;}
+.rank-num.r3{color:var(--bronze);font-size:2.1rem;}
+ 
+/* main info column */
+.er-info{padding:0.8rem 1.2rem;display:flex;flex-direction:column;justify-content:center;gap:0.2rem;min-width:0;}
+.er-name-line{display:flex;align-items:baseline;gap:0.8rem;flex-wrap:wrap;}
+.er-name{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color 0.2s;}
+.entry-row:hover .er-name{color:var(--red);}
+.er-inst-chip{font-family:'Teko',sans-serif;font-size:0.7rem;letter-spacing:0.15em;padding:0.1rem 0.45rem;font-weight:500;flex-shrink:0;}
+.chip-kjs{background:#4fc3f7;color:#0c0b09;}
+.chip-mjs{background:#a78bfa;color:#0c0b09;}
+.chip-ujs{background:#fb923c;color:#0c0b09;}
+.er-score-line{display:flex;align-items:center;gap:1.2rem;font-family:'Instrument Sans',sans-serif;font-size:0.62rem;color:var(--text-muted);letter-spacing:0.12em;flex-wrap:wrap;}
+.er-score-num{font-family:'Teko',sans-serif;font-size:1rem;font-weight:600;letter-spacing:0.08em;}
+.sc-gold{color:var(--gold);}
+.sc-red{color:var(--red);}
+ 
+/* badges column */
+.er-badges{padding:0.7rem 1rem 0.7rem 0.5rem;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:0.35rem;min-width:0;max-width:560px;}
+.badges-wrap{display:flex;flex-wrap:wrap;gap:0.3rem;justify-content:flex-end;}
+.badge-pill{display:inline-flex;align-items:center;gap:0.25rem;font-family:'Instrument Sans',sans-serif;font-size:0.5rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.18rem 0.5rem;border:1px solid;border-radius:1px;white-space:nowrap;font-weight:600;}
+.bp-legendary{background:linear-gradient(90deg,rgba(192,146,11,0.15),rgba(247,233,142,0.1));border-color:var(--gold);color:var(--gold);}
+.bp-gold{background:rgba(184,134,11,0.08);border-color:rgba(184,134,11,0.5);color:#8b6914;}
+.bp-silver{background:rgba(138,138,138,0.07);border-color:rgba(138,138,138,0.4);color:#606060;}
+.bp-bronze{background:rgba(139,94,60,0.07);border-color:rgba(139,94,60,0.35);color:var(--bronze);}
+.bp-inst{background:rgba(79,195,247,0.08);border-color:rgba(79,195,247,0.4);color:#1a7a9a;}
+.badge-icon{font-size:0.7rem;}
+.er-badge-count{font-family:'Teko',sans-serif;font-size:0.72rem;letter-spacing:0.15em;color:var(--text-muted);text-align:right;}
+ 
+/* ── AGGREGATE SECTION ── */
+.agg-section{margin-bottom:3rem;}
+.agg-header{display:flex;align-items:center;gap:1.5rem;padding:2rem 0 1rem;border-bottom:4px solid var(--ink);}
+.agg-icon{font-size:2rem;}
+.agg-title{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,3.5vw,2.2rem);font-weight:700;}
+.agg-desc{font-family:'Instrument Sans',sans-serif;font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-muted);margin-top:0.2rem;}
+ 
+/* ── THE GRAND ROLL (overall champion display) ── */
+.champion-banner{display:grid;grid-template-columns:auto 1fr auto;gap:0;background:var(--ink);color:#fff;margin:2rem 0;position:relative;overflow:hidden;}
+.champion-banner::before{content:'CHAMPION';position:absolute;right:-1rem;top:50%;transform:translateY(-50%);font-family:'Teko',sans-serif;font-size:6rem;font-weight:700;opacity:0.04;letter-spacing:0.08em;pointer-events:none;}
+.cb-num{font-family:'Teko',sans-serif;font-size:8rem;font-weight:700;line-height:1;color:var(--gold2);opacity:0.15;padding:1rem 1.5rem;display:flex;align-items:center;}
+.cb-info{padding:1.5rem 1.5rem;display:flex;flex-direction:column;justify-content:center;gap:0.5rem;}
+.cb-eyebrow{font-family:'Instrument Sans',sans-serif;font-size:0.55rem;letter-spacing:0.45em;text-transform:uppercase;color:var(--gold2);opacity:0.7;}
+.cb-name{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,3rem);font-weight:900;font-style:italic;}
+.cb-stats{display:flex;gap:2rem;flex-wrap:wrap;}
+.cb-stat{text-align:left;}
+.cb-sv{font-family:'Teko',sans-serif;font-size:2rem;color:var(--gold2);}
+.cb-sl{font-size:0.52rem;letter-spacing:0.2em;opacity:0.5;text-transform:uppercase;}
+.cb-badges-block{padding:1.5rem;display:flex;flex-direction:column;justify-content:center;gap:0.4rem;border-left:1px solid rgba(255,255,255,0.08);}
+.cb-badge-strip{display:flex;flex-wrap:wrap;gap:0.3rem;max-width:280px;justify-content:flex-end;}
+ 
+/* ── DIVIDER TYPES ── */
+.section-break{margin:3rem 0 0;height:1px;background:var(--border-heavy);}
+.section-break-double{margin:3rem 0 0;border:none;border-top:4px double var(--border-heavy);}
+.pull-quote{font-family:'Playfair Display',serif;font-size:1.1rem;font-style:italic;color:var(--text-secondary);border-left:4px solid var(--gold);padding:0.8rem 1.5rem;margin:2rem 0;background:var(--cream);}
+ 
+/* ── LOADING STATE ── */
+.loading-masthead{padding:120px 2rem 4rem;text-align:center;}
+.l-title{font-family:'Playfair Display',serif;font-size:3rem;font-weight:900;color:var(--ink);margin-bottom:1rem;}
+.l-sub{font-family:'Instrument Sans',sans-serif;font-size:0.7rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--text-muted);}
+.l-dots{display:flex;gap:0.5rem;justify-content:center;margin-top:2rem;}
+.l-dot{width:8px;height:8px;background:var(--ink);border-radius:50%;animation:blink 1.2s infinite;}
+.l-dot:nth-child(2){animation-delay:0.2s;}
+.l-dot:nth-child(3){animation-delay:0.4s;}
+@keyframes blink{0%,100%{opacity:0.1}50%{opacity:1}}
+ 
+/* ── EMPTY STATE ── */
+.empty-state{padding:4rem;text-align:center;color:var(--text-muted);font-family:'Playfair Display',serif;font-style:italic;font-size:1.1rem;}
+ 
+/* ── FOOTER ── */
+.page-footer{border-top:4px double var(--border-heavy);padding:2rem 2rem;max-width:1500px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;}
+.pf-logo{font-family:'Teko',sans-serif;font-size:1.2rem;font-weight:600;letter-spacing:0.12em;color:var(--ink);}
+.pf-copy{font-family:'Instrument Sans',sans-serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-muted);}
+ 
+/* ── PHOTO TREATMENT ── */
+.er-photo{width:56px;height:72px;object-fit:cover;display:block;filter:grayscale(20%) contrast(1.05);}
+.er-photo-col{width:56px;border-right:1px solid var(--border-rule);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--cream);}
+.er-photo-init{font-family:'Teko',sans-serif;font-size:1.8rem;color:var(--text-muted);letter-spacing:0.05em;}
+ 
+/* ── ANIM ── */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity 0.5s,transform 0.5s;}
 .reveal.vis{opacity:1;transform:translateY(0);}
-
-/* ── filter bar ── */
-.filter-strip{display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:2.5rem;padding:1rem 1.4rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;}
-.filter-label{font-size:0.52rem;letter-spacing:0.25em;color:var(--muted);text-transform:uppercase;flex-shrink:0;}
-.filter-sep{width:1px;height:18px;background:var(--border);flex-shrink:0;}
-.flt-btn{font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;padding:0.35rem 0.9rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;transition:all 0.2s;white-space:nowrap;}
-.flt-btn:hover{border-color:var(--accent);color:var(--accent);}
-.flt-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
-.flt-btn.ib-kjs.active{background:#4fc3f7;border-color:#4fc3f7;}
-.flt-btn.ib-mjs.active{background:#a78bfa;border-color:#a78bfa;}
-.flt-btn.ib-ujs.active{background:#fb923c;border-color:#fb923c;}
-.search-elite{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.9rem;font-family:'JetBrains Mono',monospace;font-size:0.68rem;border-radius:2px;outline:none;min-width:220px;transition:border-color 0.2s;margin-left:auto;}
-.search-elite:focus{border-color:var(--accent);}
-.search-elite::placeholder{color:var(--muted);}
-
-/* ── badge tier colors ── */
-.tier-legendary{background:linear-gradient(135deg,rgba(232,197,71,0.18),rgba(251,191,36,0.08));border-color:rgba(232,197,71,0.5)!important;color:var(--gold);}
-.tier-gold{background:rgba(251,191,36,0.08);border-color:rgba(251,191,36,0.3)!important;color:#fbbf24;}
-.tier-silver{background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.25)!important;color:var(--silver);}
-.tier-bronze{background:rgba(205,127,50,0.08);border-color:rgba(205,127,50,0.2)!important;color:var(--bronze);}
-
-/* ── elite card ── */
-.elites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem;}
-.elite-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;position:relative;transition:transform 0.3s,border-color 0.3s,box-shadow 0.3s;cursor:pointer;text-decoration:none;display:block;}
-.elite-card:hover{transform:translateY(-6px);border-color:rgba(232,197,71,0.35);box-shadow:0 20px 60px rgba(0,0,0,0.4);}
-.elite-card.legendary-card{border-color:rgba(232,197,71,0.3);box-shadow:0 0 30px rgba(232,197,71,0.06);}
-.elite-card.legendary-card:hover{border-color:rgba(232,197,71,0.6);box-shadow:0 20px 60px rgba(232,197,71,0.12);}
-
-/* card top band */
-.card-band{height:3px;}
-.band-legendary{background:linear-gradient(90deg,#fbbf24,#e8c547,#47e8c5);}
-.band-gold{background:linear-gradient(90deg,#fbbf24,#fb923c);}
-.band-silver{background:linear-gradient(90deg,#94a3b8,#4fc3f7);}
-.band-default{background:linear-gradient(90deg,var(--accent),var(--accent2));}
-
-/* rank badge absolute top-right */
-.card-rank{position:absolute;top:0.8rem;right:0.9rem;font-family:'Bebas Neue',sans-serif;font-size:1.8rem;line-height:1;opacity:0.55;}
-.rank-1-c{color:var(--gold);}
-.rank-2-c{color:var(--silver);}
-.rank-3-c{color:var(--bronze);}
-.rank-n-c{color:var(--muted);}
-
-/* photo area */
-.card-photo-wrap{width:100%;aspect-ratio:4/3;overflow:hidden;position:relative;background:var(--surface2);}
-.card-photo{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.5s;}
-.elite-card:hover .card-photo{transform:scale(1.04);}
-.card-photo-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:4rem;color:rgba(232,197,71,0.15);}
-.card-photo-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,15,0.9) 0%,rgba(10,10,15,0.3) 50%,transparent 100%);}
-.card-photo-score{position:absolute;bottom:0.9rem;left:1rem;font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;color:var(--accent);}
-.card-photo-avg-label{font-size:0.48rem;letter-spacing:0.22em;color:rgba(232,197,71,0.6);text-transform:uppercase;margin-bottom:1px;}
-
-/* card body */
-.card-body{padding:1.2rem 1.3rem 1.4rem;}
-.card-inst{display:inline-block;font-size:0.48rem;letter-spacing:0.2em;padding:0.16rem 0.5rem;border-radius:2px;text-transform:uppercase;margin-bottom:0.5rem;font-weight:600;}
-.inst-kjs{background:rgba(79,195,247,0.12);color:#4fc3f7;}
-.inst-mjs{background:rgba(167,139,250,0.12);color:#a78bfa;}
-.inst-ujs{background:rgba(251,146,60,0.12);color:#fb923c;}
-.card-name{font-family:'DM Serif Display',serif;font-size:1.2rem;line-height:1.2;margin-bottom:0.6rem;color:var(--text);}
-.card-stats{display:flex;gap:1.2rem;margin-bottom:1rem;flex-wrap:wrap;}
-.card-stat-item{text-align:center;}
-.cs-val{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1;}
-.cs-lbl{font-size:0.44rem;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;}
-.card-subj-bars{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;}
-.csb-row{}
-.csb-label{font-size:0.48rem;color:var(--muted);letter-spacing:0.1em;margin-bottom:3px;display:flex;justify-content:space-between;}
-.csb-outer{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
-.csb-inner{height:100%;border-radius:2px;}
-
-/* badges strip */
-.card-badges{display:flex;flex-wrap:wrap;gap:0.35rem;}
-.badge{display:inline-flex;align-items:center;gap:0.3rem;font-size:0.48rem;letter-spacing:0.12em;padding:0.22rem 0.55rem;border-radius:20px;border:1px solid;text-transform:uppercase;white-space:nowrap;}
-.badge .badge-icon{font-size:0.7rem;}
-
-/* ── podium section ── */
-.podium-trio{display:flex;align-items:flex-end;justify-content:center;gap:0;margin:2rem 0 3rem;}
-.ptop{flex:1;max-width:320px;text-align:center;position:relative;}
-.ptop-photo{width:120px;height:120px;border-radius:50%;overflow:hidden;margin:0 auto 1rem;border:3px solid var(--border);position:relative;}
-.ptop-photo img{width:100%;height:100%;object-fit:cover;}
-.ptop-photo-fb{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:rgba(232,197,71,0.2);}
-.ptop-medal{position:absolute;top:-8px;right:-8px;font-size:1.5rem;}
-.ptop-name{font-family:'DM Serif Display',serif;font-size:1.05rem;margin-bottom:0.25rem;}
-.ptop-score{font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;}
-.ptop-sub{font-size:0.52rem;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;}
-.ptop-block{margin-top:0.8rem;border-radius:4px 4px 0 0;height:120px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;}
-.ptop-1 .ptop-score{color:var(--gold);}
-.ptop-1 .ptop-photo{border-color:var(--gold);box-shadow:0 0 20px rgba(251,191,36,0.25);}
-.ptop-1 .ptop-block{background:linear-gradient(135deg,#fbbf24,#f59e0b);height:150px;}
-.ptop-2 .ptop-score{color:var(--silver);}
-.ptop-2 .ptop-photo{border-color:var(--silver);}
-.ptop-2 .ptop-block{background:linear-gradient(135deg,#94a3b8,#64748b);}
-.ptop-3 .ptop-score{color:var(--bronze);}
-.ptop-3 .ptop-photo{border-color:var(--bronze);}
-.ptop-3 .ptop-block{background:linear-gradient(135deg,#cd7f32,#a0632a);height:88px;}
-
-/* ── badge legend ── */
-.badge-legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.8rem;margin-top:1.5rem;}
-.bl-item{display:flex;align-items:center;gap:0.8rem;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0.8rem 1rem;}
-.bl-icon{font-size:1.5rem;flex-shrink:0;}
-.bl-name{font-size:0.62rem;margin-bottom:0.15rem;}
-.bl-desc{font-size:0.52rem;color:var(--muted);letter-spacing:0.05em;line-height:1.5;}
-
-/* ── loading ── */
-.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;gap:1rem;}
-.ld-dots{display:flex;gap:8px;}
-.ld-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:blink 1.2s infinite;}
-.ld-dot:nth-child(2){animation-delay:0.2s;}
-.ld-dot:nth-child(3){animation-delay:0.4s;}
-@keyframes blink{0%,100%{opacity:0.15}50%{opacity:1}}
-.ld-text{font-size:0.65rem;letter-spacing:0.3em;color:var(--muted);text-transform:uppercase;}
-
-/* ── empty state ── */
-.empty-msg{text-align:center;padding:4rem;color:var(--muted);font-size:0.7rem;letter-spacing:0.2em;}
-
+.entry-row{opacity:0;transform:translateX(-8px);transition:opacity 0.4s,transform 0.4s,background 0.15s;}
+.entry-row.vis{opacity:1;transform:translateX(0);}
+ 
+/* ── RESPONSIVE ── */
 @media(max-width:900px){
-  .hero{padding:7rem 1.5rem 4rem;}
-  .podium-trio{flex-direction:column;align-items:center;gap:1.5rem;}
-  .ptop{max-width:260px;}
-  .ptop-block{display:none;}
-  .main{padding:0 1.2rem 6rem;}
-  .elites-grid{grid-template-columns:1fr;}
+  .er-badges{max-width:240px;}
+  .champion-banner{grid-template-columns:1fr;}.cb-num{display:none;}
+  .mh-date,.mh-edition{display:none;}
+  .mh-top{flex-direction:column;align-items:center;}
+}
+@media(max-width:640px){
+  .entry-row{grid-template-columns:44px 1fr;}
+  .er-badges{display:none;}
+  .cb-badges-block{display:none;}
+  .topbar-links .topbar-link:not(.always){display:none;}
 }
 </style>
 </head>
 <body>
-<div class="grid-bg"></div>
-<div class="glow-gold"></div>
-<div class="glow-teal"></div>
-<div class="glow-pink"></div>
-
-<nav class="topnav">
-  <a class="topnav-logo" href="/">JUT<span>·</span>HUB</a>
-  <div class="topnav-links">
-    <a class="topnav-link" href="/">Home</a>
-    <a class="topnav-link" href="/analysis">Per-Test</a>
-    <a class="topnav-link" href="/overview">Overview</a>
-    <a class="topnav-link" href="/student">Student</a>
-    <a class="topnav-link active" href="/elites">Elites</a>
+ 
+<nav class="topbar">
+  <a class="topbar-logo" href="/">JUT·HUB</a>
+  <div class="topbar-links">
+    <a class="topbar-link always" href="/">Home</a>
+    <a class="topbar-link" href="/analysis">Per-Test</a>
+    <a class="topbar-link" href="/overview">Overview</a>
+    <a class="topbar-link" href="/student">Student</a>
+    <a class="topbar-link active always" href="/elites">Elites</a>
   </div>
 </nav>
-
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-scanline"></div>
-  <div class="hero-content">
-    <div class="hero-eyebrow">JUT · Wall of Fame</div>
-    <div class="hero-title">
-      <span class="gold">JUT</span>
-      <span class="stroke">ELITES</span>
+ 
+<!-- CONTROL BAR -->
+<div class="control-bar">
+  <div class="cb-inner">
+    <div class="cb-section">
+      <span class="cb-label">View</span>
+      <button class="cb-btn active" data-view="by-jut">By JUT</button>
+      <button class="cb-btn" data-view="aggregate">Aggregate</button>
+      <button class="cb-btn" data-view="all-badges">All Badges</button>
     </div>
-    <div class="hero-sub" id="heroSub">Loading elite performers…</div>
-    <div class="hero-kpis">
-      <div class="kpi"><div class="kpi-val" id="kpiElites">—</div><div class="kpi-label">Elites Listed</div></div>
-      <div class="kpi"><div class="kpi-val" id="kpiBadges">—</div><div class="kpi-label">Badges Awarded</div></div>
-      <div class="kpi"><div class="kpi-val" id="kpiLegendary">—</div><div class="kpi-label">Legendary</div></div>
+    <div class="cb-section">
+      <span class="cb-label">Sort</span>
+      <button class="cb-btn active" data-sort="rank">Rank</button>
+      <button class="cb-btn" data-sort="badges-desc">Most Badges</button>
+      <button class="cb-btn" data-sort="name">Name</button>
+    </div>
+    <div class="cb-section">
+      <span class="cb-label">Inst</span>
+      <button class="cb-btn active" data-inst="ALL">All</button>
+      <button class="cb-btn" data-inst="KJS">KJS</button>
+      <button class="cb-btn" data-inst="MJS">MJS</button>
+      <button class="cb-btn" data-inst="UJS">UJS</button>
+    </div>
+    <div class="cb-section">
+      <input class="cb-search" id="cbSearch" type="text" placeholder="Search name…">
     </div>
   </div>
-  <div class="ticker-wrap"><div class="ticker" id="ticker"></div></div>
 </div>
-
-<div class="main">
-
-<!-- PODIUM -->
-<section>
-  <div class="sec-label reveal">All-Time Top 3</div>
-  <div class="sec-title reveal">The Immortal Podium</div>
-  <div class="podium-trio reveal" id="podiumTrio"></div>
-</section>
-
-<div class="divider"></div>
-
-<!-- WALL OF FAME -->
-<section>
-  <div class="sec-label reveal">Achievement Wall</div>
-  <div class="sec-title reveal">Elite Performers</div>
-
-  <div class="filter-strip reveal" id="filterStrip">
-    <span class="filter-label">Filter:</span>
-    <button class="flt-btn active" data-filter="all">All</button>
-    <div class="filter-sep"></div>
-    <span class="filter-label">Inst:</span>
-    <button class="flt-btn ib-kjs" data-inst="KJS">KJS</button>
-    <button class="flt-btn ib-mjs" data-inst="MJS">MJS</button>
-    <button class="flt-btn ib-ujs" data-inst="UJS">UJS</button>
-    <div class="filter-sep"></div>
-    <span class="filter-label">Badge:</span>
-    <button class="flt-btn" data-badge="rank1">👑 #1</button>
-    <button class="flt-btn" data-badge="top10">⭐ Top10</button>
-    <button class="flt-btn" data-badge="sharpshooter">🎯 Sharp</button>
-    <button class="flt-btn" data-badge="ironwall">🔒 Consistent</button>
-    <button class="flt-btn" data-badge="rising">📈 Rising</button>
-    <input class="search-elite" id="eliteSearch" type="text" placeholder="Search name…">
-  </div>
-
-  <div id="wallGrid" class="elites-grid"></div>
-  <div id="wallEmpty" class="empty-msg" style="display:none;">No elites match the current filter.</div>
-</section>
-
-<div class="divider"></div>
-
-<!-- BADGE LEGEND -->
-<section>
-  <div class="sec-label reveal">Achievement Guide</div>
-  <div class="sec-title reveal">Badge Glossary</div>
-  <div class="badge-legend reveal" id="badgeLegend"></div>
-</section>
-
-</div><!-- /main -->
-
-<div id="loadingWrap" class="loading-wrap main" style="max-width:1600px;margin:0 auto;padding:0 2.5rem;">
-  <div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div>
-  <div class="ld-text">Scanning achievements…</div>
-</div>
-
-<footer style="text-align:center;padding:2rem;color:var(--muted);font-size:0.58rem;letter-spacing:0.18em;border-top:1px solid var(--border);position:relative;z-index:1;">JUT ELITES · WALL OF FAME · ACHIEVEMENT SYSTEM</footer>
-
-<script>
-const BADGE_META = {
-  rank1:       { icon:'👑', label:'#1 Overall',        tier:'legendary', desc:'Highest avg score across all JUTs in the batch.' },
-  podium:      { icon:'🏅', label:'Podium',             tier:'gold',      desc:'Among the top 3 students by average score.' },
-  top10:       { icon:'⭐', label:'Top 10',             tier:'gold',      desc:'Within the top 10 students overall.' },
-  elite10:     { icon:'🔱', label:'Top 10%',            tier:'silver',    desc:'Ranks in the top 10% of the entire batch.' },
-  top25:       { icon:'💎', label:'Top 25%',            tier:'silver',    desc:'Ranks in the top 25% of the batch.' },
-  perfect:     { icon:'✨', label:'Perfect Score',      tier:'legendary', desc:'Achieved a flawless 300/300 in a JUT.' },
-  near_perfect:{ icon:'🌟', label:'Near Perfect',       tier:'gold',      desc:'Scored 280 or above in a single JUT.' },
-  sharpshooter:{ icon:'🎯', label:'Sharpshooter',       tier:'gold',      desc:'80%+ overall accuracy across all attempts.' },
-  precise:     { icon:'🔬', label:'Precision',          tier:'silver',    desc:'70%+ overall accuracy across all attempts.' },
-  ironwall:    { icon:'🔒', label:'Iron Wall',          tier:'gold',      desc:'85%+ consistency score (very low variance).' },
-  consistent:  { icon:'📐', label:'Consistent',         tier:'silver',    desc:'70%+ consistency score across tests.' },
-  perfect_att: { icon:'📅', label:'Perfect Attendance', tier:'silver',    desc:'Attended every single JUT without absence.' },
-  phy_ace:     { icon:'⚛️', label:'Physics Ace',        tier:'silver',    desc:'Average Physics score ≥ 80 marks.' },
-  chem_ace:    { icon:'🧪', label:'Chemistry Ace',      tier:'silver',    desc:'Average Chemistry score ≥ 80 marks.' },
-  math_ace:    { icon:'∑',  label:'Maths Ace',          tier:'silver',    desc:'Average Maths score ≥ 80 marks.' },
-  phy_god:     { icon:'⚡', label:'Physics God',        tier:'gold',      desc:'Average Physics score ≥ 90 marks.' },
-  chem_god:    { icon:'🔭', label:'Chem Genius',        tier:'gold',      desc:'Average Chemistry score ≥ 90 marks.' },
-  math_god:    { icon:'🌀', label:'Math Wizard',        tier:'gold',      desc:'Average Maths score ≥ 90 marks.' },
-  rising:      { icon:'📈', label:'Rising Star',        tier:'silver',    desc:'Last 3 JUT scores show continuous improvement.' },
-};
-
-let allData = [], filteredData = [];
-let activeInst = null, activeBadge = null, searchText = '';
-
-function normName(n){ return n.trim().replace(/\s+/g,' ').toUpperCase(); }
-
-function instChip(inst){
-  if(!inst) return '';
-  const cls = inst==='KJS'?'inst-kjs':inst==='MJS'?'inst-mjs':'inst-ujs';
-  return `<span class="card-inst ${cls}">${inst}</span>`;
-}
-
-function tierOrder(t){ return {legendary:0,gold:1,silver:2,bronze:3}[t]??4; }
-
-function highestTier(badges){
-  if(!badges.length) return 'default';
-  return badges.slice().sort((a,b)=>tierOrder(a.tier)-tierOrder(b.tier))[0].tier;
-}
-
-function bandClass(tier){
-  return {legendary:'band-legendary',gold:'band-gold',silver:'band-silver'}[tier]||'band-default';
-}
-
-function rankClass(r){
-  return r===1?'rank-1-c':r===2?'rank-2-c':r===3?'rank-3-c':'rank-n-c';
-}
-
-function buildCard(s){
-  const tier = highestTier(s.badges);
-  const isLeg = tier==='legendary';
-  const top3 = s.rank<=3;
-  const instC = s.inst?`inst-${s.inst.toLowerCase()}`:'';
-
-  // photo
-  let photoHtml = '';
-  if(s.photo){
-    photoHtml = `<img class="card-photo" src="${s.photo}" alt="${s.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-      <div class="card-photo-fallback" style="display:none;">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`;
-  } else {
-    photoHtml = `<div class="card-photo-fallback">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`;
-  }
-
-  // subject bars
-  const maxSubj = Math.max(s.avg_phy, s.avg_chem, s.avg_math, 1);
-  const subjBars = [
-    {lbl:'Phy', val:s.avg_phy, color:'var(--phy)'},
-    {lbl:'Che', val:s.avg_chem, color:'var(--chem)'},
-    {lbl:'Mat', val:s.avg_math, color:'var(--math)'},
-  ].map(x=>`<div class="csb-row">
-    <div class="csb-label"><span style="color:${x.color}">${x.lbl}</span><span>${Math.round(x.val)}</span></div>
-    <div class="csb-outer"><div class="csb-inner" style="background:${x.color};width:${(x.val/100*100).toFixed(1)}%"></div></div>
-  </div>`).join('');
-
-  // badges (up to 5 shown)
-  const badgesHtml = s.badges.slice(0,6).map(b=>{
-    const meta = BADGE_META[b.id]||{icon:'🏷️',label:b.label,tier:b.tier};
-    return `<span class="badge tier-${meta.tier}" title="${(BADGE_META[b.id]||{}).desc||''}"><span class="badge-icon">${meta.icon}</span>${meta.label}</span>`;
-  }).join('');
-
-  const accColor = s.accuracy>=80?'var(--accent2)':s.accuracy>=60?'var(--accent)':'var(--math)';
-
-  return `<a class="elite-card${isLeg?' legendary-card':''}" href="/student?student=${encodeURIComponent(s.name)}">
-  <div class="card-band ${bandClass(tier)}"></div>
-  <div class="card-rank ${rankClass(s.rank)}">#${s.rank}</div>
-  <div class="card-photo-wrap">
-    ${photoHtml}
-    <div class="card-photo-overlay"></div>
-    <div class="card-photo-score">
-      <div class="card-photo-avg-label">Avg Score</div>
-      ${Math.round(s.avg_score)}
-    </div>
-  </div>
-  <div class="card-body">
-    ${instChip(s.inst)}
-    <div class="card-name">${s.name}</div>
-    <div class="card-stats">
-      <div class="card-stat-item"><div class="cs-val" style="color:var(--accent)">${Math.round(s.avg_score)}</div><div class="cs-lbl">Avg</div></div>
-      <div class="card-stat-item"><div class="cs-val" style="color:var(--gold)">${s.best_score}</div><div class="cs-lbl">Best</div></div>
-      <div class="card-stat-item"><div class="cs-val" style="color:${accColor}">${s.accuracy}%</div><div class="cs-lbl">Acc</div></div>
-      <div class="card-stat-item"><div class="cs-val" style="color:var(--accent2)">${s.attended}</div><div class="cs-lbl">JUTs</div></div>
-      ${s.consistency!==null?`<div class="card-stat-item"><div class="cs-val" style="color:var(--silver)">${s.consistency}%</div><div class="cs-lbl">Cons.</div></div>`:''}
-    </div>
-    <div class="card-subj-bars">${subjBars}</div>
-    <div class="card-badges">${badgesHtml}</div>
-  </div>
-</a>`;
-}
-
-function applyFilters(){
-  let d = [...allData];
-  if(activeInst) d = d.filter(s=>s.inst===activeInst);
-  if(activeBadge) d = d.filter(s=>s.badges.some(b=>b.id===activeBadge));
-  if(searchText) d = d.filter(s=>normName(s.name).includes(searchText.toUpperCase()));
-  filteredData = d;
-  const wall = document.getElementById('wallGrid');
-  const empty = document.getElementById('wallEmpty');
-  if(!d.length){ wall.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  wall.innerHTML = d.map(buildCard).join('');
-}
-
-function buildPodium(data){
-  const top3 = data.slice(0,3);
-  const order = [top3[1], top3[0], top3[2]].filter(Boolean);
-  const classes = ['ptop ptop-2','ptop ptop-1','ptop ptop-3'];
-  const medals = ['🥈','🥇','🥉'];
-  const heights = [120,150,88];
-  const trio = document.getElementById('podiumTrio');
-  trio.innerHTML = order.map((s,i)=>{
-    const photoInner = s.photo
-      ? `<img src="${s.photo}" alt="${s.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="ptop-photo-fb" style="display:none;">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`
-      : `<div class="ptop-photo-fb">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`;
-    return `<a class="${classes[i]}" href="/student?student=${encodeURIComponent(s.name)}" style="text-decoration:none;color:inherit;">
-      <div class="ptop-photo"><span class="ptop-medal">${medals[i]}</span>${photoInner}</div>
-      <div class="ptop-name">${s.name}</div>
-      <div class="ptop-score">${Math.round(s.avg_score)}</div>
-      <div class="ptop-sub">avg · best: ${s.best_score}</div>
-      <div class="ptop-block" style="background:${['linear-gradient(135deg,#94a3b8,#64748b)','linear-gradient(135deg,#fbbf24,#f59e0b)','linear-gradient(135deg,#cd7f32,#a0632a)'][i]};height:${heights[i]}px">${medals[i]}</div>
-    </a>`;
-  }).join('');
-}
-
-function buildBadgeLegend(){
-  const leg = document.getElementById('badgeLegend');
-  leg.innerHTML = Object.entries(BADGE_META).map(([id,b])=>`
-    <div class="bl-item">
-      <div class="bl-icon">${b.icon}</div>
-      <div>
-        <div class="bl-name"><span class="badge tier-${b.tier}" style="font-size:0.52rem;">${b.label}</span></div>
-        <div class="bl-desc">${b.desc}</div>
+ 
+<!-- MASTHEAD -->
+<div class="masthead" id="masthead" style="display:none;">
+  <div class="masthead-inner">
+    <div class="masthead-top">
+      <div class="mh-date" id="mhDate">—</div>
+      <div class="mh-title-block">
+        <div class="mh-eyebrow">New JUT · Annual Honours</div>
+        <div class="mh-title">Hall of <span class="italic">Honour</span></div>
+        <div class="mh-subtitle" id="mhSub">Loading…</div>
       </div>
-    </div>`).join('');
+      <div class="mh-edition" id="mhEdition">—</div>
+    </div>
+  </div>
+</div>
+ 
+<!-- MAIN CONTENT -->
+<div class="page-wrap" id="pageContent" style="display:none;"></div>
+ 
+<!-- LOADING -->
+<div class="loading-masthead" id="loadingState">
+  <div class="l-title">Hall of Honour</div>
+  <div class="l-sub">Compiling achievements…</div>
+  <div class="l-dots"><div class="l-dot"></div><div class="l-dot"></div><div class="l-dot"></div></div>
+</div>
+ 
+<footer style="position:relative;">
+  <div class="page-footer">
+    <div class="pf-logo">JUT · HALL OF HONOUR</div>
+    <div class="pf-copy" id="footerCopy">Physics · Chemistry · Mathematics</div>
+  </div>
+</footer>
+ 
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   DATA + BADGE ENGINE
+══════════════════════════════════════════════════════════════════ */
+const n = v => parseFloat(v)||0;
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+const normName = s => s.trim().replace(/\s+/g,' ').toUpperCase();
+function getInst(fileVal){
+  if(!fileVal) return '';
+  const f=(fileVal+'').trim().toUpperCase();
+  if(f.startsWith('K')) return 'KJS';
+  if(f.startsWith('U')) return 'UJS';
+  if(f.startsWith('M')) return 'MJS';
+  return '';
 }
-
-function buildTicker(data){
-  const items = data.slice(0,20).map(s=>`<span class="ticker-item">${s.name}<span class="ticker-sep">·</span>#${s.rank}<span class="ticker-sep">·</span>${Math.round(s.avg_score)} avg</span>`).join('');
-  const t = document.getElementById('ticker');
-  t.innerHTML = items + items; // double for seamless loop
+function mapRow(r){
+  const g=(...ks)=>{for(const k of ks){if(r[k]!==undefined&&r[k]!=='')return r[k];}return'0';};
+  const gs=(...ks)=>{for(const k of ks){if(r[k]!==undefined&&r[k]!=='')return r[k];}return'';};
+  return{
+    name:gs('name')||'Unknown',
+    test:gs('test','test_name','jut','jut_name')||'Unknown',
+    inst:getInst(gs('file','filename')),
+    total:n(g('total_marks','total_score','total')),
+    rank:n(g('rank')),
+    tot_a:n(g('total_attempt')),tot_c:n(g('total_correct')),tot_w:n(g('total_wrong')),
+    phy_m:n(g('phy_marks','physics_marks')),chem_m:n(g('chem_marks','chemistry_marks')),math_m:n(g('math_marks','maths_marks')),
+    phy_c:n(g('phy_correct','physics_correct')),chem_c:n(g('chem_correct','chemistry_correct')),math_c:n(g('math_correct','maths_correct')),
+    phy_a:n(g('phy_attempt','physics_attempt')),chem_a:n(g('chem_attempt','chemistry_attempt')),math_a:n(g('math_attempt','maths_attempt')),
+  };
 }
-
-async function loadElites(){
+ 
+function shortTest(s){
+  s=s.replace(/_/g,' ').trim();
+  const m=s.match(/(\d+)\s*$/);
+  if(m){const kws=['JUT','JEE','TEST','EXAM'];for(const k of kws){if(s.toUpperCase().includes(k))return k+' '+m[1];}return '#'+m[1];}
+  return s.length>14?s.slice(0,14)+'…':s;
+}
+ 
+/* ── BADGE TIERS ── */
+const TIER = {LEGENDARY:'legendary', GOLD:'gold', SILVER:'silver', BRONZE:'bronze', INST:'inst'};
+ 
+/* Core badge builder */
+function makeBadge(id, icon, label, tier, context=''){
+  return {id, icon, label: context ? label+' · '+context : label, tier};
+}
+ 
+/* ── MASTER BADGE GENERATOR ── */
+function computeAllBadges(allRows){
+  // Group by test
+  const testMap = {};
+  allRows.forEach(r=>{
+    if(!testMap[r.test]) testMap[r.test]=[];
+    testMap[r.test].push(r);
+  });
+  const allTests = Object.keys(testMap).sort();
+ 
+  // Group by student
+  const studentMap = {};
+  allRows.forEach(r=>{
+    const k = normName(r.name);
+    if(!studentMap[k]) studentMap[k]={name:r.name,inst:r.inst||'',rows:[],byTest:{}};
+    studentMap[k].rows.push(r);
+    studentMap[k].byTest[r.test]=r;
+    if(!studentMap[k].inst && r.inst) studentMap[k].inst=r.inst;
+  });
+ 
+  // Per-student aggregate stats
+  Object.values(studentMap).forEach(s=>{
+    const att = s.rows.filter(r=>r.total>0||r.tot_a>0);
+    s.attended = att;
+    s.scores = att.map(r=>r.total);
+    s.avgScore = s.scores.length ? avg(s.scores) : 0;
+    s.bestScore = s.scores.length ? Math.max(...s.scores) : 0;
+    s.avgPhy = att.length ? avg(att.map(r=>r.phy_m)) : 0;
+    s.avgChem = att.length ? avg(att.map(r=>r.chem_m)) : 0;
+    s.avgMath = att.length ? avg(att.map(r=>r.math_m)) : 0;
+    s.totCorrect = att.reduce((a,r)=>a+r.tot_c,0);
+    s.totAttempt = att.reduce((a,r)=>a+r.tot_a,0);
+    s.accuracy = s.totAttempt>0 ? Math.round(s.totCorrect/s.totAttempt*100) : 0;
+    if(s.scores.length>=3){
+      const mn=avg(s.scores),sd=Math.sqrt(avg(s.scores.map(x=>(x-mn)**2)));
+      s.consistency = mn>0 ? Math.max(0,Math.round(100-sd/mn*100)) : 0;
+    } else { s.consistency = null; }
+  });
+ 
+  const sArr = Object.values(studentMap).filter(s=>s.attended.length>0);
+ 
+  // Global rank by avg
+  const sorted = [...sArr].sort((a,b)=>b.avgScore-a.avgScore);
+  sorted.forEach((s,i)=>{ s.avgRank = i+1; });
+  const totalS = sArr.length;
+ 
+  // Build badges for each student
+  const badgeMap = {}; // normName -> [{...badge}]
+ 
+  sArr.forEach(s=>{
+    const key = normName(s.name);
+    badgeMap[key] = [];
+    const add = (b)=>badgeMap[key].push(b);
+ 
+    // ── AGGREGATE RANK BADGES ──
+    if(s.avgRank===1) add(makeBadge('agg_rank1','👑','Overall Champion',TIER.LEGENDARY));
+    if(s.avgRank===2) add(makeBadge('agg_rank2','🥈','Overall 2nd',TIER.GOLD));
+    if(s.avgRank===3) add(makeBadge('agg_rank3','🥉','Overall 3rd',TIER.GOLD));
+    if(s.avgRank<=5 && s.avgRank>3) add(makeBadge('agg_top5','⭐','Top 5 Overall',TIER.GOLD));
+    if(s.avgRank<=10 && s.avgRank>5) add(makeBadge('agg_top10','🔱','Top 10 Overall',TIER.SILVER));
+ 
+    // ── AGGREGATE SUBJECT BADGES ──
+    const subjRankFn = (field)=>{
+      const sbSorted=[...sArr].filter(x=>x.attended.length>0).sort((a,b)=>b[field]-a[field]);
+      return sbSorted.findIndex(x=>normName(x.name)===key)+1;
+    };
+    const phyRank=subjRankFn('avgPhy'),chemRank=subjRankFn('avgChem'),mathRank=subjRankFn('avgMath');
+    if(phyRank===1) add(makeBadge('agg_phy1','⚛️','Physics Champion',TIER.LEGENDARY));
+    if(phyRank===2) add(makeBadge('agg_phy2','⚡','Physics 2nd Best',TIER.GOLD));
+    if(phyRank===3) add(makeBadge('agg_phy3','🔬','Physics 3rd Best',TIER.SILVER));
+    if(chemRank===1) add(makeBadge('agg_chem1','🧪','Chemistry Champion',TIER.LEGENDARY));
+    if(chemRank===2) add(makeBadge('agg_chem2','🔭','Chemistry 2nd Best',TIER.GOLD));
+    if(chemRank===3) add(makeBadge('agg_chem3','⚗️','Chemistry 3rd Best',TIER.SILVER));
+    if(mathRank===1) add(makeBadge('agg_math1','∑','Mathematics Champion',TIER.LEGENDARY));
+    if(mathRank===2) add(makeBadge('agg_math2','🌀','Mathematics 2nd Best',TIER.GOLD));
+    if(mathRank===3) add(makeBadge('agg_math3','📐','Mathematics 3rd Best',TIER.SILVER));
+ 
+    // ── AGGREGATE ACCURACY ──
+    const accSorted=[...sArr].sort((a,b)=>b.accuracy-a.accuracy);
+    const accRank=accSorted.findIndex(x=>normName(x.name)===key)+1;
+    if(accRank===1) add(makeBadge('agg_acc1','🎯','Sharpest Eye',TIER.LEGENDARY));
+    if(accRank===2) add(makeBadge('agg_acc2','🎯','2nd Best Accuracy',TIER.GOLD));
+    if(accRank===3) add(makeBadge('agg_acc3','🎯','3rd Best Accuracy',TIER.SILVER));
+    if(s.accuracy>=85) add(makeBadge('acc85','🎯','85%+ Accuracy',TIER.GOLD));
+    else if(s.accuracy>=75) add(makeBadge('acc75','🔬','75%+ Accuracy',TIER.SILVER));
+ 
+    // ── AGGREGATE CONSISTENCY ──
+    if(s.consistency!==null){
+      const consSorted=[...sArr].filter(x=>x.consistency!==null).sort((a,b)=>b.consistency-a.consistency);
+      const consRank=consSorted.findIndex(x=>normName(x.name)===key)+1;
+      if(consRank===1) add(makeBadge('cons1','🔒','Most Consistent',TIER.LEGENDARY));
+      if(consRank===2) add(makeBadge('cons2','🔒','2nd Most Consistent',TIER.GOLD));
+      if(consRank===3) add(makeBadge('cons3','📐','3rd Most Consistent',TIER.SILVER));
+      if(s.consistency>=80) add(makeBadge('cons80','📐','Iron Consistency',TIER.GOLD));
+    }
+ 
+    // ── BEST SCORE EVER ──
+    if(s.bestScore>=300) add(makeBadge('perfect','✨','Perfect 300',TIER.LEGENDARY));
+    if(s.bestScore>=280) add(makeBadge('near_perfect','🌟','Near-Perfect Score',TIER.GOLD));
+    if(s.bestScore>=250) add(makeBadge('great_score','⭐','250+ Score',TIER.SILVER));
+ 
+    // ── ATTENDANCE ──
+    if(s.attended.length===allTests.length) add(makeBadge('full_att','📅','Perfect Attendance',TIER.SILVER));
+ 
+    // ── RISING STAR: last 3 attended scores increasing ──
+    if(s.scores.length>=3 && s.scores[s.scores.length-1]>s.scores[s.scores.length-2] && s.scores[s.scores.length-2]>s.scores[s.scores.length-3])
+      add(makeBadge('rising','📈','Rising Star',TIER.SILVER));
+ 
+    // ── PER-INSTITUTION BADGES ──
+    if(s.inst){
+      const instStudents = sArr.filter(x=>x.inst===s.inst && x.attended.length>0);
+      const instSorted = [...instStudents].sort((a,b)=>b.avgScore-a.avgScore);
+      const instRank = instSorted.findIndex(x=>normName(x.name)===key)+1;
+      if(instRank===1) add(makeBadge('inst_rank1','🏆',`${s.inst} Champion`,TIER.GOLD));
+      if(instRank===2) add(makeBadge('inst_rank2','🥈',`${s.inst} 2nd`,TIER.SILVER));
+      if(instRank===3) add(makeBadge('inst_rank3','🥉',`${s.inst} 3rd`,TIER.BRONZE));
+ 
+      // Per-institution subject rank
+      ['avgPhy','avgChem','avgMath'].forEach((field,fi)=>{
+        const subName=['Physics','Chemistry','Maths'][fi];
+        const isSorted=[...instStudents].sort((a,b)=>b[field]-a[field]);
+        const iRank=isSorted.findIndex(x=>normName(x.name)===key)+1;
+        if(iRank===1) add(makeBadge(`inst_subj1_${fi}`,'🏆',`${s.inst} ${subName} 1st`,TIER.SILVER));
+        if(iRank===2) add(makeBadge(`inst_subj2_${fi}`,'🥈',`${s.inst} ${subName} 2nd`,TIER.BRONZE));
+      });
+    }
+ 
+    // ── PER-JUT BADGES ──
+    allTests.forEach(testName=>{
+      const jutRows = (testMap[testName]||[]).filter(r=>r.total>0||r.tot_a>0);
+      if(!jutRows.length) return;
+      const row = s.byTest[testName];
+      if(!row || (row.total===0 && row.tot_a===0)) return;
+ 
+      const tLabel = shortTest(testName);
+      const jutSorted = [...jutRows].sort((a,b)=>{
+        if(b.total!==a.total) return b.total-a.total;
+        if(b.tot_c!==a.tot_c) return b.tot_c-a.tot_c;
+        return a.name.localeCompare(b.name);
+      });
+      const jutRank = jutSorted.findIndex(r=>normName(r.name)===key)+1;
+      const batchSize = jutRows.length;
+ 
+      // JUT overall rank 1/2/3
+      if(jutRank===1) add(makeBadge(`jut_r1_${testName}`,'👑',`#1 Rank`,TIER.LEGENDARY,tLabel));
+      if(jutRank===2) add(makeBadge(`jut_r2_${testName}`,'🥈',`#2 Rank`,TIER.GOLD,tLabel));
+      if(jutRank===3) add(makeBadge(`jut_r3_${testName}`,'🥉',`#3 Rank`,TIER.SILVER,tLabel));
+      if(jutRank===4||jutRank===5) add(makeBadge(`jut_r45_${testName}`,'⭐',`#${jutRank} Rank`,TIER.BRONZE,tLabel));
+ 
+      // JUT score milestones
+      if(row.total>=300) add(makeBadge(`jut_perfect_${testName}`,'✨','Perfect 300',TIER.LEGENDARY,tLabel));
+      else if(row.total>=280) add(makeBadge(`jut_280_${testName}`,'🌟','280+ Score',TIER.GOLD,tLabel));
+ 
+      // JUT percentile
+      const below = jutRows.filter(r=>r.total<row.total).length;
+      const pct = Math.round(below/batchSize*100);
+      if(pct>=95) add(makeBadge(`jut_p95_${testName}`,'🔱','Top 5%',TIER.GOLD,tLabel));
+      else if(pct>=90) add(makeBadge(`jut_p90_${testName}`,'💎','Top 10%',TIER.SILVER,tLabel));
+ 
+      // JUT subject rank 1/2/3
+      [
+        {field:'phy_m',name:'Physics',icon:'⚛️'},
+        {field:'chem_m',name:'Chemistry',icon:'🧪'},
+        {field:'math_m',name:'Maths',icon:'∑'},
+      ].forEach(({field,name,icon})=>{
+        const sSorted=[...jutRows].sort((a,b)=>b[field]-a[field]);
+        const sRank=sSorted.findIndex(r=>normName(r.name)===key)+1;
+        const maxPossible=sSorted[0]?sSorted[0][field]:0;
+        if(sRank===1&&maxPossible>0) add(makeBadge(`jut_s1_${name}_${testName}`,icon,`${name} Rank 1`,TIER.GOLD,tLabel));
+        if(sRank===2&&maxPossible>0) add(makeBadge(`jut_s2_${name}_${testName}`,icon,`${name} Rank 2`,TIER.SILVER,tLabel));
+        if(sRank===3&&maxPossible>0) add(makeBadge(`jut_s3_${name}_${testName}`,icon,`${name} Rank 3`,TIER.BRONZE,tLabel));
+      });
+ 
+      // JUT accuracy rank
+      const accRows = jutRows.filter(r=>r.tot_a>0);
+      if(accRows.length>0){
+        const myAcc = row.tot_a>0 ? row.tot_c/row.tot_a : 0;
+        const accSortedJut = [...accRows].sort((a,b)=>b.tot_c/b.tot_a - a.tot_c/a.tot_a);
+        const accRankJut = accSortedJut.findIndex(r=>normName(r.name)===key)+1;
+        if(accRankJut===1) add(makeBadge(`jut_acc1_${testName}`,'🎯','Best Accuracy',TIER.SILVER,tLabel));
+      }
+ 
+      // Per-institution JUT rank
+      if(s.inst){
+        const instJutRows = jutRows.filter(r=>getInst(r.inst||'')===s.inst||r.inst===s.inst);
+        // fallback: use student's known inst
+        const instJutAlt = jutRows.filter(r=>{
+          const key2=normName(r.name);
+          return studentMap[key2]&&studentMap[key2].inst===s.inst;
+        });
+        const iJut = instJutAlt.length>1?instJutAlt:instJutRows;
+        if(iJut.length>1){
+          const iSorted=[...iJut].sort((a,b)=>b.total-a.total);
+          const iRank=iSorted.findIndex(r=>normName(r.name)===key)+1;
+          if(iRank===1) add(makeBadge(`inst_jut_r1_${testName}`,'🏆',`${s.inst} #1`,TIER.SILVER,tLabel));
+          if(iRank===2) add(makeBadge(`inst_jut_r2_${testName}`,'🥈',`${s.inst} #2`,TIER.BRONZE,tLabel));
+        }
+      }
+    });
+  });
+ 
+  return {studentMap, badgeMap, allTests, testMap, sorted};
+}
+ 
+/* ══════════════════════════════════════════════════════════════════
+   UI STATE
+══════════════════════════════════════════════════════════════════ */
+let masterData = null;
+let activeView = 'by-jut';
+let activeSort = 'rank';
+let activeInst = 'ALL';
+let searchText = '';
+ 
+function tierOrder(t){ return {legendary:0,gold:1,silver:2,bronze:3,inst:4}[t]??5; }
+ 
+function sortedBadges(badges){
+  return [...badges].sort((a,b)=>tierOrder(a.tier)-tierOrder(b.tier));
+}
+ 
+function highestTier(badges){
+  if(!badges.length) return null;
+  return sortedBadges(badges)[0].tier;
+}
+ 
+function badgePillClass(tier){
+  return {legendary:'bp-legendary',gold:'bp-gold',silver:'bp-silver',bronze:'bp-bronze',inst:'bp-inst'}[tier]||'bp-silver';
+}
+ 
+function instChipHTML(inst){
+  if(!inst) return '';
+  const cls={KJS:'chip-kjs',MJS:'chip-mjs',UJS:'chip-ujs'}[inst]||'';
+  return `<span class="er-inst-chip ${cls}">${inst}</span>`;
+}
+ 
+function photoHTML(s, w=56, h=72){
+  const init = s.name.trim().split(/\s+/).map(w=>w[0]?.toUpperCase()||'').join('').slice(0,2)||'?';
+  // Try to infer photo from file column — just use initials with consistent colour
+  const hue = init.charCodeAt(0)*13+init.charCodeAt(1||0)*7;
+  return `<div class="er-photo-col" style="width:${w}px;height:${h}px;"><div class="er-photo-init">${init}</div></div>`;
+}
+ 
+function entryRowHTML(s, badges, rank, showTestLabel='', delayMs=0){
+  const sorted_b = sortedBadges(badges);
+  const tier = highestTier(sorted_b);
+  const tierClass = {legendary:'entry-gold',gold:'entry-gold',silver:'entry-silver',bronze:'entry-bronze'}[tier]||'';
+  const rankClass = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
+  const displayBadges = sorted_b.slice(0, 18);
+  const extraCount = sorted_b.length - displayBadges.length;
+ 
+  const badgesHTML = displayBadges.map(b=>
+    `<span class="badge-pill ${badgePillClass(b.tier)}"><span class="badge-icon">${b.icon}</span>${b.label}</span>`
+  ).join('') + (extraCount>0?`<span class="badge-pill bp-silver">+${extraCount} more</span>`:'');
+ 
+  const avgS = s.avgScore ? Math.round(s.avgScore) : 0;
+  const accStr = s.accuracy ? s.accuracy+'%' : '—';
+ 
+  return `<a class="entry-row ${tierClass}" href="/student?student=${encodeURIComponent(s.name)}" style="transition-delay:${delayMs}ms;">
+    ${photoHTML(s)}
+    <div class="er-rank"><span class="rank-num ${rankClass}">${rank}</span></div>
+    <div class="er-info">
+      <div class="er-name-line">
+        <span class="er-name">${s.name}</span>
+        ${instChipHTML(s.inst)}
+      </div>
+      <div class="er-score-line">
+        <span class="sc-gold er-score-num">${avgS}</span><span style="opacity:.4">avg</span>
+        <span>·</span>
+        <span class="sc-red er-score-num">${s.bestScore||0}</span><span style="opacity:.4">best</span>
+        <span>·</span>
+        <span class="er-score-num" style="color:var(--teal)">${accStr}</span><span style="opacity:.4">acc</span>
+        <span>·</span>
+        <span style="color:var(--text-muted)">${s.attended.length} JUTs</span>
+        ${showTestLabel?`<span>·</span><span style="color:var(--text-muted);font-style:italic;">${showTestLabel}</span>`:''}
+      </div>
+    </div>
+    <div class="er-badges">
+      <div class="badges-wrap">${badgesHTML}</div>
+      ${sorted_b.length>0?`<div class="er-badge-count">${sorted_b.length} achievement${sorted_b.length!==1?'s':''}</div>`:''}
+    </div>
+  </a>`;
+}
+ 
+/* ── per-JUT entry HTML (single-test context) ── */
+function jutEntryHTML(s, row, jutBadges, rank, testName, delayMs=0){
+  const sorted_b = sortedBadges(jutBadges);
+  const tier = highestTier(sorted_b)||'silver';
+  const tierClass = {legendary:'entry-gold',gold:'entry-gold',silver:'entry-silver',bronze:'entry-bronze'}[tier]||'';
+  const rankClass = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
+  const displayBadges = sorted_b.slice(0,12);
+  const extra = sorted_b.length - displayBadges.length;
+  const badgesHTML = displayBadges.map(b=>
+    `<span class="badge-pill ${badgePillClass(b.tier)}"><span class="badge-icon">${b.icon}</span>${b.label}</span>`
+  ).join('') + (extra>0?`<span class="badge-pill bp-silver">+${extra} more</span>`:'');
+  const acc = row.tot_a>0?Math.round(row.tot_c/row.tot_a*100)+'%':'—';
+ 
+  return `<a class="entry-row ${tierClass}" href="/student?student=${encodeURIComponent(s.name)}" style="transition-delay:${delayMs}ms;">
+    ${photoHTML(s)}
+    <div class="er-rank"><span class="rank-num ${rankClass}">${rank}</span></div>
+    <div class="er-info">
+      <div class="er-name-line">
+        <span class="er-name">${s.name}</span>
+        ${instChipHTML(s.inst)}
+      </div>
+      <div class="er-score-line">
+        <span class="sc-gold er-score-num">${row.total}</span><span style="opacity:.4">score</span>
+        <span>·</span>
+        <span>P:<span class="er-score-num" style="color:var(--teal)">${row.phy_m}</span></span>
+        <span>C:<span class="er-score-num" style="color:#8b14a0">${row.chem_m}</span></span>
+        <span>M:<span class="er-score-num" style="color:var(--red)">${row.math_m}</span></span>
+        <span>·</span>
+        <span style="color:var(--text-muted)">${acc} acc</span>
+      </div>
+    </div>
+    <div class="er-badges">
+      <div class="badges-wrap">${badgesHTML}</div>
+      ${sorted_b.length>0?`<div class="er-badge-count">${sorted_b.length} badge${sorted_b.length!==1?'s':''} this JUT</div>`:''}
+    </div>
+  </a>`;
+}
+ 
+/* ══════════════════════════════════════════════════════════════════
+   VIEW BUILDERS
+══════════════════════════════════════════════════════════════════ */
+function filterStudents(students){
+  return students.filter(s=>{
+    if(activeInst!=='ALL' && s.inst!==activeInst) return false;
+    if(searchText && !normName(s.name).includes(searchText.toUpperCase())) return false;
+    return true;
+  });
+}
+ 
+function buildByJutView(data){
+  const {studentMap, badgeMap, allTests, testMap} = data;
+  let html = '';
+ 
+  allTests.forEach((testName, ti)=>{
+    const jutRows = (testMap[testName]||[]).filter(r=>r.total>0||r.tot_a>0);
+    if(!jutRows.length) return;
+ 
+    // Sort JUT rows
+    const jutSorted = [...jutRows].sort((a,b)=>{
+      if(b.total!==a.total) return b.total-a.total;
+      if(b.tot_c!==a.tot_c) return b.tot_c-a.tot_c;
+      return a.name.localeCompare(b.name);
+    });
+ 
+    // Find relevant students (those with at least 1 badge in this JUT, or rank 1-5)
+    const relevantRows = jutSorted.filter((row,idx)=>{
+      const k = normName(row.name);
+      const s = studentMap[k];
+      if(!s) return false;
+      if(activeInst!=='ALL' && s.inst!==activeInst) return false;
+      if(searchText && !normName(row.name).includes(searchText.toUpperCase())) return false;
+      // Include if top 10 or has any JUT-specific badge
+      const jutBadges = (badgeMap[k]||[]).filter(b=>b.id.includes(testName));
+      return idx<10 || jutBadges.length>0;
+    });
+ 
+    if(!relevantRows.length) return;
+ 
+    // Highlight top 3
+    const top3 = jutSorted.slice(0,3);
+ 
+    html += `<div class="jut-section reveal">
+      <div class="jut-header">
+        <div class="jut-name">${shortTest(testName)}</div>
+        <div class="jut-meta">${jutRows.length} students · Avg ${Math.round(avg(jutRows.map(r=>r.total)))}</div>
+        <div class="jut-date-chip">JUT ${ti+1}</div>
+        <div class="jut-num">${ti+1}</div>
+      </div>`;
+ 
+    // Champion line for this JUT
+    if(top3[0]){
+      const champ = studentMap[normName(top3[0].name)];
+      if(champ){
+        const cb = (badgeMap[normName(champ.name)]||[]).filter(b=>b.id.includes(testName));
+        html += `<div class="champion-banner">
+          <div class="cb-num">1</div>
+          <div class="cb-info">
+            <div class="cb-eyebrow">JUT Champion — ${shortTest(testName)}</div>
+            <div class="cb-name">${champ.name}</div>
+            <div class="cb-stats">
+              <div class="cb-stat"><div class="cb-sv">${top3[0].total}</div><div class="cb-sl">Score</div></div>
+              <div class="cb-stat"><div class="cb-sv">${top3[0].phy_m}</div><div class="cb-sl">Physics</div></div>
+              <div class="cb-stat"><div class="cb-sv">${top3[0].chem_m}</div><div class="cb-sl">Chem</div></div>
+              <div class="cb-stat"><div class="cb-sv">${top3[0].math_m}</div><div class="cb-sl">Maths</div></div>
+              ${champ.inst?`<div class="cb-stat"><div class="cb-sv" style="font-size:1rem;padding-top:0.3rem;">${instChipHTML(champ.inst)}</div><div class="cb-sl">Institute</div></div>`:''}
+            </div>
+          </div>
+          <div class="cb-badges-block">
+            <div class="cb-badge-strip">${sortedBadges(cb).slice(0,6).map(b=>`<span class="badge-pill ${badgePillClass(b.tier)}"><span class="badge-icon">${b.icon}</span>${b.label}</span>`).join('')}</div>
+          </div>
+        </div>`;
+      }
+    }
+ 
+    html += `<div class="entries-list">`;
+    relevantRows.slice(0, activeSort==='badges-desc'?50:30).forEach((row, ri)=>{
+      const k = normName(row.name);
+      const s = studentMap[k];
+      if(!s) return;
+      const jutBadges = (badgeMap[k]||[]).filter(b=>b.id.includes(testName)||b.id.includes('agg_'));
+      const localRank = jutSorted.findIndex(r=>normName(r.name)===k)+1;
+      html += jutEntryHTML(s, row, jutBadges, localRank, testName, ri*30);
+    });
+    html += `</div>`;
+ 
+    if(ti < allTests.length-1) html += `<div class="section-break"></div>`;
+    html += `</div>`;
+  });
+ 
+  return html || `<div class="empty-state">No results found for the current filters.</div>`;
+}
+ 
+function buildAggregateView(data){
+  const {studentMap, badgeMap, sorted} = data;
+  let html = '';
+  let students = filterStudents(sorted);
+ 
+  if(activeSort==='badges-desc'){
+    students = [...students].sort((a,b)=>{
+      const ba=(badgeMap[normName(a.name)]||[]).length;
+      const bb=(badgeMap[normName(b.name)]||[]).length;
+      return bb-ba;
+    });
+  } else if(activeSort==='name'){
+    students = [...students].sort((a,b)=>a.name.localeCompare(b.name));
+  }
+ 
+  // Champion banner
+  if(students[0]){
+    const champ = students[0];
+    const cb = sortedBadges(badgeMap[normName(champ.name)]||[]);
+    html += `<section class="agg-section">
+      <div class="agg-header reveal">
+        <div class="agg-icon">👑</div>
+        <div><div class="agg-title">Overall Champion</div><div class="agg-desc">Highest average score across all JUTs</div></div>
+      </div>
+      <div class="champion-banner reveal">
+        <div class="cb-num">1</div>
+        <div class="cb-info">
+          <div class="cb-eyebrow">Batch Champion — All JUTs</div>
+          <div class="cb-name">${champ.name}</div>
+          <div class="cb-stats">
+            <div class="cb-stat"><div class="cb-sv">${Math.round(champ.avgScore)}</div><div class="cb-sl">Avg Score</div></div>
+            <div class="cb-stat"><div class="cb-sv">${champ.bestScore}</div><div class="cb-sl">Best Score</div></div>
+            <div class="cb-stat"><div class="cb-sv">${champ.accuracy}%</div><div class="cb-sl">Accuracy</div></div>
+            <div class="cb-stat"><div class="cb-sv">${champ.attended.length}</div><div class="cb-sl">JUTs</div></div>
+          </div>
+        </div>
+        <div class="cb-badges-block">
+          <div class="cb-badge-strip">${cb.slice(0,8).map(b=>`<span class="badge-pill ${badgePillClass(b.tier)}"><span class="badge-icon">${b.icon}</span>${b.label}</span>`).join('')}</div>
+        </div>
+      </div>
+    </section>
+    <div class="section-break-double"></div>`;
+  }
+ 
+  // Pull quote
+  html += `<div class="pull-quote reveal" style="margin:2rem 0;">"Excellence is not a destination — it is measured test by test, subject by subject. These are the ones who answered the call."</div>`;
+ 
+  html += `<div class="entries-list reveal">`;
+  students.forEach((s,i)=>{
+    const badges = badgeMap[normName(s.name)]||[];
+    if(!badges.length && s.avgRank>totalS*0.5) return; // skip low-rankers with no badges unless searched
+    const displayRank = activeSort==='rank' ? s.avgRank : i+1;
+    html += entryRowHTML(s, badges, displayRank, '', i*20);
+  });
+  html += `</div>`;
+ 
+  return html || `<div class="empty-state">No results found.</div>`;
+}
+ 
+function buildAllBadgesView(data){
+  const {studentMap, badgeMap, sorted} = data;
+ 
+  // Group by badge tier
+  const tierGroups = {legendary:[], gold:[], silver:[], bronze:[]};
+  let students = filterStudents(sorted);
+  if(activeSort==='badges-desc') students=[...students].sort((a,b)=>(badgeMap[normName(b.name)]||[]).length-(badgeMap[normName(a.name)]||[]).length);
+  else if(activeSort==='name') students=[...students].sort((a,b)=>a.name.localeCompare(b.name));
+ 
+  let html='';
+  const tierMeta = [
+    {key:'legendary',label:'Legendary Achievers',desc:'The rarest of the rare — feats that define a generation.',icon:'👑'},
+    {key:'gold',label:'Gold Honours',desc:'Sustained excellence across multiple dimensions.',icon:'🥇'},
+    {key:'silver',label:'Silver Distinctions',desc:'Consistent high performance deserving recognition.',icon:'🥈'},
+    {key:'bronze',label:'Bronze Commendations',desc:'Notable achievements within the cohort.',icon:'🥉'},
+  ];
+ 
+  tierMeta.forEach(({key,label,desc,icon})=>{
+    const studs = students.filter(s=>{
+      const badges = badgeMap[normName(s.name)]||[];
+      return badges.some(b=>b.tier===key);
+    });
+    if(!studs.length) return;
+    html+=`<section class="agg-section reveal">
+      <div class="agg-header">
+        <div class="agg-icon">${icon}</div>
+        <div><div class="agg-title">${label}</div><div class="agg-desc">${desc}</div></div>
+      </div>
+      <div class="entries-list">`;
+    studs.forEach((s,i)=>{
+      const badges = (badgeMap[normName(s.name)]||[]).filter(b=>b.tier===key);
+      html+=entryRowHTML(s, badges, s.avgRank, '', i*25);
+    });
+    html+=`</div></section><div class="section-break-double" style="margin-bottom:2rem;"></div>`;
+  });
+ 
+  return html || `<div class="empty-state">No results found.</div>`;
+}
+ 
+let totalS = 0;
+ 
+function render(){
+  const pc = document.getElementById('pageContent');
+  const {studentMap, badgeMap, allTests, testMap, sorted} = masterData;
+  totalS = sorted.length;
+  let html = '';
+  if(activeView==='by-jut') html = buildByJutView(masterData);
+  else if(activeView==='aggregate') html = buildAggregateView(masterData);
+  else html = buildAllBadgesView(masterData);
+  pc.innerHTML = html;
+ 
+  // Reveal animation
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');}});
+  },{threshold:0.02});
+  pc.querySelectorAll('.reveal,.entry-row').forEach(el=>{el.classList.remove('vis');io.observe(el);});
+}
+ 
+/* ══════════════════════════════════════════════════════════════════
+   BOOT
+══════════════════════════════════════════════════════════════════ */
+async function boot(){
   try{
-    const res = await fetch('/api/elites');
+    const res = await fetch('/api/master-data');
     if(!res.ok) throw new Error('HTTP '+res.status);
-    allData = await res.json();
-
-    // Hero KPIs
-    const totalBadges = allData.reduce((s,e)=>s+e.badges.length,0);
-    const legendaryCount = allData.filter(e=>e.badges.some(b=>b.tier==='legendary')).length;
-    document.getElementById('kpiElites').textContent = allData.length;
-    document.getElementById('kpiBadges').textContent = totalBadges;
-    document.getElementById('kpiLegendary').textContent = legendaryCount;
-    document.getElementById('heroSub').textContent = allData.length + ' ELITE PERFORMERS · ' + totalBadges + ' BADGES AWARDED · ' + legendaryCount + ' LEGENDARY';
-
-    document.getElementById('loadingWrap').style.display='none';
-    document.getElementById('wallGrid').closest('section').style.display='block';
-
-    buildPodium(allData);
-    buildTicker(allData);
-    buildBadgeLegend();
-    applyFilters();
-
-    // Reveal
-    const io = new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis');});},{threshold:0.05});
-    document.querySelectorAll('.reveal').forEach(el=>{el.classList.remove('vis');io.observe(el);});
-
+    const raw = await res.json();
+    const rows = raw.map(mapRow);
+    masterData = computeAllBadges(rows);
+ 
+    // Masthead
+    const sLen = masterData.sorted.length;
+    const totalBadges = Object.values(masterData.badgeMap).reduce((s,b)=>s+b.length,0);
+    document.getElementById('mhDate').textContent = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}).toUpperCase();
+    document.getElementById('mhSub').textContent = sLen+' Students · '+masterData.allTests.length+' JUTs · Physics · Chemistry · Mathematics';
+    document.getElementById('mhEdition').textContent = masterData.allTests.length+' JUTs\nEdition';
+    document.getElementById('masthead').style.display='';
+    document.getElementById('pageContent').style.display='';
+    document.getElementById('loadingState').style.display='none';
+    document.getElementById('footerCopy').textContent = sLen+' students · '+masterData.allTests.length+' JUTs · '+totalBadges+' achievements';
+ 
+    render();
   } catch(e){
-    document.getElementById('loadingWrap').innerHTML=`<div style="color:var(--accent3);font-size:0.75rem;letter-spacing:0.2em;text-align:center;">Error: ${e.message}</div>`;
+    document.getElementById('loadingState').innerHTML=`<div class="l-title">Error</div><div class="l-sub">${e.message}</div>`;
   }
 }
-
-// Filter buttons
+ 
+/* ── Controls ── */
+document.querySelectorAll('[data-view]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    activeView=btn.dataset.view;
+    document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+document.querySelectorAll('[data-sort]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    activeSort=btn.dataset.sort;
+    document.querySelectorAll('[data-sort]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
 document.querySelectorAll('[data-inst]').forEach(btn=>{
   btn.addEventListener('click',()=>{
-    const inst = btn.dataset.inst;
-    activeInst = activeInst===inst ? null : inst;
+    activeInst=btn.dataset.inst;
     document.querySelectorAll('[data-inst]').forEach(b=>b.classList.remove('active'));
-    if(activeInst) btn.classList.add('active');
-    applyFilters();
+    btn.classList.add('active');
+    render();
   });
 });
-document.querySelectorAll('[data-badge]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const badge = btn.dataset.badge;
-    activeBadge = activeBadge===badge ? null : badge;
-    document.querySelectorAll('[data-badge]').forEach(b=>b.classList.remove('active'));
-    if(activeBadge) btn.classList.add('active');
-    applyFilters();
-  });
-});
-document.querySelector('[data-filter="all"]').addEventListener('click',()=>{
-  activeInst=null; activeBadge=null;
-  document.querySelectorAll('[data-inst],[data-badge]').forEach(b=>b.classList.remove('active'));
-  document.querySelector('[data-filter="all"]').classList.add('active');
-  applyFilters();
-});
-document.getElementById('eliteSearch').addEventListener('input',e=>{
+document.getElementById('cbSearch').addEventListener('input',e=>{
   searchText=e.target.value.trim();
-  applyFilters();
+  render();
 });
-
-loadElites();
+ 
+boot();
 </script>
 </body>
 </html>"""
