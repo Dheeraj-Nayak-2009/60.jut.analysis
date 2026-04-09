@@ -153,140 +153,6 @@ def get_elites():
     result.sort(key=lambda x: x['rank'])
     return jsonify(result)
 
-@app.get("/api/elites-detailed")
-def api_elites_detailed():
-    """Get detailed elite data with JUT-by-JUT performance for badge generation"""
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # Get all students with their aggregate stats
-    cursor.execute("""
-        SELECT 
-            s.id, s.name, s.inst, s.photo,
-            COALESCE(ROUND(AVG(j.phy + j.chem + j.math), 1), 0) as avg_score,
-            COALESCE(MAX(j.phy + j.chem + j.math), 0) as best_score,
-            COUNT(j.id) as attended,
-            COUNT(DISTINCT j.jut_num) as total_juts,
-            COALESCE(ROUND(AVG(j.phy), 1), 0) as avg_phy,
-            COALESCE(ROUND(AVG(j.chem), 1), 0) as avg_chem,
-            COALESCE(ROUND(AVG(j.math), 1), 0) as avg_math,
-            COALESCE(ROUND(AVG((j.phy + j.chem + j.math) / 3.0), 1), 0) as accuracy
-        FROM students s
-        LEFT JOIN juts j ON s.id = j.student_id
-        GROUP BY s.id, s.name, s.inst, s.photo
-        HAVING COUNT(j.id) > 0
-    """)
-    
-    students = cursor.fetchall()
-    
-    # Get all JUTs for each student
-    cursor.execute("""
-        SELECT 
-            j.student_id, j.jut_num, j.phy, j.chem, j.math,
-            (j.phy + j.chem + j.math) as total_score
-        FROM juts j
-        ORDER BY j.jut_num
-    """)
-    all_juts = cursor.fetchall()
-    
-    # Calculate consistency (standard deviation inverse)
-    # Get rank calculations
-    for student in students:
-        student_id = student['id']
-        
-        # Get student's JUT performances
-        student_juts = [j for j in all_juts if j['student_id'] == student_id]
-        student['jut_performances'] = []
-        
-        for jut in student_juts:
-            student['jut_performances'].append({
-                'jut_num': jut['jut_num'],
-                'total_score': jut['total_score'],
-                'phy_score': jut['phy'],
-                'chem_score': jut['chem'],
-                'math_score': jut['math']
-            })
-        
-        # Calculate consistency (lower std dev = higher consistency)
-        if len(student_juts) > 1:
-            scores = [j['total_score'] for j in student_juts]
-            mean = sum(scores) / len(scores)
-            variance = sum((x - mean) ** 2 for x in scores) / len(scores)
-            std_dev = variance ** 0.5
-            # Convert to percentage (100 - normalized std dev)
-            max_possible_std = 100  # Max possible std dev for 0-300 range
-            consistency = max(0, 100 - (std_dev / max_possible_std * 100))
-            student['consistency'] = round(consistency, 1)
-        else:
-            student['consistency'] = 100
-        
-        # Check improvement trend
-        if len(student_juts) >= 3:
-            scores = [j['total_score'] for j in sorted(student_juts, key=lambda x: x['jut_num'])]
-            increasing = all(scores[i] <= scores[i+1] for i in range(len(scores)-1))
-            student['improving'] = increasing
-        else:
-            student['improving'] = False
-    
-    # Calculate overall ranks
-    students_sorted = sorted(students, key=lambda x: x['avg_score'], reverse=True)
-    for i, student in enumerate(students_sorted, 1):
-        student['overall_rank'] = i
-    
-    # Calculate subject-specific ranks
-    for rank_type, key in [('phy_rank', 'avg_phy'), ('chem_rank', 'avg_chem'), ('math_rank', 'avg_math')]:
-        students_sorted_subj = sorted(students, key=lambda x: x[key], reverse=True)
-        for i, student in enumerate(students_sorted_subj, 1):
-            student[rank_type] = i
-    
-    # Calculate JUT-specific ranks
-    for jut_num in range(1, 16):  # Assuming up to 15 JUTs
-        jut_students = []
-        for student in students:
-            jut_perf = next((j for j in student['jut_performances'] if j['jut_num'] == jut_num), None)
-            if jut_perf:
-                jut_students.append({
-                    'student_id': student['id'],
-                    'total_score': jut_perf['total_score'],
-                    'phy_score': jut_perf['phy_score'],
-                    'chem_score': jut_perf['chem_score'],
-                    'math_score': jut_perf['math_score']
-                })
-        
-        if jut_students:
-            # Overall rank
-            jut_students_sorted = sorted(jut_students, key=lambda x: x['total_score'], reverse=True)
-            for i, js in enumerate(jut_students_sorted, 1):
-                student = next(s for s in students if s['id'] == js['student_id'])
-                jut_perf = next(j for j in student['jut_performances'] if j['jut_num'] == jut_num)
-                jut_perf['jut_rank'] = i
-            
-            # Physics rank
-            jut_students_sorted_phy = sorted(jut_students, key=lambda x: x['phy_score'], reverse=True)
-            for i, js in enumerate(jut_students_sorted_phy, 1):
-                student = next(s for s in students if s['id'] == js['student_id'])
-                jut_perf = next(j for j in student['jut_performances'] if j['jut_num'] == jut_num)
-                jut_perf['phy_rank'] = i
-            
-            # Chemistry rank
-            jut_students_sorted_chem = sorted(jut_students, key=lambda x: x['chem_score'], reverse=True)
-            for i, js in enumerate(jut_students_sorted_chem, 1):
-                student = next(s for s in students if s['id'] == js['student_id'])
-                jut_perf = next(j for j in student['jut_performances'] if j['jut_num'] == jut_num)
-                jut_perf['chem_rank'] = i
-            
-            # Mathematics rank
-            jut_students_sorted_math = sorted(jut_students, key=lambda x: x['math_score'], reverse=True)
-            for i, js in enumerate(jut_students_sorted_math, 1):
-                student = next(s for s in students if s['id'] == js['student_id'])
-                jut_perf = next(j for j in student['jut_performances'] if j['jut_num'] == jut_num)
-                jut_perf['math_rank'] = i
-    
-    return {
-        'students': [dict(s) for s in students],
-        'juts': list(range(1, 16))
-    }
-
 def math_module_sd(scores):
     import math
     if len(scores) < 2: return 0
@@ -3949,681 +3815,521 @@ async function populatePickerMenu() {
 # ══════════════════════════════════════════════════════════════════════════════
 #  ELITES PAGE
 # ══════════════════════════════════════════════════════════════════════════════
-# ══════════════════════════════════════════════════════════════════════════════
-#  ELITES PAGE - HALL OF FAME
-# ══════════════════════════════════════════════════════════════════════════════
 ELITES_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>JUT · WALL OF FAME | Elite Achievers</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JUT · Elites — Wall of Fame</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
+:root{
+  --bg:#0a0a0f;--surface:#111118;--surface2:#16161f;--border:#1e1e2e;
+  --accent:#e8c547;--accent2:#47e8c5;--accent3:#e847a0;
+  --text:#e8e8f0;--muted:#6b6b8a;
+  --phy:#4fc3f7;--chem:#a78bfa;--math:#fb923c;
+  --gold:#fbbf24;--silver:#94a3b8;--bronze:#cd7f32;--legendary:#e8c547;
+  --green:#4ade80;--red:#f87171;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden;}
 
-  :root {
-    --bg-deep: #05050A;
-    --bg-surface: #0C0C14;
-    --bg-card: #111118;
-    --border-glow: rgba(232, 197, 71, 0.2);
-    --accent-gold: #E8C547;
-    --accent-teal: #47E8C5;
-    --accent-pink: #E847A0;
-    --text-primary: #F0F0FA;
-    --text-muted: #6B6B8A;
-    --rank-1: #FFD966;
-    --rank-2: #C0C8D4;
-    --rank-3: #E4A87A;
-    --phy: #4FC3F7;
-    --chem: #A78BFA;
-    --math: #FB923C;
-  }
+/* ── noise grain ── */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.4;}
 
-  body {
-    background: var(--bg-deep);
-    color: var(--text-primary);
-    font-family: 'Space Grotesk', sans-serif;
-    overflow-x: hidden;
-  }
+/* ── animated grid bg ── */
+.grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px);background-size:80px 80px;animation:gridDrift 50s linear infinite;z-index:0;}
+@keyframes gridDrift{0%{background-position:0 0}100%{background-position:80px 80px}}
 
-  /* animated background grain */
-  .grain-overlay {
-    position: fixed;
-    inset: 0;
-    background-image: radial-gradient(rgba(232,197,71,0.02) 1px, transparent 1px);
-    background-size: 32px 32px;
-    pointer-events: none;
-    z-index: 2;
-    opacity: 0.5;
-  }
+/* ── ambient glows ── */
+.glow-gold{position:fixed;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(232,197,71,0.06) 0%,transparent 65%);top:-300px;right:-200px;pointer-events:none;animation:floatGold 22s ease-in-out infinite;}
+.glow-teal{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(71,232,197,0.05) 0%,transparent 65%);bottom:-150px;left:-100px;pointer-events:none;animation:floatTeal 28s ease-in-out infinite;}
+.glow-pink{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(232,71,160,0.04) 0%,transparent 65%);top:40%;left:40%;pointer-events:none;animation:floatPink 34s ease-in-out infinite;}
+@keyframes floatGold{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,60px)}}
+@keyframes floatTeal{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,-40px)}}
+@keyframes floatPink{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,30px)}}
 
-  .glow-orb {
-    position: fixed;
-    width: 70vw;
-    height: 70vw;
-    background: radial-gradient(circle, rgba(232,197,71,0.05) 0%, transparent 70%);
-    top: -30vh;
-    right: -20vw;
-    pointer-events: none;
-    z-index: 1;
-    animation: floatSlow 28s infinite alternate;
-  }
+/* ── nav ── */
+.topnav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(10,10,15,0.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0.9rem 2rem;gap:1rem;}
+.topnav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:0.08em;color:var(--text);text-decoration:none;}
+.topnav-logo span{color:var(--accent);}
+.topnav-links{display:flex;gap:1.2rem;align-items:center;}
+.topnav-link{font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;padding:0.3rem 0;}
+.topnav-link:hover,.topnav-link.active{color:var(--accent);}
+.topnav-link.active{border-bottom:1px solid var(--accent);}
 
-  @keyframes floatSlow {
-    0% { transform: translate(0,0) scale(1); opacity: 0.3; }
-    100% { transform: translate(4%, 6%) scale(1.2); opacity: 0.6; }
-  }
+/* ── hero ── */
+.hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;padding:8rem 4rem 5rem;overflow:hidden;}
+.hero-scanline{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(232,197,71,0.012) 3px,rgba(232,197,71,0.012) 4px);pointer-events:none;}
+.hero-content{position:relative;z-index:2;}
+.hero-eyebrow{font-size:0.62rem;letter-spacing:0.5em;color:var(--accent2);text-transform:uppercase;margin-bottom:1rem;opacity:0;animation:slideUp 0.6s 0.2s forwards;display:flex;align-items:center;gap:0.8rem;}
+.hero-eyebrow::before{content:'';display:block;width:42px;height:1px;background:var(--accent2);}
+.hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(5rem,16vw,14rem);line-height:0.84;letter-spacing:0.01em;opacity:0;animation:slideUp 0.9s 0.35s forwards;}
+.hero-title .gold{color:var(--accent);-webkit-text-stroke:0px;display:block;}
+.hero-title .stroke{-webkit-text-stroke:1.5px rgba(232,197,71,0.5);color:transparent;display:block;}
+.hero-sub{font-size:0.75rem;color:var(--muted);letter-spacing:0.18em;margin-top:1.5rem;max-width:560px;line-height:1.8;opacity:0;animation:slideUp 0.7s 0.6s forwards;}
+.hero-kpis{display:flex;gap:3rem;margin-top:3rem;opacity:0;animation:slideUp 0.7s 0.75s forwards;flex-wrap:wrap;}
+.kpi{text-align:left;}
+.kpi-val{font-family:'Bebas Neue',sans-serif;font-size:3.8rem;color:var(--accent);line-height:1;}
+.kpi-label{font-size:0.52rem;letter-spacing:0.28em;color:var(--muted);text-transform:uppercase;margin-top:0.2rem;}
+@keyframes slideUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
 
-  /* nav */
-  .nav {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100;
-    background: rgba(5,5,10,0.85);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid rgba(232,197,71,0.15);
-    padding: 0.8rem 2.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: 'Syne', sans-serif;
-  }
-  .nav-logo {
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    background: linear-gradient(135deg, #E8C547, #47E8C5);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  .nav-links {
-    display: flex;
-    gap: 2rem;
-  }
-  .nav-link {
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    transition: 0.2s;
-  }
-  .nav-link.active, .nav-link:hover {
-    color: var(--accent-gold);
-  }
+/* ── scrolling ticker ── */
+.ticker-wrap{position:absolute;bottom:0;left:0;right:0;z-index:3;overflow:hidden;border-top:1px solid rgba(232,197,71,0.12);height:36px;background:rgba(10,10,15,0.7);backdrop-filter:blur(8px);}
+.ticker{display:flex;align-items:center;white-space:nowrap;animation:tickerScroll 40s linear infinite;height:100%;}
+.ticker-item{font-size:0.55rem;letter-spacing:0.22em;color:rgba(232,197,71,0.5);text-transform:uppercase;padding:0 2rem;}
+.ticker-sep{color:rgba(232,197,71,0.25);padding:0 0.5rem;}
+@keyframes tickerScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
-  /* hero */
-  .hero {
-    min-height: 45vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 7rem 2.5rem 3rem;
-    position: relative;
-    z-index: 5;
-  }
-  .hero-badge {
-    font-size: 0.7rem;
-    letter-spacing: 0.3em;
-    color: var(--accent-teal);
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-  }
-  .hero-title {
-    font-family: 'Syne', sans-serif;
-    font-size: clamp(3rem, 12vw, 7rem);
-    font-weight: 800;
-    line-height: 1;
-    background: linear-gradient(135deg, #FFF 30%, #E8C547 70%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  .hero-sub {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    max-width: 500px;
-    margin-top: 1rem;
-    border-left: 2px solid var(--accent-gold);
-    padding-left: 1rem;
-  }
+/* ── main layout ── */
+.main{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:0 2.5rem 8rem;}
+section{padding:5rem 0;}
+.sec-label{font-size:0.6rem;letter-spacing:0.45em;color:var(--accent);text-transform:uppercase;margin-bottom:0.7rem;display:flex;align-items:center;gap:0.8rem;}
+.sec-label::before{content:'';display:block;width:28px;height:1px;background:var(--accent);}
+.sec-title{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3.5rem);margin-bottom:2.5rem;}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent);}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity 0.7s,transform 0.7s;}
+.reveal.vis{opacity:1;transform:translateY(0);}
 
-  /* controls */
-  .controls-panel {
-    max-width: 1600px;
-    margin: 2rem auto 2rem;
-    padding: 0 2rem;
-  }
-  .filter-sort-bar {
-    background: var(--bg-surface);
-    border: 1px solid rgba(232,197,71,0.2);
-    border-radius: 60px;
-    padding: 0.5rem 1rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.6rem;
-    backdrop-filter: blur(8px);
-  }
-  .filter-group {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    background: rgba(20,20,30,0.6);
-    border-radius: 40px;
-    padding: 0.2rem 0.6rem;
-  }
-  .filter-label {
-    font-size: 0.55rem;
-    letter-spacing: 0.1em;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    margin-right: 0.3rem;
-  }
-  .filter-chip {
-    background: transparent;
-    border: 1px solid rgba(232,197,71,0.3);
-    color: var(--text-muted);
-    font-size: 0.65rem;
-    padding: 0.3rem 0.9rem;
-    border-radius: 40px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-  }
-  .filter-chip.active {
-    background: var(--accent-gold);
-    color: #05050A;
-    border-color: var(--accent-gold);
-  }
-  .sort-select {
-    background: var(--bg-card);
-    border: 1px solid var(--border-glow);
-    color: var(--text-primary);
-    padding: 0.4rem 1rem;
-    border-radius: 40px;
-    font-size: 0.7rem;
-    font-family: inherit;
-    cursor: pointer;
-  }
-  .search-input {
-    background: var(--bg-card);
-    border: 1px solid rgba(232,197,71,0.3);
-    padding: 0.45rem 1rem;
-    border-radius: 40px;
-    color: white;
-    font-size: 0.7rem;
-    min-width: 180px;
-    font-family: inherit;
-  }
-  .search-input:focus {
-    outline: none;
-    border-color: var(--accent-gold);
-  }
+/* ── filter bar ── */
+.filter-strip{display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:2.5rem;padding:1rem 1.4rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;}
+.filter-label{font-size:0.52rem;letter-spacing:0.25em;color:var(--muted);text-transform:uppercase;flex-shrink:0;}
+.filter-sep{width:1px;height:18px;background:var(--border);flex-shrink:0;}
+.flt-btn{font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;padding:0.35rem 0.9rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;transition:all 0.2s;white-space:nowrap;}
+.flt-btn:hover{border-color:var(--accent);color:var(--accent);}
+.flt-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.flt-btn.ib-kjs.active{background:#4fc3f7;border-color:#4fc3f7;}
+.flt-btn.ib-mjs.active{background:#a78bfa;border-color:#a78bfa;}
+.flt-btn.ib-ujs.active{background:#fb923c;border-color:#fb923c;}
+.search-elite{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:0.4rem 0.9rem;font-family:'JetBrains Mono',monospace;font-size:0.68rem;border-radius:2px;outline:none;min-width:220px;transition:border-color 0.2s;margin-left:auto;}
+.search-elite:focus{border-color:var(--accent);}
+.search-elite::placeholder{color:var(--muted);}
 
-  /* MAIN GRID — HONOR WALL */
-  .honor-wall {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 1rem 2rem 5rem;
-  }
-  .elite-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 1.8rem;
-  }
-  .elite-monument {
-    background: var(--bg-card);
-    border: 1px solid rgba(232,197,71,0.2);
-    border-radius: 32px;
-    transition: all 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-    position: relative;
-    overflow: hidden;
-    backdrop-filter: blur(4px);
-    cursor: pointer;
-  }
-  .elite-monument:hover {
-    transform: translateY(-8px);
-    border-color: rgba(232,197,71,0.6);
-    box-shadow: 0 30px 40px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(232,197,71,0.2);
-  }
-  .tier-stripe {
-    height: 4px;
-    background: linear-gradient(90deg, var(--accent-gold), var(--accent-teal), var(--accent-pink));
-  }
-  .monument-inner {
-    padding: 1.5rem;
-  }
-  .rank-orb {
-    position: absolute;
-    top: 1rem;
-    right: 1.5rem;
-    font-family: 'Syne', monospace;
-    font-size: 2rem;
-    font-weight: 800;
-    opacity: 0.7;
-    color: var(--accent-gold);
-  }
-  .rank-orb.rank1 { color: var(--rank-1); text-shadow: 0 0 6px rgba(255,217,102,0.3);}
-  .rank-orb.rank2 { color: var(--rank-2);}
-  .rank-orb.rank3 { color: var(--rank-3);}
-  
-  /* photo area */
-  .hero-portrait {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-  .avatar-frame {
-    width: 80px;
-    height: 80px;
-    border-radius: 40px;
-    background: linear-gradient(145deg, #1a1a24, #0f0f18);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    border: 2px solid var(--accent-gold);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-  }
-  .avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .avatar-fallback {
-    font-size: 2.2rem;
-    font-weight: bold;
-    font-family: 'Syne';
-    color: var(--accent-gold);
-  }
-  .name-inst {
-    flex: 1;
-  }
-  .elite-name {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-  }
-  .inst-tag {
-    display: inline-block;
-    font-size: 0.55rem;
-    padding: 0.2rem 0.7rem;
-    border-radius: 20px;
-    background: rgba(79,195,247,0.15);
-    color: #4fc3f7;
-    margin-top: 4px;
-  }
-  .inst-mjs { background: rgba(167,139,250,0.15); color: #a78bfa; }
-  .inst-ujs { background: rgba(251,146,60,0.15); color: #fb923c; }
+/* ── badge tier colors ── */
+.tier-legendary{background:linear-gradient(135deg,rgba(232,197,71,0.18),rgba(251,191,36,0.08));border-color:rgba(232,197,71,0.5)!important;color:var(--gold);}
+.tier-gold{background:rgba(251,191,36,0.08);border-color:rgba(251,191,36,0.3)!important;color:#fbbf24;}
+.tier-silver{background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.25)!important;color:var(--silver);}
+.tier-bronze{background:rgba(205,127,50,0.08);border-color:rgba(205,127,50,0.2)!important;color:var(--bronze);}
 
-  /* metrics */
-  .metrics-row {
-    display: flex;
-    gap: 1rem;
-    margin: 1rem 0;
-    background: rgba(0,0,0,0.3);
-    border-radius: 24px;
-    padding: 0.6rem;
-    justify-content: space-between;
-  }
-  .metric {
-    text-align: center;
-    flex: 1;
-  }
-  .metric-val {
-    font-size: 1.6rem;
-    font-weight: 700;
-    font-family: 'Syne';
-    line-height: 1;
-  }
-  .metric-label {
-    font-size: 0.55rem;
-    letter-spacing: 0.1em;
-    color: var(--text-muted);
-  }
-  .subject-badge {
-    display: flex;
-    justify-content: space-between;
-    margin: 0.6rem 0;
-    gap: 0.8rem;
-  }
-  .subj-item {
-    background: rgba(255,255,255,0.03);
-    border-radius: 40px;
-    padding: 0.2rem 0.6rem;
-    font-size: 0.7rem;
-    font-weight: 500;
-  }
-  .subj-phy { color: var(--phy); }
-  .subj-chem { color: var(--chem); }
-  .subj-math { color: var(--math); }
+/* ── elite card ── */
+.elites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem;}
+.elite-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;position:relative;transition:transform 0.3s,border-color 0.3s,box-shadow 0.3s;cursor:pointer;text-decoration:none;display:block;}
+.elite-card:hover{transform:translateY(-6px);border-color:rgba(232,197,71,0.35);box-shadow:0 20px 60px rgba(0,0,0,0.4);}
+.elite-card.legendary-card{border-color:rgba(232,197,71,0.3);box-shadow:0 0 30px rgba(232,197,71,0.06);}
+.elite-card.legendary-card:hover{border-color:rgba(232,197,71,0.6);box-shadow:0 20px 60px rgba(232,197,71,0.12);}
 
-  /* badges container - scrollable if many */
-  .badges-wall {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    max-height: 140px;
-    overflow-y: auto;
-    padding: 0.2rem 0;
-    scrollbar-width: thin;
-  }
-  .achievement-badge {
-    font-size: 0.6rem;
-    padding: 0.25rem 0.8rem;
-    background: rgba(232,197,71,0.1);
-    border-left: 2px solid var(--accent-gold);
-    border-radius: 20px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
-    backdrop-filter: blur(4px);
-  }
-  .badge-icon {
-    font-size: 0.75rem;
-  }
-  .legendary-badge {
-    background: linear-gradient(135deg, rgba(232,197,71,0.2), rgba(71,232,197,0.1));
-    border-left-color: #e8c547;
-    color: #FFE8A3;
-  }
+/* card top band */
+.card-band{height:3px;}
+.band-legendary{background:linear-gradient(90deg,#fbbf24,#e8c547,#47e8c5);}
+.band-gold{background:linear-gradient(90deg,#fbbf24,#fb923c);}
+.band-silver{background:linear-gradient(90deg,#94a3b8,#4fc3f7);}
+.band-default{background:linear-gradient(90deg,var(--accent),var(--accent2));}
 
-  /* empty state */
-  .empty-wall {
-    text-align: center;
-    padding: 4rem;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    border: 1px dashed var(--border-glow);
-    border-radius: 48px;
-  }
+/* rank badge absolute top-right */
+.card-rank{position:absolute;top:0.8rem;right:0.9rem;font-family:'Bebas Neue',sans-serif;font-size:1.8rem;line-height:1;opacity:0.55;}
+.rank-1-c{color:var(--gold);}
+.rank-2-c{color:var(--silver);}
+.rank-3-c{color:var(--bronze);}
+.rank-n-c{color:var(--muted);}
 
-  /* footer */
-  .footer {
-    text-align: center;
-    padding: 2rem;
-    border-top: 1px solid rgba(232,197,71,0.1);
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
-    color: var(--text-muted);
-  }
-  @media (max-width: 700px) {
-    .filter-sort-bar { border-radius: 20px; flex-direction: column; align-items: stretch; }
-    .elite-grid { grid-template-columns: 1fr; }
-    .hero { padding: 6rem 1rem 2rem; }
-    .honor-wall { padding: 0 1rem 3rem; }
-  }
+/* photo area */
+.card-photo-wrap{width:100%;aspect-ratio:4/3;overflow:hidden;position:relative;background:var(--surface2);}
+.card-photo{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.5s;}
+.elite-card:hover .card-photo{transform:scale(1.04);}
+.card-photo-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:4rem;color:rgba(232,197,71,0.15);}
+.card-photo-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,15,0.9) 0%,rgba(10,10,15,0.3) 50%,transparent 100%);}
+.card-photo-score{position:absolute;bottom:0.9rem;left:1rem;font-family:'Bebas Neue',sans-serif;font-size:2.8rem;line-height:1;color:var(--accent);}
+.card-photo-avg-label{font-size:0.48rem;letter-spacing:0.22em;color:rgba(232,197,71,0.6);text-transform:uppercase;margin-bottom:1px;}
+
+/* card body */
+.card-body{padding:1.2rem 1.3rem 1.4rem;}
+.card-inst{display:inline-block;font-size:0.48rem;letter-spacing:0.2em;padding:0.16rem 0.5rem;border-radius:2px;text-transform:uppercase;margin-bottom:0.5rem;font-weight:600;}
+.inst-kjs{background:rgba(79,195,247,0.12);color:#4fc3f7;}
+.inst-mjs{background:rgba(167,139,250,0.12);color:#a78bfa;}
+.inst-ujs{background:rgba(251,146,60,0.12);color:#fb923c;}
+.card-name{font-family:'DM Serif Display',serif;font-size:1.2rem;line-height:1.2;margin-bottom:0.6rem;color:var(--text);}
+.card-stats{display:flex;gap:1.2rem;margin-bottom:1rem;flex-wrap:wrap;}
+.card-stat-item{text-align:center;}
+.cs-val{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1;}
+.cs-lbl{font-size:0.44rem;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;}
+.card-subj-bars{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;}
+.csb-row{}
+.csb-label{font-size:0.48rem;color:var(--muted);letter-spacing:0.1em;margin-bottom:3px;display:flex;justify-content:space-between;}
+.csb-outer{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.csb-inner{height:100%;border-radius:2px;}
+
+/* badges strip */
+.card-badges{display:flex;flex-wrap:wrap;gap:0.35rem;}
+.badge{display:inline-flex;align-items:center;gap:0.3rem;font-size:0.48rem;letter-spacing:0.12em;padding:0.22rem 0.55rem;border-radius:20px;border:1px solid;text-transform:uppercase;white-space:nowrap;}
+.badge .badge-icon{font-size:0.7rem;}
+
+/* ── podium section ── */
+.podium-trio{display:flex;align-items:flex-end;justify-content:center;gap:0;margin:2rem 0 3rem;}
+.ptop{flex:1;max-width:320px;text-align:center;position:relative;}
+.ptop-photo{width:120px;height:120px;border-radius:50%;overflow:hidden;margin:0 auto 1rem;border:3px solid var(--border);position:relative;}
+.ptop-photo img{width:100%;height:100%;object-fit:cover;}
+.ptop-photo-fb{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:rgba(232,197,71,0.2);}
+.ptop-medal{position:absolute;top:-8px;right:-8px;font-size:1.5rem;}
+.ptop-name{font-family:'DM Serif Display',serif;font-size:1.05rem;margin-bottom:0.25rem;}
+.ptop-score{font-family:'Bebas Neue',sans-serif;font-size:3rem;line-height:1;}
+.ptop-sub{font-size:0.52rem;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;}
+.ptop-block{margin-top:0.8rem;border-radius:4px 4px 0 0;height:120px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;}
+.ptop-1 .ptop-score{color:var(--gold);}
+.ptop-1 .ptop-photo{border-color:var(--gold);box-shadow:0 0 20px rgba(251,191,36,0.25);}
+.ptop-1 .ptop-block{background:linear-gradient(135deg,#fbbf24,#f59e0b);height:150px;}
+.ptop-2 .ptop-score{color:var(--silver);}
+.ptop-2 .ptop-photo{border-color:var(--silver);}
+.ptop-2 .ptop-block{background:linear-gradient(135deg,#94a3b8,#64748b);}
+.ptop-3 .ptop-score{color:var(--bronze);}
+.ptop-3 .ptop-photo{border-color:var(--bronze);}
+.ptop-3 .ptop-block{background:linear-gradient(135deg,#cd7f32,#a0632a);height:88px;}
+
+/* ── badge legend ── */
+.badge-legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.8rem;margin-top:1.5rem;}
+.bl-item{display:flex;align-items:center;gap:0.8rem;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0.8rem 1rem;}
+.bl-icon{font-size:1.5rem;flex-shrink:0;}
+.bl-name{font-size:0.62rem;margin-bottom:0.15rem;}
+.bl-desc{font-size:0.52rem;color:var(--muted);letter-spacing:0.05em;line-height:1.5;}
+
+/* ── loading ── */
+.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:50vh;gap:1rem;}
+.ld-dots{display:flex;gap:8px;}
+.ld-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:blink 1.2s infinite;}
+.ld-dot:nth-child(2){animation-delay:0.2s;}
+.ld-dot:nth-child(3){animation-delay:0.4s;}
+@keyframes blink{0%,100%{opacity:0.15}50%{opacity:1}}
+.ld-text{font-size:0.65rem;letter-spacing:0.3em;color:var(--muted);text-transform:uppercase;}
+
+/* ── empty state ── */
+.empty-msg{text-align:center;padding:4rem;color:var(--muted);font-size:0.7rem;letter-spacing:0.2em;}
+
+@media(max-width:900px){
+  .hero{padding:7rem 1.5rem 4rem;}
+  .podium-trio{flex-direction:column;align-items:center;gap:1.5rem;}
+  .ptop{max-width:260px;}
+  .ptop-block{display:none;}
+  .main{padding:0 1.2rem 6rem;}
+  .elites-grid{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
-<div class="grain-overlay"></div>
-<div class="glow-orb"></div>
+<div class="grid-bg"></div>
+<div class="glow-gold"></div>
+<div class="glow-teal"></div>
+<div class="glow-pink"></div>
 
-<nav class="nav">
-  <div class="nav-logo">JUT·ELITE</div>
-  <div class="nav-links">
-    <a href="/" class="nav-link">Home</a>
-    <a href="/analysis" class="nav-link">Analysis</a>
-    <a href="/overview" class="nav-link">Overview</a>
-    <a href="/student" class="nav-link">Student</a>
-    <a href="/elites" class="nav-link active">Wall of Fame</a>
+<nav class="topnav">
+  <a class="topnav-logo" href="/">JUT<span>·</span>HUB</a>
+  <div class="topnav-links">
+    <a class="topnav-link" href="/">Home</a>
+    <a class="topnav-link" href="/analysis">Per-Test</a>
+    <a class="topnav-link" href="/overview">Overview</a>
+    <a class="topnav-link" href="/student">Student</a>
+    <a class="topnav-link active" href="/elites">Elites</a>
   </div>
 </nav>
 
+<!-- HERO -->
 <div class="hero">
-  <div class="hero-badge">✦ HALL OF IMMORTALS ✦</div>
-  <div class="hero-title">ACHIEVERS'<br>MONOLITH</div>
-  <div class="hero-sub">Ranking the finest — JUT warriors recognized by legendary badges, subject dominance, and all-time peaks.</div>
-</div>
-
-<div class="controls-panel">
-  <div class="filter-sort-bar">
-    <div class="filter-group"><span class="filter-label">🏆 BADGE TIER</span>
-      <button data-tier="all" class="filter-chip active">All</button>
-      <button data-tier="legendary" class="filter-chip">Legendary</button>
-      <button data-tier="gold" class="filter-chip">Gold</button>
-      <button data-tier="silver" class="filter-chip">Silver</button>
+  <div class="hero-scanline"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">JUT · Wall of Fame</div>
+    <div class="hero-title">
+      <span class="gold">JUT</span>
+      <span class="stroke">ELITES</span>
     </div>
-    <div class="filter-group"><span class="filter-label">🏛️ INSTITUTE</span>
-      <button data-inst="all" class="filter-chip active">All</button>
-      <button data-inst="KJS" class="filter-chip">KJS</button>
-      <button data-inst="MJS" class="filter-chip">MJS</button>
-      <button data-inst="UJS" class="filter-chip">UJS</button>
+    <div class="hero-sub" id="heroSub">Loading elite performers…</div>
+    <div class="hero-kpis">
+      <div class="kpi"><div class="kpi-val" id="kpiElites">—</div><div class="kpi-label">Elites Listed</div></div>
+      <div class="kpi"><div class="kpi-val" id="kpiBadges">—</div><div class="kpi-label">Badges Awarded</div></div>
+      <div class="kpi"><div class="kpi-val" id="kpiLegendary">—</div><div class="kpi-label">Legendary</div></div>
     </div>
-    <select id="sortSelect" class="sort-select">
-      <option value="rank">📊 Global Rank (Lowest #)</option>
-      <option value="badgeCount">🏅 Most Badges</option>
-      <option value="avgScore">⭐ Highest Avg Score</option>
-      <option value="jutBest">🔥 Peak JUT Score</option>
-      <option value="consistency">🔒 Consistency</option>
-    </select>
-    <input type="text" id="searchName" class="search-input" placeholder="Search elite by name...">
   </div>
+  <div class="ticker-wrap"><div class="ticker" id="ticker"></div></div>
 </div>
 
-<div class="honor-wall">
-  <div id="eliteGridContainer" class="elite-grid"></div>
-  <div id="emptyMessage" class="empty-wall" style="display: none;">⚡ No legends match the current filter. Adjust your scope ⚡</div>
+<div class="main">
+
+<!-- PODIUM -->
+<section>
+  <div class="sec-label reveal">All-Time Top 3</div>
+  <div class="sec-title reveal">The Immortal Podium</div>
+  <div class="podium-trio reveal" id="podiumTrio"></div>
+</section>
+
+<div class="divider"></div>
+
+<!-- WALL OF FAME -->
+<section>
+  <div class="sec-label reveal">Achievement Wall</div>
+  <div class="sec-title reveal">Elite Performers</div>
+
+  <div class="filter-strip reveal" id="filterStrip">
+    <span class="filter-label">Filter:</span>
+    <button class="flt-btn active" data-filter="all">All</button>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Inst:</span>
+    <button class="flt-btn ib-kjs" data-inst="KJS">KJS</button>
+    <button class="flt-btn ib-mjs" data-inst="MJS">MJS</button>
+    <button class="flt-btn ib-ujs" data-inst="UJS">UJS</button>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Badge:</span>
+    <button class="flt-btn" data-badge="rank1">👑 #1</button>
+    <button class="flt-btn" data-badge="top10">⭐ Top10</button>
+    <button class="flt-btn" data-badge="sharpshooter">🎯 Sharp</button>
+    <button class="flt-btn" data-badge="ironwall">🔒 Consistent</button>
+    <button class="flt-btn" data-badge="rising">📈 Rising</button>
+    <input class="search-elite" id="eliteSearch" type="text" placeholder="Search name…">
+  </div>
+
+  <div id="wallGrid" class="elites-grid"></div>
+  <div id="wallEmpty" class="empty-msg" style="display:none;">No elites match the current filter.</div>
+</section>
+
+<div class="divider"></div>
+
+<!-- BADGE LEGEND -->
+<section>
+  <div class="sec-label reveal">Achievement Guide</div>
+  <div class="sec-title reveal">Badge Glossary</div>
+  <div class="badge-legend reveal" id="badgeLegend"></div>
+</section>
+
+</div><!-- /main -->
+
+<div id="loadingWrap" class="loading-wrap main" style="max-width:1600px;margin:0 auto;padding:0 2.5rem;">
+  <div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div>
+  <div class="ld-text">Scanning achievements…</div>
 </div>
 
-<div class="footer">JUT ELITE WALL OF FAME · RECOGNIZING THE EXCEPTIONAL · DYNAMIC BADGES SYSTEM</div>
+<footer style="text-align:center;padding:2rem;color:var(--muted);font-size:0.58rem;letter-spacing:0.18em;border-top:1px solid var(--border);position:relative;z-index:1;">JUT ELITES · WALL OF FAME · ACHIEVEMENT SYSTEM</footer>
 
 <script>
-  // --------------------------------------------------------------
-  // DYNAMIC BADGE GENERATOR (based on JUTs, aggregates, ranks, subject ranks, institute ranks)
-  // This function runs on server side mock, but in real API we compute badges on the fly.
-  // For this prototype: we will generate elite dataset with full badges (using logic from DB)
-  // --------------------------------------------------------------
-  
-  // Mock data with extensive badges — simulates actual elite performance.
-  // Badges include: JUT specific rank (#1 JUT3, #2 JUT7 Phy etc), aggregate ranks, subject avgs, institute-specific rank, etc.
-  const generateMockEliteData = () => {
-    const studentsRaw = [
-      { name: "ARADHYA SINGH", inst: "KJS", photo: null, avg_phy: 94, avg_chem: 92, avg_math: 96, best_score: 298, avg_score: 94.2, consistency: 91, attendance: 12, accuracy: 88 },
-      { name: "VIAAN SHARMA", inst: "KJS", photo: null, avg_phy: 91, avg_chem: 89, avg_math: 93, best_score: 294, avg_score: 91.5, consistency: 86, attendance: 12, accuracy: 84 },
-      { name: "REYANSH MEHTA", inst: "MJS", photo: null, avg_phy: 88, avg_chem: 95, avg_math: 90, best_score: 292, avg_score: 91.0, consistency: 83, attendance: 12, accuracy: 82 },
-      { name: "SAANVI VERMA", inst: "UJS", photo: null, avg_phy: 96, avg_chem: 94, avg_math: 88, best_score: 296, avg_score: 92.7, consistency: 89, attendance: 12, accuracy: 86 },
-      { name: "KABIR NATH", inst: "MJS", photo: null, avg_phy: 85, avg_chem: 87, avg_math: 92, best_score: 285, avg_score: 88.0, consistency: 78, attendance: 11, accuracy: 79 },
-      { name: "ISHITA ROY", inst: "UJS", photo: null, avg_phy: 90, avg_chem: 91, avg_math: 95, best_score: 300, avg_score: 92.0, consistency: 92, attendance: 12, accuracy: 90 },
-      { name: "DHRUV RAJPUT", inst: "KJS", photo: null, avg_phy: 97, avg_chem: 88, avg_math: 94, best_score: 299, avg_score: 93.3, consistency: 88, attendance: 12, accuracy: 87 },
-      { name: "ANANYA JOSHI", inst: "MJS", photo: null, avg_phy: 92, avg_chem: 93, avg_math: 89, best_score: 290, avg_score: 91.3, consistency: 84, attendance: 11, accuracy: 83 },
-      { name: "RUDRA PRATAP", inst: "UJS", photo: null, avg_phy: 87, avg_chem: 85, avg_math: 91, best_score: 281, avg_score: 87.7, consistency: 76, attendance: 10, accuracy: 76 }
-    ];
-    
-    // Define all possible elite badges (extensive: JUT-specific ranks, subject aggregates, institute ranks)
-    // To make rich, each student gets badges based on rank and performance.
-    // We'll compute per student.
-    const computeBadges = (student, idx, allStudents) => {
-      let badges = [];
-      const overallSorted = [...allStudents].sort((a,b)=>b.avg_score - a.avg_score);
-      const rankOverall = overallSorted.findIndex(s=>s.name===student.name)+1;
-      if(rankOverall === 1) badges.push({ id: "rank1_global", label: "#1 OVERALL", tier: "legendary", icon: "👑" });
-      else if(rankOverall === 2) badges.push({ id: "rank2_global", label: "RUNNER-UP", tier: "gold", icon: "🥈" });
-      else if(rankOverall === 3) badges.push({ id: "rank3_global", label: "BRONZE LEGEND", tier: "gold", icon: "🥉" });
-      if(rankOverall <= 10) badges.push({ id: "top10_global", label: "TOP 10 ELITE", tier: "gold", icon: "⭐" });
-      
-      // subject aces and gods
-      const phySorted = [...allStudents].sort((a,b)=>b.avg_phy - a.avg_phy);
-      const chemSorted = [...allStudents].sort((a,b)=>b.avg_chem - a.avg_chem);
-      const mathSorted = [...allStudents].sort((a,b)=>b.avg_math - a.avg_math);
-      const phyRank = phySorted.findIndex(s=>s.name===student.name)+1;
-      const chemRank = chemSorted.findIndex(s=>s.name===student.name)+1;
-      const mathRank = mathSorted.findIndex(s=>s.name===student.name)+1;
-      
-      if(phyRank === 1) badges.push({ id: "phy_king", label: "PHYSICS EMPEROR", tier: "legendary", icon: "⚛️" });
-      else if(phyRank <= 3) badges.push({ id: "phy_ace", label: "PHYSICS ACE #"+phyRank, tier: "gold", icon: "⚡" });
-      if(chemRank === 1) badges.push({ id: "chem_king", label: "CHEMISTRY OVERLORD", tier: "legendary", icon: "🧪" });
-      else if(chemRank <= 3) badges.push({ id: "chem_ace", label: "CHEM ACE #"+chemRank, tier: "gold", icon: "🔭" });
-      if(mathRank === 1) badges.push({ id: "math_king", label: "MATHEMATICAL TITAN", tier: "legendary", icon: "∑" });
-      else if(mathRank <= 3) badges.push({ id: "math_ace", label: "MATH ACE #"+mathRank, tier: "gold", icon: "🌀" });
-      
-      // Institute specific rank 1
-      const instStudents = allStudents.filter(s=>s.inst === student.inst);
-      const instSorted = [...instStudents].sort((a,b)=>b.avg_score - a.avg_score);
-      const instRank = instSorted.findIndex(s=>s.name===student.name)+1;
-      if(instRank === 1) badges.push({ id: `inst_top_${student.inst}`, label: `${student.inst} CHAMPION`, tier: "legendary", icon: "🏛️" });
-      else if(instRank <= 3) badges.push({ id: `inst_podium_${student.inst}`, label: `${student.inst} TOP ${instRank}`, tier: "gold", icon: "🏅" });
-      
-      // JUT specific mock badges: for demonstration we simulate outstanding JUT performances (like JUT 3 rank 1, JUT 7 Phy rank 1)
-      // create a few per top performer
-      if(student.avg_score > 92) {
-        badges.push({ id: "jut3_rank1", label: "JUT #3 CHAMPION", tier: "gold", icon: "🏆" });
-        badges.push({ id: "jut7_phy1", label: "JUT 7 · PHYSICS #1", tier: "gold", icon: "🎯" });
-      }
-      if(student.best_score >= 298) badges.push({ id: "perfect_300", label: "NEAR PERFECT (298+)", tier: "legendary", icon: "✨" });
-      if(student.best_score === 300) badges.push({ id: "perfect_score", label: "FLAWLESS 300", tier: "legendary", icon: "💎" });
-      if(student.accuracy >= 88) badges.push({ id: "sharpshooter", label: "SHARPSHOOTER", tier: "gold", icon: "🎯" });
-      if(student.consistency >= 88) badges.push({ id: "iron_wall", label: "IRON WALL (88% CONS)", tier: "gold", icon: "🔒" });
-      if(student.attendance === 12) badges.push({ id: "perfect_att", label: "PERFECT ATTENDANCE", tier: "silver", icon: "📅" });
-      // Subject 90+ badges
-      if(student.avg_phy >= 90) badges.push({ id: "phy_god", label: "PHYSICS GOD (90+)", tier: "gold", icon: "⚡" });
-      if(student.avg_chem >= 90) badges.push({ id: "chem_genius", label: "CHEM GENIUS (90+)", tier: "gold", icon: "🔭" });
-      if(student.avg_math >= 90) badges.push({ id: "math_wizard", label: "MATH WIZARD (90+)", tier: "gold", icon: "🌀" });
-      // top 25% badge
-      if(rankOverall <= Math.ceil(allStudents.length * 0.25)) badges.push({ id: "top_quarter", label: "TOP 25% COHORT", tier: "silver", icon: "💎" });
-      if(student.avg_score > 90 && student.consistency > 85) badges.push({ id: "consistent_elite", label: "CONSISTENT ELITE", tier: "gold", icon: "📐" });
-      
-      // additional jut rank combos: JUT 13 rank 2 KJS specific (example)
-      if(student.inst === "KJS" && student.name === "DHRUV RAJPUT") badges.push({ id: "kjs_jut13_rank2", label: "KJS · JUT 13 RANK #2", tier: "gold", icon: "⚙️" });
-      if(student.name === "ARADHYA SINGH") badges.push({ id: "jut_phy_cup", label: "JUT 8 · PHYSICS CUP", tier: "legendary", icon: "🏆" });
-      
-      return badges;
-    };
-    
-    let allWithBadges = studentsRaw.map((s, idx) => {
-      const badges = computeBadges(s, idx, studentsRaw);
-      return {
-        ...s,
-        badges: badges,
-        rank: idx+1,
-        attended: s.attendance,
-        best_score: s.best_score,
-        avg_score: s.avg_score,
-        consistency: s.consistency,
-        accuracy: s.accuracy
-      };
-    });
-    // reorder by global rank
-    allWithBadges.sort((a,b)=>b.avg_score - a.avg_score);
-    allWithBadges = allWithBadges.map((s,idx)=>({...s, rank: idx+1}));
-    return allWithBadges;
-  };
-  
-  let eliteDataset = generateMockEliteData();
-  let filteredElites = [...eliteDataset];
-  let activeTier = "all";
-  let activeInst = "all";
-  let sortMode = "rank";
-  let searchTerm = "";
-  
-  const renderGrid = () => {
-    let data = [...filteredElites];
-    if(activeTier !== "all") {
-      data = data.filter(s => s.badges.some(b => b.tier === activeTier));
-    }
-    if(activeInst !== "all") {
-      data = data.filter(s => s.inst === activeInst);
-    }
-    if(searchTerm.trim() !== "") {
-      const term = searchTerm.trim().toUpperCase();
-      data = data.filter(s => s.name.toUpperCase().includes(term));
-    }
-    // sorting
-    if(sortMode === "rank") data.sort((a,b)=>a.rank - b.rank);
-    else if(sortMode === "badgeCount") data.sort((a,b)=>b.badges.length - a.badges.length);
-    else if(sortMode === "avgScore") data.sort((a,b)=>b.avg_score - a.avg_score);
-    else if(sortMode === "jutBest") data.sort((a,b)=>b.best_score - a.best_score);
-    else if(sortMode === "consistency") data.sort((a,b)=> (b.consistency||0) - (a.consistency||0));
-    
-    const container = document.getElementById("eliteGridContainer");
-    const emptyDiv = document.getElementById("emptyMessage");
-    if(!data.length) {
-      container.innerHTML = "";
-      emptyDiv.style.display = "block";
-      return;
-    }
-    emptyDiv.style.display = "none";
-    container.innerHTML = data.map(s => {
-      const rankClass = s.rank === 1 ? "rank1" : (s.rank === 2 ? "rank2" : (s.rank === 3 ? "rank3" : ""));
-      const highestTier = s.badges.some(b=>b.tier==="legendary") ? "legendary" : (s.badges.some(b=>b.tier==="gold") ? "gold" : "silver");
-      const avatarHtml = s.photo ? `<img class="avatar-img" src="${s.photo}" onerror="this.src='';this.nextElementSibling.style.display='flex';">` : `<div class="avatar-fallback">${s.name.split(' ').map(w=>w[0]).join('')}</div>`;
-      const instClass = s.inst === "KJS" ? "" : (s.inst === "MJS" ? "inst-mjs" : "inst-ujs");
-      return `
-        <div class="elite-monument" onclick="window.location.href='/student?student=${encodeURIComponent(s.name)}'">
-          <div class="tier-stripe"></div>
-          <div class="monument-inner">
-            <div class="rank-orb ${rankClass}">#${s.rank}</div>
-            <div class="hero-portrait">
-              <div class="avatar-frame">${avatarHtml}</div>
-              <div class="name-inst">
-                <div class="elite-name">${s.name}</div>
-                <span class="inst-tag ${instClass}">${s.inst}</span>
-              </div>
-            </div>
-            <div class="metrics-row">
-              <div class="metric"><div class="metric-val">${Math.round(s.avg_score)}</div><div class="metric-label">AVG</div></div>
-              <div class="metric"><div class="metric-val">${s.best_score}</div><div class="metric-label">PEAK</div></div>
-              <div class="metric"><div class="metric-val">${s.accuracy}%</div><div class="metric-label">ACC</div></div>
-              <div class="metric"><div class="metric-val">${s.consistency}%</div><div class="metric-label">CONS</div></div>
-            </div>
-            <div class="subject-badge">
-              <span class="subj-item subj-phy">⚛️ PHY ${Math.round(s.avg_phy)}</span>
-              <span class="subj-item subj-chem">🧪 CHEM ${Math.round(s.avg_chem)}</span>
-              <span class="subj-item subj-math">∑ MATH ${Math.round(s.avg_math)}</span>
-            </div>
-            <div class="badges-wall">
-              ${s.badges.map(b => `<span class="achievement-badge ${b.tier === 'legendary' ? 'legendary-badge' : ''}"><span class="badge-icon">${b.icon}</span> ${b.label}</span>`).join('')}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  };
-  
-  const applyFiltersAndRender = () => {
-    renderGrid();
-  };
-  
-  // event listeners
-  document.querySelectorAll("[data-tier]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("[data-tier]").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      activeTier = btn.dataset.tier;
-      applyFiltersAndRender();
-    });
+const BADGE_META = {
+  rank1:       { icon:'👑', label:'#1 Overall',        tier:'legendary', desc:'Highest avg score across all JUTs in the batch.' },
+  podium:      { icon:'🏅', label:'Podium',             tier:'gold',      desc:'Among the top 3 students by average score.' },
+  top10:       { icon:'⭐', label:'Top 10',             tier:'gold',      desc:'Within the top 10 students overall.' },
+  elite10:     { icon:'🔱', label:'Top 10%',            tier:'silver',    desc:'Ranks in the top 10% of the entire batch.' },
+  top25:       { icon:'💎', label:'Top 25%',            tier:'silver',    desc:'Ranks in the top 25% of the batch.' },
+  perfect:     { icon:'✨', label:'Perfect Score',      tier:'legendary', desc:'Achieved a flawless 300/300 in a JUT.' },
+  near_perfect:{ icon:'🌟', label:'Near Perfect',       tier:'gold',      desc:'Scored 280 or above in a single JUT.' },
+  sharpshooter:{ icon:'🎯', label:'Sharpshooter',       tier:'gold',      desc:'80%+ overall accuracy across all attempts.' },
+  precise:     { icon:'🔬', label:'Precision',          tier:'silver',    desc:'70%+ overall accuracy across all attempts.' },
+  ironwall:    { icon:'🔒', label:'Iron Wall',          tier:'gold',      desc:'85%+ consistency score (very low variance).' },
+  consistent:  { icon:'📐', label:'Consistent',         tier:'silver',    desc:'70%+ consistency score across tests.' },
+  perfect_att: { icon:'📅', label:'Perfect Attendance', tier:'silver',    desc:'Attended every single JUT without absence.' },
+  phy_ace:     { icon:'⚛️', label:'Physics Ace',        tier:'silver',    desc:'Average Physics score ≥ 80 marks.' },
+  chem_ace:    { icon:'🧪', label:'Chemistry Ace',      tier:'silver',    desc:'Average Chemistry score ≥ 80 marks.' },
+  math_ace:    { icon:'∑',  label:'Maths Ace',          tier:'silver',    desc:'Average Maths score ≥ 80 marks.' },
+  phy_god:     { icon:'⚡', label:'Physics God',        tier:'gold',      desc:'Average Physics score ≥ 90 marks.' },
+  chem_god:    { icon:'🔭', label:'Chem Genius',        tier:'gold',      desc:'Average Chemistry score ≥ 90 marks.' },
+  math_god:    { icon:'🌀', label:'Math Wizard',        tier:'gold',      desc:'Average Maths score ≥ 90 marks.' },
+  rising:      { icon:'📈', label:'Rising Star',        tier:'silver',    desc:'Last 3 JUT scores show continuous improvement.' },
+};
+
+let allData = [], filteredData = [];
+let activeInst = null, activeBadge = null, searchText = '';
+
+function normName(n){ return n.trim().replace(/\s+/g,' ').toUpperCase(); }
+
+function instChip(inst){
+  if(!inst) return '';
+  const cls = inst==='KJS'?'inst-kjs':inst==='MJS'?'inst-mjs':'inst-ujs';
+  return `<span class="card-inst ${cls}">${inst}</span>`;
+}
+
+function tierOrder(t){ return {legendary:0,gold:1,silver:2,bronze:3}[t]??4; }
+
+function highestTier(badges){
+  if(!badges.length) return 'default';
+  return badges.slice().sort((a,b)=>tierOrder(a.tier)-tierOrder(b.tier))[0].tier;
+}
+
+function bandClass(tier){
+  return {legendary:'band-legendary',gold:'band-gold',silver:'band-silver'}[tier]||'band-default';
+}
+
+function rankClass(r){
+  return r===1?'rank-1-c':r===2?'rank-2-c':r===3?'rank-3-c':'rank-n-c';
+}
+
+function buildCard(s){
+  const tier = highestTier(s.badges);
+  const isLeg = tier==='legendary';
+  const top3 = s.rank<=3;
+  const instC = s.inst?`inst-${s.inst.toLowerCase()}`:'';
+
+  // photo
+  let photoHtml = '';
+  if(s.photo){
+    photoHtml = `<img class="card-photo" src="${s.photo}" alt="${s.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <div class="card-photo-fallback" style="display:none;">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`;
+  } else {
+    photoHtml = `<div class="card-photo-fallback">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`;
+  }
+
+  // subject bars
+  const maxSubj = Math.max(s.avg_phy, s.avg_chem, s.avg_math, 1);
+  const subjBars = [
+    {lbl:'Phy', val:s.avg_phy, color:'var(--phy)'},
+    {lbl:'Che', val:s.avg_chem, color:'var(--chem)'},
+    {lbl:'Mat', val:s.avg_math, color:'var(--math)'},
+  ].map(x=>`<div class="csb-row">
+    <div class="csb-label"><span style="color:${x.color}">${x.lbl}</span><span>${Math.round(x.val)}</span></div>
+    <div class="csb-outer"><div class="csb-inner" style="background:${x.color};width:${(x.val/100*100).toFixed(1)}%"></div></div>
+  </div>`).join('');
+
+  // badges (up to 5 shown)
+  const badgesHtml = s.badges.slice(0,6).map(b=>{
+    const meta = BADGE_META[b.id]||{icon:'🏷️',label:b.label,tier:b.tier};
+    return `<span class="badge tier-${meta.tier}" title="${(BADGE_META[b.id]||{}).desc||''}"><span class="badge-icon">${meta.icon}</span>${meta.label}</span>`;
+  }).join('');
+
+  const accColor = s.accuracy>=80?'var(--accent2)':s.accuracy>=60?'var(--accent)':'var(--math)';
+
+  return `<a class="elite-card${isLeg?' legendary-card':''}" href="/student?student=${encodeURIComponent(s.name)}">
+  <div class="card-band ${bandClass(tier)}"></div>
+  <div class="card-rank ${rankClass(s.rank)}">#${s.rank}</div>
+  <div class="card-photo-wrap">
+    ${photoHtml}
+    <div class="card-photo-overlay"></div>
+    <div class="card-photo-score">
+      <div class="card-photo-avg-label">Avg Score</div>
+      ${Math.round(s.avg_score)}
+    </div>
+  </div>
+  <div class="card-body">
+    ${instChip(s.inst)}
+    <div class="card-name">${s.name}</div>
+    <div class="card-stats">
+      <div class="card-stat-item"><div class="cs-val" style="color:var(--accent)">${Math.round(s.avg_score)}</div><div class="cs-lbl">Avg</div></div>
+      <div class="card-stat-item"><div class="cs-val" style="color:var(--gold)">${s.best_score}</div><div class="cs-lbl">Best</div></div>
+      <div class="card-stat-item"><div class="cs-val" style="color:${accColor}">${s.accuracy}%</div><div class="cs-lbl">Acc</div></div>
+      <div class="card-stat-item"><div class="cs-val" style="color:var(--accent2)">${s.attended}</div><div class="cs-lbl">JUTs</div></div>
+      ${s.consistency!==null?`<div class="card-stat-item"><div class="cs-val" style="color:var(--silver)">${s.consistency}%</div><div class="cs-lbl">Cons.</div></div>`:''}
+    </div>
+    <div class="card-subj-bars">${subjBars}</div>
+    <div class="card-badges">${badgesHtml}</div>
+  </div>
+</a>`;
+}
+
+function applyFilters(){
+  let d = [...allData];
+  if(activeInst) d = d.filter(s=>s.inst===activeInst);
+  if(activeBadge) d = d.filter(s=>s.badges.some(b=>b.id===activeBadge));
+  if(searchText) d = d.filter(s=>normName(s.name).includes(searchText.toUpperCase()));
+  filteredData = d;
+  const wall = document.getElementById('wallGrid');
+  const empty = document.getElementById('wallEmpty');
+  if(!d.length){ wall.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  wall.innerHTML = d.map(buildCard).join('');
+}
+
+function buildPodium(data){
+  const top3 = data.slice(0,3);
+  const order = [top3[1], top3[0], top3[2]].filter(Boolean);
+  const classes = ['ptop ptop-2','ptop ptop-1','ptop ptop-3'];
+  const medals = ['🥈','🥇','🥉'];
+  const heights = [120,150,88];
+  const trio = document.getElementById('podiumTrio');
+  trio.innerHTML = order.map((s,i)=>{
+    const photoInner = s.photo
+      ? `<img src="${s.photo}" alt="${s.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="ptop-photo-fb" style="display:none;">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`
+      : `<div class="ptop-photo-fb">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`;
+    return `<a class="${classes[i]}" href="/student?student=${encodeURIComponent(s.name)}" style="text-decoration:none;color:inherit;">
+      <div class="ptop-photo"><span class="ptop-medal">${medals[i]}</span>${photoInner}</div>
+      <div class="ptop-name">${s.name}</div>
+      <div class="ptop-score">${Math.round(s.avg_score)}</div>
+      <div class="ptop-sub">avg · best: ${s.best_score}</div>
+      <div class="ptop-block" style="background:${['linear-gradient(135deg,#94a3b8,#64748b)','linear-gradient(135deg,#fbbf24,#f59e0b)','linear-gradient(135deg,#cd7f32,#a0632a)'][i]};height:${heights[i]}px">${medals[i]}</div>
+    </a>`;
+  }).join('');
+}
+
+function buildBadgeLegend(){
+  const leg = document.getElementById('badgeLegend');
+  leg.innerHTML = Object.entries(BADGE_META).map(([id,b])=>`
+    <div class="bl-item">
+      <div class="bl-icon">${b.icon}</div>
+      <div>
+        <div class="bl-name"><span class="badge tier-${b.tier}" style="font-size:0.52rem;">${b.label}</span></div>
+        <div class="bl-desc">${b.desc}</div>
+      </div>
+    </div>`).join('');
+}
+
+function buildTicker(data){
+  const items = data.slice(0,20).map(s=>`<span class="ticker-item">${s.name}<span class="ticker-sep">·</span>#${s.rank}<span class="ticker-sep">·</span>${Math.round(s.avg_score)} avg</span>`).join('');
+  const t = document.getElementById('ticker');
+  t.innerHTML = items + items; // double for seamless loop
+}
+
+async function loadElites(){
+  try{
+    const res = await fetch('/api/elites');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    allData = await res.json();
+
+    // Hero KPIs
+    const totalBadges = allData.reduce((s,e)=>s+e.badges.length,0);
+    const legendaryCount = allData.filter(e=>e.badges.some(b=>b.tier==='legendary')).length;
+    document.getElementById('kpiElites').textContent = allData.length;
+    document.getElementById('kpiBadges').textContent = totalBadges;
+    document.getElementById('kpiLegendary').textContent = legendaryCount;
+    document.getElementById('heroSub').textContent = allData.length + ' ELITE PERFORMERS · ' + totalBadges + ' BADGES AWARDED · ' + legendaryCount + ' LEGENDARY';
+
+    document.getElementById('loadingWrap').style.display='none';
+    document.getElementById('wallGrid').closest('section').style.display='block';
+
+    buildPodium(allData);
+    buildTicker(allData);
+    buildBadgeLegend();
+    applyFilters();
+
+    // Reveal
+    const io = new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis');});},{threshold:0.05});
+    document.querySelectorAll('.reveal').forEach(el=>{el.classList.remove('vis');io.observe(el);});
+
+  } catch(e){
+    document.getElementById('loadingWrap').innerHTML=`<div style="color:var(--accent3);font-size:0.75rem;letter-spacing:0.2em;text-align:center;">Error: ${e.message}</div>`;
+  }
+}
+
+// Filter buttons
+document.querySelectorAll('[data-inst]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const inst = btn.dataset.inst;
+    activeInst = activeInst===inst ? null : inst;
+    document.querySelectorAll('[data-inst]').forEach(b=>b.classList.remove('active'));
+    if(activeInst) btn.classList.add('active');
+    applyFilters();
   });
-  document.querySelectorAll("[data-inst]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll("[data-inst]").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      activeInst = btn.dataset.inst;
-      applyFiltersAndRender();
-    });
+});
+document.querySelectorAll('[data-badge]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const badge = btn.dataset.badge;
+    activeBadge = activeBadge===badge ? null : badge;
+    document.querySelectorAll('[data-badge]').forEach(b=>b.classList.remove('active'));
+    if(activeBadge) btn.classList.add('active');
+    applyFilters();
   });
-  document.getElementById("sortSelect").addEventListener("change", e => {
-    sortMode = e.target.value;
-    applyFiltersAndRender();
-  });
-  document.getElementById("searchName").addEventListener("input", e => {
-    searchTerm = e.target.value;
-    applyFiltersAndRender();
-  });
-  
-  renderGrid();
+});
+document.querySelector('[data-filter="all"]').addEventListener('click',()=>{
+  activeInst=null; activeBadge=null;
+  document.querySelectorAll('[data-inst],[data-badge]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-filter="all"]').classList.add('active');
+  applyFilters();
+});
+document.getElementById('eliteSearch').addEventListener('input',e=>{
+  searchText=e.target.value.trim();
+  applyFilters();
+});
+
+loadElites();
 </script>
 </body>
 </html>"""
