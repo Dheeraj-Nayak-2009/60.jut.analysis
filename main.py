@@ -1,10 +1,14 @@
-from flask import Flask, Blueprint, jsonify, request
+from flask import Flask, Blueprint, jsonify, request, render_template
 import os
 import csv
 
 app = Flask(__name__)
 
 api_bp = Blueprint('api', __name__)
+
+@app.route("/annual")
+def annual():
+    return render_template("annual.html")
 
 # ── ALL blueprint routes MUST be defined before app.register_blueprint() ──
 
