@@ -4313,7 +4313,7 @@ let currentFilter = 'all';
 
 async function loadElites() {
   try {
-    const res = await fetch('/api/elites-detailed');
+    const res = await fetch('/api/elites');
     if (!res.ok) throw new Error('Failed to load');
     const data = await res.json();
     
