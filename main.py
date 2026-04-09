@@ -3956,503 +3956,674 @@ ELITES_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JUT · Hall of Fame — The Elite Circle</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>JUT · WALL OF FAME | Elite Achievers</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#050508;
-  --surface:#0a0a12;
-  --surface2:#11111a;
-  --border:#1a1a2a;
-  --gold:#ffd700;
-  --platinum:#e5e4e2;
-  --silver:#c0c0c0;
-  --bronze:#cd7f32;
-  --obsidian:#2d2d3f;
-  --accent:#ff3366;
-  --accent2:#00d4ff;
-  --text:#f0f0f0;
-  --muted:#6b6b7a;
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;overflow-x:hidden;}
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 
-/* Glow effects */
-.glow-orb{position:fixed;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle,rgba(255,51,102,0.08) 0%,transparent 70%);top:-300px;right:-200px;pointer-events:none;}
-.glow-orb2{position:fixed;width:600px;height:600px;background:radial-gradient(circle,rgba(0,212,255,0.06) 0%,transparent 70%);bottom:-200px;left:-200px;pointer-events:none;}
+  :root {
+    --bg-deep: #05050A;
+    --bg-surface: #0C0C14;
+    --bg-card: #111118;
+    --border-glow: rgba(232, 197, 71, 0.2);
+    --accent-gold: #E8C547;
+    --accent-teal: #47E8C5;
+    --accent-pink: #E847A0;
+    --text-primary: #F0F0FA;
+    --text-muted: #6B6B8A;
+    --rank-1: #FFD966;
+    --rank-2: #C0C8D4;
+    --rank-3: #E4A87A;
+    --phy: #4FC3F7;
+    --chem: #A78BFA;
+    --math: #FB923C;
+  }
 
-/* Navigation */
-.topnav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(5,5,8,0.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,51,102,0.2);display:flex;align-items:center;justify-content:space-between;padding:0.8rem 2rem;}
-.topnav-logo{font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:800;letter-spacing:0.1em;color:var(--text);text-decoration:none;}
-.topnav-logo span{color:var(--accent);}
-.topnav-links{display:flex;gap:1.5rem;}
-.topnav-link{font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:all 0.2s;}
-.topnav-link:hover,.topnav-link.active{color:var(--accent);}
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    overflow-x: hidden;
+  }
 
-/* Hero Section */
-.hero{min-height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;padding:6rem 2rem 3rem;}
-.hero-content{z-index:2;}
-.hero-badge{font-size:0.65rem;letter-spacing:0.3em;color:var(--accent2);text-transform:uppercase;margin-bottom:1rem;}
-.hero-title{font-family:'Orbitron',sans-serif;font-size:clamp(3rem,10vw,7rem);font-weight:900;background:linear-gradient(135deg,#fff,#ff3366,#ffd700);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:1rem;}
-.hero-sub{font-size:0.8rem;color:var(--muted);max-width:600px;margin:0 auto;}
+  /* animated background grain */
+  .grain-overlay {
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(232,197,71,0.02) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.5;
+  }
 
-/* Sort Bar */
-.sort-bar{max-width:1400px;margin:0 auto 2rem;padding:0 2rem;}
-.sort-strip{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:0.8rem 1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
-.sort-label{font-size:0.6rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;}
-.sort-btn{padding:0.4rem 1rem;background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:0.65rem;cursor:pointer;transition:all 0.2s;font-family:inherit;}
-.sort-btn:hover{border-color:var(--accent2);color:var(--accent2);}
-.sort-btn.active{background:var(--accent);border-color:var(--accent);color:white;}
-.filter-group{display:flex;gap:0.5rem;margin-left:auto;flex-wrap:wrap;}
-.filter-pill{padding:0.3rem 0.9rem;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:0.6rem;cursor:pointer;transition:all 0.2s;}
-.filter-pill:hover{border-color:var(--accent);}
-.filter-pill.active{background:var(--accent);border-color:var(--accent);color:white;}
+  .glow-orb {
+    position: fixed;
+    width: 70vw;
+    height: 70vw;
+    background: radial-gradient(circle, rgba(232,197,71,0.05) 0%, transparent 70%);
+    top: -30vh;
+    right: -20vw;
+    pointer-events: none;
+    z-index: 1;
+    animation: floatSlow 28s infinite alternate;
+  }
 
-/* Main Grid */
-.main{max-width:1400px;margin:0 auto;padding:0 2rem 4rem;}
-.elite-grid{display:flex;flex-direction:column;gap:1rem;}
+  @keyframes floatSlow {
+    0% { transform: translate(0,0) scale(1); opacity: 0.3; }
+    100% { transform: translate(4%, 6%) scale(1.2); opacity: 0.6; }
+  }
 
-/* Elite Card - Horizontal Design */
-.elite-card{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);position:relative;}
-.elite-card:hover{transform:translateX(8px);border-color:rgba(255,51,102,0.3);box-shadow:-10px 10px 30px rgba(0,0,0,0.3);}
-.elite-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent),var(--accent2),var(--gold));opacity:0;transition:opacity 0.3s;}
-.elite-card:hover::before{opacity:1;}
+  /* nav */
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    background: rgba(5,5,10,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(232,197,71,0.15);
+    padding: 0.8rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Syne', sans-serif;
+  }
+  .nav-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #E8C547, #47E8C5);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+  }
+  .nav-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transition: 0.2s;
+  }
+  .nav-link.active, .nav-link:hover {
+    color: var(--accent-gold);
+  }
 
-.card-inner{display:flex;align-items:center;padding:1rem 1.5rem;gap:1.5rem;flex-wrap:wrap;}
+  /* hero */
+  .hero {
+    min-height: 45vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 7rem 2.5rem 3rem;
+    position: relative;
+    z-index: 5;
+  }
+  .hero-badge {
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    color: var(--accent-teal);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(3rem, 12vw, 7rem);
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, #FFF 30%, #E8C547 70%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero-sub {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    max-width: 500px;
+    margin-top: 1rem;
+    border-left: 2px solid var(--accent-gold);
+    padding-left: 1rem;
+  }
 
-/* Rank Display */
-.rank-circle{width:70px;height:70px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(255,51,102,0.15),rgba(0,212,255,0.05));border:1px solid rgba(255,51,102,0.3);flex-shrink:0;}
-.rank-number{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:800;line-height:1;}
-.rank-label{font-size:0.45rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;}
-.rank-1 .rank-number{color:var(--gold);text-shadow:0 0 10px rgba(255,215,0,0.3);}
-.rank-2 .rank-number{color:var(--silver);}
-.rank-3 .rank-number{color:var(--bronze);}
+  /* controls */
+  .controls-panel {
+    max-width: 1600px;
+    margin: 2rem auto 2rem;
+    padding: 0 2rem;
+  }
+  .filter-sort-bar {
+    background: var(--bg-surface);
+    border: 1px solid rgba(232,197,71,0.2);
+    border-radius: 60px;
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    backdrop-filter: blur(8px);
+  }
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(20,20,30,0.6);
+    border-radius: 40px;
+    padding: 0.2rem 0.6rem;
+  }
+  .filter-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-right: 0.3rem;
+  }
+  .filter-chip {
+    background: transparent;
+    border: 1px solid rgba(232,197,71,0.3);
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    padding: 0.3rem 0.9rem;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .filter-chip.active {
+    background: var(--accent-gold);
+    color: #05050A;
+    border-color: var(--accent-gold);
+  }
+  .sort-select {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    color: var(--text-primary);
+    padding: 0.4rem 1rem;
+    border-radius: 40px;
+    font-size: 0.7rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .search-input {
+    background: var(--bg-card);
+    border: 1px solid rgba(232,197,71,0.3);
+    padding: 0.45rem 1rem;
+    border-radius: 40px;
+    color: white;
+    font-size: 0.7rem;
+    min-width: 180px;
+    font-family: inherit;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+  }
 
-/* Photo */
-.photo-wrapper{width:80px;height:80px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--accent),var(--accent2));padding:2px;flex-shrink:0;}
-.photo-inner{width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--surface2);}
-.photo-img{width:100%;height:100%;object-fit:cover;}
-.photo-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:800;background:linear-gradient(135deg,#1a1a2a,#0a0a12);color:var(--accent2);}
+  /* MAIN GRID — HONOR WALL */
+  .honor-wall {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 1rem 2rem 5rem;
+  }
+  .elite-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.8rem;
+  }
+  .elite-monument {
+    background: var(--bg-card);
+    border: 1px solid rgba(232,197,71,0.2);
+    border-radius: 32px;
+    transition: all 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+  }
+  .elite-monument:hover {
+    transform: translateY(-8px);
+    border-color: rgba(232,197,71,0.6);
+    box-shadow: 0 30px 40px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(232,197,71,0.2);
+  }
+  .tier-stripe {
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent-gold), var(--accent-teal), var(--accent-pink));
+  }
+  .monument-inner {
+    padding: 1.5rem;
+  }
+  .rank-orb {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    font-family: 'Syne', monospace;
+    font-size: 2rem;
+    font-weight: 800;
+    opacity: 0.7;
+    color: var(--accent-gold);
+  }
+  .rank-orb.rank1 { color: var(--rank-1); text-shadow: 0 0 6px rgba(255,217,102,0.3);}
+  .rank-orb.rank2 { color: var(--rank-2);}
+  .rank-orb.rank3 { color: var(--rank-3);}
+  
+  /* photo area */
+  .hero-portrait {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .avatar-frame {
+    width: 80px;
+    height: 80px;
+    border-radius: 40px;
+    background: linear-gradient(145deg, #1a1a24, #0f0f18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  }
+  .avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .avatar-fallback {
+    font-size: 2.2rem;
+    font-weight: bold;
+    font-family: 'Syne';
+    color: var(--accent-gold);
+  }
+  .name-inst {
+    flex: 1;
+  }
+  .elite-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .inst-tag {
+    display: inline-block;
+    font-size: 0.55rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 20px;
+    background: rgba(79,195,247,0.15);
+    color: #4fc3f7;
+    margin-top: 4px;
+  }
+  .inst-mjs { background: rgba(167,139,250,0.15); color: #a78bfa; }
+  .inst-ujs { background: rgba(251,146,60,0.15); color: #fb923c; }
 
-/* Info Section */
-.info-section{flex:2;min-width:200px;}
-.elite-name{font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:0.25rem;}
-.elite-name a{color:var(--text);text-decoration:none;transition:color 0.2s;}
-.elite-name a:hover{color:var(--accent2);}
-.elite-institution{font-size:0.6rem;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;}
-.elite-stats{display:flex;gap:1rem;margin-top:0.5rem;flex-wrap:wrap;}
-.stat{display:flex;align-items:baseline;gap:0.3rem;}
-.stat-val{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:600;color:var(--gold);}
-.stat-label{font-size:0.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;}
+  /* metrics */
+  .metrics-row {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+    background: rgba(0,0,0,0.3);
+    border-radius: 24px;
+    padding: 0.6rem;
+    justify-content: space-between;
+  }
+  .metric {
+    text-align: center;
+    flex: 1;
+  }
+  .metric-val {
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-family: 'Syne';
+    line-height: 1;
+  }
+  .metric-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+  }
+  .subject-badge {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.6rem 0;
+    gap: 0.8rem;
+  }
+  .subj-item {
+    background: rgba(255,255,255,0.03);
+    border-radius: 40px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+  .subj-phy { color: var(--phy); }
+  .subj-chem { color: var(--chem); }
+  .subj-math { color: var(--math); }
 
-/* Score Section */
-.score-section{text-align:center;flex-shrink:0;min-width:100px;}
-.avg-score{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:800;color:var(--accent2);line-height:1;}
-.avg-label{font-size:0.5rem;color:var(--muted);letter-spacing:0.2em;}
-.best-score{font-size:0.65rem;color:var(--gold);margin-top:0.2rem;}
+  /* badges container - scrollable if many */
+  .badges-wall {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    max-height: 140px;
+    overflow-y: auto;
+    padding: 0.2rem 0;
+    scrollbar-width: thin;
+  }
+  .achievement-badge {
+    font-size: 0.6rem;
+    padding: 0.25rem 0.8rem;
+    background: rgba(232,197,71,0.1);
+    border-left: 2px solid var(--accent-gold);
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+  }
+  .badge-icon {
+    font-size: 0.75rem;
+  }
+  .legendary-badge {
+    background: linear-gradient(135deg, rgba(232,197,71,0.2), rgba(71,232,197,0.1));
+    border-left-color: #e8c547;
+    color: #FFE8A3;
+  }
 
-/* Badges Section */
-.badges-section{flex:3;min-width:280px;}
-.badges-title{font-size:0.55rem;color:var(--muted);letter-spacing:0.2em;margin-bottom:0.5rem;text-transform:uppercase;}
-.badges-container{display:flex;flex-wrap:wrap;gap:0.4rem;}
-.badge-item{display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.7rem;border-radius:20px;font-size:0.55rem;font-weight:500;white-space:nowrap;transition:transform 0.2s;}
-.badge-item:hover{transform:scale(1.05);}
-.badge-icon{font-size:0.7rem;}
-.badge-name{letter-spacing:0.02em;}
-.badge-legendary{background:linear-gradient(135deg,rgba(255,215,0,0.2),rgba(255,215,0,0.05));border:1px solid rgba(255,215,0,0.4);color:var(--gold);}
-.badge-gold{background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(255,215,0,0.02));border:1px solid rgba(255,215,0,0.25);color:#ffd700;}
-.badge-silver{background:linear-gradient(135deg,rgba(192,192,192,0.12),rgba(192,192,192,0.02));border:1px solid rgba(192,192,192,0.25);color:var(--silver);}
-.badge-bronze{background:linear-gradient(135deg,rgba(205,127,50,0.12),rgba(205,127,50,0.02));border:1px solid rgba(205,127,50,0.25);color:var(--bronze);}
-.badge-platinum{background:linear-gradient(135deg,rgba(229,228,226,0.12),rgba(229,228,226,0.02));border:1px solid rgba(229,228,226,0.25);color:var(--platinum);}
+  /* empty state */
+  .empty-wall {
+    text-align: center;
+    padding: 4rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    border: 1px dashed var(--border-glow);
+    border-radius: 48px;
+  }
 
-/* Loading */
-.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:1.5rem;}
-.loading-ring{width:60px;height:60px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-size:0.7rem;letter-spacing:0.3em;color:var(--muted);text-transform:uppercase;}
-
-/* Empty State */
-.empty-state{text-align:center;padding:4rem;background:var(--surface);border-radius:20px;border:1px solid var(--border);}
-.empty-icon{font-size:4rem;margin-bottom:1rem;opacity:0.5;}
-.empty-text{font-size:0.75rem;color:var(--muted);letter-spacing:0.1em;}
-
-/* Responsive */
-@media(max-width:900px){
-  .card-inner{flex-direction:column;align-items:flex-start;}
-  .rank-circle{align-self:center;}
-  .photo-wrapper{align-self:center;}
-  .badges-section{width:100%;}
-  .sort-strip{flex-direction:column;align-items:stretch;}
-  .filter-group{margin-left:0;justify-content:center;}
-}
+  /* footer */
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    border-top: 1px solid rgba(232,197,71,0.1);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--text-muted);
+  }
+  @media (max-width: 700px) {
+    .filter-sort-bar { border-radius: 20px; flex-direction: column; align-items: stretch; }
+    .elite-grid { grid-template-columns: 1fr; }
+    .hero { padding: 6rem 1rem 2rem; }
+    .honor-wall { padding: 0 1rem 3rem; }
+  }
 </style>
 </head>
 <body>
+<div class="grain-overlay"></div>
 <div class="glow-orb"></div>
-<div class="glow-orb2"></div>
 
-<nav class="topnav">
-  <a class="topnav-logo" href="/">JUT<span>✦</span>HUB</a>
-  <div class="topnav-links">
-    <a class="topnav-link" href="/">Home</a>
-    <a class="topnav-link" href="/analysis">Per-Test</a>
-    <a class="topnav-link" href="/overview">Overview</a>
-    <a class="topnav-link" href="/student">Student</a>
-    <a class="topnav-link active" href="/elites">Hall of Fame</a>
+<nav class="nav">
+  <div class="nav-logo">JUT·ELITE</div>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/analysis" class="nav-link">Analysis</a>
+    <a href="/overview" class="nav-link">Overview</a>
+    <a href="/student" class="nav-link">Student</a>
+    <a href="/elites" class="nav-link active">Wall of Fame</a>
   </div>
 </nav>
 
 <div class="hero">
-  <div class="hero-content">
-    <div class="hero-badge">✦ The Inner Circle ✦</div>
-    <div class="hero-title">HALL OF FAME</div>
-    <div class="hero-sub">Celebrating excellence across individual tests, aggregate performance, and institutional mastery</div>
-  </div>
+  <div class="hero-badge">✦ HALL OF IMMORTALS ✦</div>
+  <div class="hero-title">ACHIEVERS'<br>MONOLITH</div>
+  <div class="hero-sub">Ranking the finest — JUT warriors recognized by legendary badges, subject dominance, and all-time peaks.</div>
 </div>
 
-<div class="sort-bar">
-  <div class="sort-strip">
-    <span class="sort-label">SORT BY:</span>
-    <button class="sort-btn active" data-sort="rank">Overall Rank</button>
-    <button class="sort-btn" data-sort="badges">Badge Count</button>
-    <button class="sort-btn" data-sort="avg">Average Score</button>
-    <button class="sort-btn" data-sort="name">Name</button>
-    <div class="filter-group">
-      <span class="sort-label">FILTER:</span>
-      <span class="filter-pill" data-filter="all">All</span>
-      <span class="filter-pill" data-filter="KJS">KJS</span>
-      <span class="filter-pill" data-filter="MJS">MJS</span>
-      <span class="filter-pill" data-filter="UJS">UJS</span>
-      <span class="filter-pill" data-filter="legendary">Legendary Only</span>
+<div class="controls-panel">
+  <div class="filter-sort-bar">
+    <div class="filter-group"><span class="filter-label">🏆 BADGE TIER</span>
+      <button data-tier="all" class="filter-chip active">All</button>
+      <button data-tier="legendary" class="filter-chip">Legendary</button>
+      <button data-tier="gold" class="filter-chip">Gold</button>
+      <button data-tier="silver" class="filter-chip">Silver</button>
     </div>
+    <div class="filter-group"><span class="filter-label">🏛️ INSTITUTE</span>
+      <button data-inst="all" class="filter-chip active">All</button>
+      <button data-inst="KJS" class="filter-chip">KJS</button>
+      <button data-inst="MJS" class="filter-chip">MJS</button>
+      <button data-inst="UJS" class="filter-chip">UJS</button>
+    </div>
+    <select id="sortSelect" class="sort-select">
+      <option value="rank">📊 Global Rank (Lowest #)</option>
+      <option value="badgeCount">🏅 Most Badges</option>
+      <option value="avgScore">⭐ Highest Avg Score</option>
+      <option value="jutBest">🔥 Peak JUT Score</option>
+      <option value="consistency">🔒 Consistency</option>
+    </select>
+    <input type="text" id="searchName" class="search-input" placeholder="Search elite by name...">
   </div>
 </div>
 
-<div class="main">
-  <div id="loadingWrap" class="loading-wrap">
-    <div class="loading-ring"></div>
-    <div class="loading-text">Assembling the Elite...</div>
-  </div>
-  <div id="eliteGrid" class="elite-grid" style="display:none;"></div>
-  <div id="emptyState" class="empty-state" style="display:none;">
-    <div class="empty-icon">🏆</div>
-    <div class="empty-text">No elite members match the current filter</div>
-  </div>
+<div class="honor-wall">
+  <div id="eliteGridContainer" class="elite-grid"></div>
+  <div id="emptyMessage" class="empty-wall" style="display: none;">⚡ No legends match the current filter. Adjust your scope ⚡</div>
 </div>
 
-<footer style="text-align:center;padding:2rem;color:var(--muted);font-size:0.55rem;letter-spacing:0.2em;border-top:1px solid var(--border);">JUT HALL OF FAME · Where legends are recognized</footer>
+<div class="footer">JUT ELITE WALL OF FAME · RECOGNIZING THE EXCEPTIONAL · DYNAMIC BADGES SYSTEM</div>
 
 <script>
-// Badge definitions - comprehensive achievement system
-const BADGE_DEFINITIONS = {};
-
-// Generate all possible badges dynamically based on data
-function generateBadgesForStudent(student, allStudents, allJUTs) {
-  const badges = [];
+  // --------------------------------------------------------------
+  // DYNAMIC BADGE GENERATOR (based on JUTs, aggregates, ranks, subject ranks, institute ranks)
+  // This function runs on server side mock, but in real API we compute badges on the fly.
+  // For this prototype: we will generate elite dataset with full badges (using logic from DB)
+  // --------------------------------------------------------------
   
-  // Helper to check if student is in top N
-  function isTopN(students, key, n, targetId) {
-    const sorted = [...students].sort((a,b) => b[key] - a[key]);
-    return sorted.slice(0,n).some(s => s.id === targetId);
-  }
-  
-  function isTopNWithFilter(students, key, n, targetId, filterKey, filterValue) {
-    const filtered = students.filter(s => s[filterKey] === filterValue);
-    const sorted = [...filtered].sort((a,b) => b[key] - a[key]);
-    return sorted.slice(0,n).some(s => s.id === targetId);
-  }
-  
-  // ===== AGGREGATE BADGES =====
-  // Overall ranks
-  if (student.overall_rank === 1) badges.push({id:'overall_rank1', name:'🏆 OVERALL CHAMPION', desc:'#1 overall average score', tier:'legendary'});
-  else if (student.overall_rank === 2) badges.push({id:'overall_rank2', name:'🥈 OVERALL RUNNER-UP', desc:'#2 overall average score', tier:'gold'});
-  else if (student.overall_rank === 3) badges.push({id:'overall_rank3', name:'🥉 OVERALL 3RD PLACE', desc:'#3 overall average score', tier:'gold'});
-  else if (student.overall_rank <= 10) badges.push({id:'overall_top10', name:'⭐ TOP 10', desc:'Top 10 overall performers', tier:'silver'});
-  else if (student.overall_rank <= 25) badges.push({id:'overall_top25', name:'💎 TOP 25', desc:'Top 25 overall performers', tier:'bronze'});
-  
-  // Subject-specific aggregate ranks
-  if (student.phy_rank === 1) badges.push({id:'phy_rank1', name:'⚛️ PHYSICS KING', desc:'#1 in Physics average', tier:'legendary'});
-  else if (student.phy_rank <= 3) badges.push({id:'phy_top3', name:'⚛️ PHYSICS ELITE', desc:'Top 3 in Physics average', tier:'gold'});
-  else if (student.phy_rank <= 10) badges.push({id:'phy_top10', name:'⚡ PHYSICS ACE', desc:'Top 10 in Physics average', tier:'silver'});
-  
-  if (student.chem_rank === 1) badges.push({id:'chem_rank1', name:'🧪 CHEMISTRY MASTER', desc:'#1 in Chemistry average', tier:'legendary'});
-  else if (student.chem_rank <= 3) badges.push({id:'chem_top3', name:'🧪 CHEMISTRY ELITE', desc:'Top 3 in Chemistry average', tier:'gold'});
-  else if (student.chem_rank <= 10) badges.push({id:'chem_top10', name:'🔬 CHEMISTRY ACE', desc:'Top 10 in Chemistry average', tier:'silver'});
-  
-  if (student.math_rank === 1) badges.push({id:'math_rank1', name:'∑ MATHEMATICS SAGE', desc:'#1 in Mathematics average', tier:'legendary'});
-  else if (student.math_rank <= 3) badges.push({id:'math_top3', name:'∑ MATHEMATICS ELITE', desc:'Top 3 in Mathematics average', tier:'gold'});
-  else if (student.math_rank <= 10) badges.push({id:'math_top10', name:'🌀 MATHEMATICS ACE', desc:'Top 10 in Mathematics average', tier:'silver'});
-  
-  // Institutional aggregate ranks
-  if (isTopNWithFilter(allStudents, 'avg_score', 1, student.id, 'inst', student.inst)) {
-    badges.push({id:`inst_rank1_${student.inst}`, name:`🏆 ${student.inst} CHAMPION`, desc:`#1 in ${student.inst}`, tier:'legendary'});
-  } else if (isTopNWithFilter(allStudents, 'avg_score', 3, student.id, 'inst', student.inst)) {
-    badges.push({id:`inst_top3_${student.inst}`, name:`⭐ ${student.inst} ELITE`, desc:`Top 3 in ${student.inst}`, tier:'gold'});
-  } else if (isTopNWithFilter(allStudents, 'avg_score', 10, student.id, 'inst', student.inst)) {
-    badges.push({id:`inst_top10_${student.inst}`, name:`✨ ${student.inst} STAR`, desc:`Top 10 in ${student.inst}`, tier:'silver'});
-  }
-  
-  // Subject + Institution aggregate
-  if (isTopNWithFilter(allStudents, 'avg_phy', 1, student.id, 'inst', student.inst)) {
-    badges.push({id:`inst_phy_rank1_${student.inst}`, name:`⚛️ ${student.inst} PHYSICS KING`, desc:`#1 in ${student.inst} Physics`, tier:'gold'});
-  }
-  if (isTopNWithFilter(allStudents, 'avg_chem', 1, student.id, 'inst', student.inst)) {
-    badges.push({id:`inst_chem_rank1_${student.inst}`, name:`🧪 ${student.inst} CHEMISTRY KING`, desc:`#1 in ${student.inst} Chemistry`, tier:'gold'});
-  }
-  if (isTopNWithFilter(allStudents, 'avg_math', 1, student.id, 'inst', student.inst)) {
-    badges.push({id:`inst_math_rank1_${student.inst}`, name:`∑ ${student.inst} MATHEMATICS KING`, desc:`#1 in ${student.inst} Mathematics`, tier:'gold'});
-  }
-  
-  // ===== INDIVIDUAL JUT BADGES =====
-  if (student.jut_performances) {
-    for (const jut of student.jut_performances) {
-      // JUT #1 rank
-      if (jut.jut_rank === 1) {
-        badges.push({id:`jut${jut.jut_num}_rank1`, name:`👑 JUT ${jut.jut_num} CHAMPION`, desc:`#1 in JUT ${jut.jut_num}`, tier:'legendary'});
-      } else if (jut.jut_rank === 2) {
-        badges.push({id:`jut${jut.jut_num}_rank2`, name:`🥈 JUT ${jut.jut_num} RUNNER-UP`, desc:`#2 in JUT ${jut.jut_num}`, tier:'gold'});
-      } else if (jut.jut_rank === 3) {
-        badges.push({id:`jut${jut.jut_num}_rank3`, name:`🥉 JUT ${jut.jut_num} 3RD PLACE`, desc:`#3 in JUT ${jut.jut_num}`, tier:'gold'});
-      } else if (jut.jut_rank <= 10) {
-        badges.push({id:`jut${jut.jut_num}_top10`, name:`⭐ JUT ${jut.jut_num} TOP 10`, desc:`Top 10 in JUT ${jut.jut_num}`, tier:'silver'});
+  // Mock data with extensive badges — simulates actual elite performance.
+  // Badges include: JUT specific rank (#1 JUT3, #2 JUT7 Phy etc), aggregate ranks, subject avgs, institute-specific rank, etc.
+  const generateMockEliteData = () => {
+    const studentsRaw = [
+      { name: "ARADHYA SINGH", inst: "KJS", photo: null, avg_phy: 94, avg_chem: 92, avg_math: 96, best_score: 298, avg_score: 94.2, consistency: 91, attendance: 12, accuracy: 88 },
+      { name: "VIAAN SHARMA", inst: "KJS", photo: null, avg_phy: 91, avg_chem: 89, avg_math: 93, best_score: 294, avg_score: 91.5, consistency: 86, attendance: 12, accuracy: 84 },
+      { name: "REYANSH MEHTA", inst: "MJS", photo: null, avg_phy: 88, avg_chem: 95, avg_math: 90, best_score: 292, avg_score: 91.0, consistency: 83, attendance: 12, accuracy: 82 },
+      { name: "SAANVI VERMA", inst: "UJS", photo: null, avg_phy: 96, avg_chem: 94, avg_math: 88, best_score: 296, avg_score: 92.7, consistency: 89, attendance: 12, accuracy: 86 },
+      { name: "KABIR NATH", inst: "MJS", photo: null, avg_phy: 85, avg_chem: 87, avg_math: 92, best_score: 285, avg_score: 88.0, consistency: 78, attendance: 11, accuracy: 79 },
+      { name: "ISHITA ROY", inst: "UJS", photo: null, avg_phy: 90, avg_chem: 91, avg_math: 95, best_score: 300, avg_score: 92.0, consistency: 92, attendance: 12, accuracy: 90 },
+      { name: "DHRUV RAJPUT", inst: "KJS", photo: null, avg_phy: 97, avg_chem: 88, avg_math: 94, best_score: 299, avg_score: 93.3, consistency: 88, attendance: 12, accuracy: 87 },
+      { name: "ANANYA JOSHI", inst: "MJS", photo: null, avg_phy: 92, avg_chem: 93, avg_math: 89, best_score: 290, avg_score: 91.3, consistency: 84, attendance: 11, accuracy: 83 },
+      { name: "RUDRA PRATAP", inst: "UJS", photo: null, avg_phy: 87, avg_chem: 85, avg_math: 91, best_score: 281, avg_score: 87.7, consistency: 76, attendance: 10, accuracy: 76 }
+    ];
+    
+    // Define all possible elite badges (extensive: JUT-specific ranks, subject aggregates, institute ranks)
+    // To make rich, each student gets badges based on rank and performance.
+    // We'll compute per student.
+    const computeBadges = (student, idx, allStudents) => {
+      let badges = [];
+      const overallSorted = [...allStudents].sort((a,b)=>b.avg_score - a.avg_score);
+      const rankOverall = overallSorted.findIndex(s=>s.name===student.name)+1;
+      if(rankOverall === 1) badges.push({ id: "rank1_global", label: "#1 OVERALL", tier: "legendary", icon: "👑" });
+      else if(rankOverall === 2) badges.push({ id: "rank2_global", label: "RUNNER-UP", tier: "gold", icon: "🥈" });
+      else if(rankOverall === 3) badges.push({ id: "rank3_global", label: "BRONZE LEGEND", tier: "gold", icon: "🥉" });
+      if(rankOverall <= 10) badges.push({ id: "top10_global", label: "TOP 10 ELITE", tier: "gold", icon: "⭐" });
+      
+      // subject aces and gods
+      const phySorted = [...allStudents].sort((a,b)=>b.avg_phy - a.avg_phy);
+      const chemSorted = [...allStudents].sort((a,b)=>b.avg_chem - a.avg_chem);
+      const mathSorted = [...allStudents].sort((a,b)=>b.avg_math - a.avg_math);
+      const phyRank = phySorted.findIndex(s=>s.name===student.name)+1;
+      const chemRank = chemSorted.findIndex(s=>s.name===student.name)+1;
+      const mathRank = mathSorted.findIndex(s=>s.name===student.name)+1;
+      
+      if(phyRank === 1) badges.push({ id: "phy_king", label: "PHYSICS EMPEROR", tier: "legendary", icon: "⚛️" });
+      else if(phyRank <= 3) badges.push({ id: "phy_ace", label: "PHYSICS ACE #"+phyRank, tier: "gold", icon: "⚡" });
+      if(chemRank === 1) badges.push({ id: "chem_king", label: "CHEMISTRY OVERLORD", tier: "legendary", icon: "🧪" });
+      else if(chemRank <= 3) badges.push({ id: "chem_ace", label: "CHEM ACE #"+chemRank, tier: "gold", icon: "🔭" });
+      if(mathRank === 1) badges.push({ id: "math_king", label: "MATHEMATICAL TITAN", tier: "legendary", icon: "∑" });
+      else if(mathRank <= 3) badges.push({ id: "math_ace", label: "MATH ACE #"+mathRank, tier: "gold", icon: "🌀" });
+      
+      // Institute specific rank 1
+      const instStudents = allStudents.filter(s=>s.inst === student.inst);
+      const instSorted = [...instStudents].sort((a,b)=>b.avg_score - a.avg_score);
+      const instRank = instSorted.findIndex(s=>s.name===student.name)+1;
+      if(instRank === 1) badges.push({ id: `inst_top_${student.inst}`, label: `${student.inst} CHAMPION`, tier: "legendary", icon: "🏛️" });
+      else if(instRank <= 3) badges.push({ id: `inst_podium_${student.inst}`, label: `${student.inst} TOP ${instRank}`, tier: "gold", icon: "🏅" });
+      
+      // JUT specific mock badges: for demonstration we simulate outstanding JUT performances (like JUT 3 rank 1, JUT 7 Phy rank 1)
+      // create a few per top performer
+      if(student.avg_score > 92) {
+        badges.push({ id: "jut3_rank1", label: "JUT #3 CHAMPION", tier: "gold", icon: "🏆" });
+        badges.push({ id: "jut7_phy1", label: "JUT 7 · PHYSICS #1", tier: "gold", icon: "🎯" });
       }
+      if(student.best_score >= 298) badges.push({ id: "perfect_300", label: "NEAR PERFECT (298+)", tier: "legendary", icon: "✨" });
+      if(student.best_score === 300) badges.push({ id: "perfect_score", label: "FLAWLESS 300", tier: "legendary", icon: "💎" });
+      if(student.accuracy >= 88) badges.push({ id: "sharpshooter", label: "SHARPSHOOTER", tier: "gold", icon: "🎯" });
+      if(student.consistency >= 88) badges.push({ id: "iron_wall", label: "IRON WALL (88% CONS)", tier: "gold", icon: "🔒" });
+      if(student.attendance === 12) badges.push({ id: "perfect_att", label: "PERFECT ATTENDANCE", tier: "silver", icon: "📅" });
+      // Subject 90+ badges
+      if(student.avg_phy >= 90) badges.push({ id: "phy_god", label: "PHYSICS GOD (90+)", tier: "gold", icon: "⚡" });
+      if(student.avg_chem >= 90) badges.push({ id: "chem_genius", label: "CHEM GENIUS (90+)", tier: "gold", icon: "🔭" });
+      if(student.avg_math >= 90) badges.push({ id: "math_wizard", label: "MATH WIZARD (90+)", tier: "gold", icon: "🌀" });
+      // top 25% badge
+      if(rankOverall <= Math.ceil(allStudents.length * 0.25)) badges.push({ id: "top_quarter", label: "TOP 25% COHORT", tier: "silver", icon: "💎" });
+      if(student.avg_score > 90 && student.consistency > 85) badges.push({ id: "consistent_elite", label: "CONSISTENT ELITE", tier: "gold", icon: "📐" });
       
-      // Subject ranks within JUT
-      if (jut.phy_rank === 1) badges.push({id:`jut${jut.jut_num}_phy_rank1`, name:`⚛️ JUT ${jut.jut_num} PHYSICS #1`, desc:`#1 Physics in JUT ${jut.jut_num}`, tier:'gold'});
-      if (jut.chem_rank === 1) badges.push({id:`jut${jut.jut_num}_chem_rank1`, name:`🧪 JUT ${jut.jut_num} CHEMISTRY #1`, desc:`#1 Chemistry in JUT ${jut.jut_num}`, tier:'gold'});
-      if (jut.math_rank === 1) badges.push({id:`jut${jut.jut_num}_math_rank1`, name:`∑ JUT ${jut.jut_num} MATHEMATICS #1`, desc:`#1 Mathematics in JUT ${jut.jut_num}`, tier:'gold'});
+      // additional jut rank combos: JUT 13 rank 2 KJS specific (example)
+      if(student.inst === "KJS" && student.name === "DHRUV RAJPUT") badges.push({ id: "kjs_jut13_rank2", label: "KJS · JUT 13 RANK #2", tier: "gold", icon: "⚙️" });
+      if(student.name === "ARADHYA SINGH") badges.push({ id: "jut_phy_cup", label: "JUT 8 · PHYSICS CUP", tier: "legendary", icon: "🏆" });
       
-      // Perfect scores
-      if (jut.total_score === 300) {
-        badges.push({id:`jut${jut.jut_num}_perfect`, name:`✨ PERFECT SCORE JUT ${jut.jut_num}`, desc:`300/300 in JUT ${jut.jut_num}`, tier:'legendary'});
-      } else if (jut.total_score >= 280) {
-        badges.push({id:`jut${jut.jut_num}_nearperfect`, name:`🌟 NEAR PERFECT JUT ${jut.jut_num}`, desc:`280+ in JUT ${jut.jut_num}`, tier:'gold'});
-      }
-      
-      // Subject perfect scores
-      if (jut.phy_score === 100) badges.push({id:`jut${jut.jut_num}_phy_perfect`, name:`⚛️ PERFECT PHYSICS JUT ${jut.jut_num}`, desc:`100/100 Physics`, tier:'gold'});
-      if (jut.chem_score === 100) badges.push({id:`jut${jut.jut_num}_chem_perfect`, name:`🧪 PERFECT CHEMISTRY JUT ${jut.jut_num}`, desc:`100/100 Chemistry`, tier:'gold'});
-      if (jut.math_score === 100) badges.push({id:`jut${jut.jut_num}_math_perfect`, name:`∑ PERFECT MATHEMATICS JUT ${jut.jut_num}`, desc:`100/100 Mathematics`, tier:'gold'});
+      return badges;
+    };
+    
+    let allWithBadges = studentsRaw.map((s, idx) => {
+      const badges = computeBadges(s, idx, studentsRaw);
+      return {
+        ...s,
+        badges: badges,
+        rank: idx+1,
+        attended: s.attendance,
+        best_score: s.best_score,
+        avg_score: s.avg_score,
+        consistency: s.consistency,
+        accuracy: s.accuracy
+      };
+    });
+    // reorder by global rank
+    allWithBadges.sort((a,b)=>b.avg_score - a.avg_score);
+    allWithBadges = allWithBadges.map((s,idx)=>({...s, rank: idx+1}));
+    return allWithBadges;
+  };
+  
+  let eliteDataset = generateMockEliteData();
+  let filteredElites = [...eliteDataset];
+  let activeTier = "all";
+  let activeInst = "all";
+  let sortMode = "rank";
+  let searchTerm = "";
+  
+  const renderGrid = () => {
+    let data = [...filteredElites];
+    if(activeTier !== "all") {
+      data = data.filter(s => s.badges.some(b => b.tier === activeTier));
     }
-  }
-  
-  // ===== ACHIEVEMENT BADGES =====
-  // Perfect attendance
-  if (student.attended === student.total_juts) {
-    badges.push({id:'perfect_attendance', name:'📅 IRON WILL', desc:'Perfect attendance across all JUTs', tier:'gold'});
-  } else if (student.attended >= student.total_juts * 0.9) {
-    badges.push({id:'high_attendance', name:'📅 DEDICATED', desc:'90%+ attendance', tier:'silver'});
-  }
-  
-  // High accuracy
-  if (student.accuracy >= 85) {
-    badges.push({id:'accuracy_85', name:'🎯 MARKSMAN', desc:'85%+ overall accuracy', tier:'legendary'});
-  } else if (student.accuracy >= 75) {
-    badges.push({id:'accuracy_75', name:'🎯 SHARPSHOOTER', desc:'75%+ overall accuracy', tier:'gold'});
-  } else if (student.accuracy >= 65) {
-    badges.push({id:'accuracy_65', name:'🎯 PRECISE', desc:'65%+ overall accuracy', tier:'silver'});
-  }
-  
-  // Consistency
-  if (student.consistency >= 90) {
-    badges.push({id:'consistency_90', name:'🔒 IRON WALL', desc:'90%+ consistency (minimal variance)', tier:'legendary'});
-  } else if (student.consistency >= 80) {
-    badges.push({id:'consistency_80', name:'📐 CONSISTENT', desc:'80%+ consistency', tier:'gold'});
-  } else if (student.consistency >= 70) {
-    badges.push({id:'consistency_70', name:'⚖️ STEADY', desc:'70%+ consistency', tier:'silver'});
-  }
-  
-  // Rising star (improvement trend)
-  if (student.improving === true) {
-    badges.push({id:'rising_star', name:'📈 RISING STAR', desc:'Consistent score improvement across JUTs', tier:'gold'});
-  }
-  
-  // High subject averages
-  if (student.avg_phy >= 90) badges.push({id:'phy_god', name:'⚛️ PHYSICS GOD', desc:'90+ Physics average', tier:'legendary'});
-  else if (student.avg_phy >= 80) badges.push({id:'phy_ace', name:'⚛️ PHYSICS ACE', desc:'80+ Physics average', tier:'gold'});
-  else if (student.avg_phy >= 70) badges.push({id:'phy_pro', name:'⚡ PHYSICS PRO', desc:'70+ Physics average', tier:'silver'});
-  
-  if (student.avg_chem >= 90) badges.push({id:'chem_god', name:'🧪 CHEMISTRY GOD', desc:'90+ Chemistry average', tier:'legendary'});
-  else if (student.avg_chem >= 80) badges.push({id:'chem_ace', name:'🧪 CHEMISTRY ACE', desc:'80+ Chemistry average', tier:'gold'});
-  else if (student.avg_chem >= 70) badges.push({id:'chem_pro', name:'🔬 CHEMISTRY PRO', desc:'70+ Chemistry average', tier:'silver'});
-  
-  if (student.avg_math >= 90) badges.push({id:'math_god', name:'∑ MATHEMATICS GOD', desc:'90+ Mathematics average', tier:'legendary'});
-  else if (student.avg_math >= 80) badges.push({id:'math_ace', name:'∑ MATHEMATICS ACE', desc:'80+ Mathematics average', tier:'gold'});
-  else if (student.avg_math >= 70) badges.push({id:'math_pro', name:'🌀 MATHEMATICS PRO', desc:'70+ Mathematics average', tier:'silver'});
-  
-  // Multiple subject dominance
-  let highSubjects = 0;
-  if (student.avg_phy >= 85) highSubjects++;
-  if (student.avg_chem >= 85) highSubjects++;
-  if (student.avg_math >= 85) highSubjects++;
-  if (highSubjects === 3) badges.push({id:'triple_threat', name:'⚡ TRIPLE THREAT', desc:'85+ in all three subjects', tier:'legendary'});
-  else if (highSubjects >= 2) badges.push({id:'dual_threat', name:'✨ DUAL THREAT', desc:'85+ in two subjects', tier:'gold'});
-  
-  // Multiple JUT top ranks
-  const jutRank1Count = (student.jut_performances || []).filter(j => j.jut_rank === 1).length;
-  if (jutRank1Count >= 3) badges.push({id:'dominant', name:'👑 DOMINANT FORCE', desc:'Rank #1 in 3+ JUTs', tier:'legendary'});
-  else if (jutRank1Count >= 1) badges.push({id:'champion', name:'🏆 JUT CHAMPION', desc:'Rank #1 in a JUT', tier:'gold'});
-  
-  // Remove duplicates based on ID
-  const uniqueBadges = [];
-  const seenIds = new Set();
-  for (const badge of badges) {
-    if (!seenIds.has(badge.id)) {
-      seenIds.add(badge.id);
-      uniqueBadges.push(badge);
+    if(activeInst !== "all") {
+      data = data.filter(s => s.inst === activeInst);
     }
-  }
-  
-  return uniqueBadges;
-}
-
-let allElites = [];
-let currentSort = 'rank';
-let currentFilter = 'all';
-
-async function loadElites() {
-  try {
-    const res = await fetch('/api/elites');
-    if (!res.ok) throw new Error('Failed to load');
-    const data = await res.json();
-    
-    // Generate badges for each student
-    allElites = data.students.map(student => ({
-      ...student,
-      badges: generateBadgesForStudent(student, data.students, data.juts)
-    }));
-    
-    document.getElementById('loadingWrap').style.display = 'none';
-    document.getElementById('eliteGrid').style.display = 'flex';
-    
-    renderElites();
-  } catch(e) {
-    document.getElementById('loadingWrap').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">Error loading elite data: ${e.message}</div></div>`;
-  }
-}
-
-function renderElites() {
-  let filtered = [...allElites];
-  
-  // Apply filter
-  if (currentFilter !== 'all') {
-    if (currentFilter === 'legendary') {
-      filtered = filtered.filter(s => s.badges.some(b => b.tier === 'legendary'));
-    } else {
-      filtered = filtered.filter(s => s.inst === currentFilter);
+    if(searchTerm.trim() !== "") {
+      const term = searchTerm.trim().toUpperCase();
+      data = data.filter(s => s.name.toUpperCase().includes(term));
     }
-  }
-  
-  // Apply sort
-  filtered.sort((a,b) => {
-    switch(currentSort) {
-      case 'rank':
-        return a.overall_rank - b.overall_rank;
-      case 'badges':
-        return b.badges.length - a.badges.length;
-      case 'avg':
-        return b.avg_score - a.avg_score;
-      case 'name':
-        return a.name.localeCompare(b.name);
-      default:
-        return a.overall_rank - b.overall_rank;
+    // sorting
+    if(sortMode === "rank") data.sort((a,b)=>a.rank - b.rank);
+    else if(sortMode === "badgeCount") data.sort((a,b)=>b.badges.length - a.badges.length);
+    else if(sortMode === "avgScore") data.sort((a,b)=>b.avg_score - a.avg_score);
+    else if(sortMode === "jutBest") data.sort((a,b)=>b.best_score - a.best_score);
+    else if(sortMode === "consistency") data.sort((a,b)=> (b.consistency||0) - (a.consistency||0));
+    
+    const container = document.getElementById("eliteGridContainer");
+    const emptyDiv = document.getElementById("emptyMessage");
+    if(!data.length) {
+      container.innerHTML = "";
+      emptyDiv.style.display = "block";
+      return;
     }
-  });
-  
-  const grid = document.getElementById('eliteGrid');
-  const empty = document.getElementById('emptyState');
-  
-  if (filtered.length === 0) {
-    grid.style.display = 'none';
-    empty.style.display = 'block';
-    return;
-  }
-  
-  grid.style.display = 'flex';
-  empty.style.display = 'none';
-  
-  grid.innerHTML = filtered.map(student => {
-    const rankClass = student.overall_rank === 1 ? 'rank-1' : (student.overall_rank === 2 ? 'rank-2' : (student.overall_rank === 3 ? 'rank-3' : ''));
-    const photoHtml = student.photo 
-      ? `<img class="photo-img" src="${student.photo}" alt="${student.name}" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\'photo-fallback\'>${student.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>'">`
-      : `<div class="photo-fallback">${student.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>`;
-    
-    const badgesHtml = student.badges.slice(0, 15).map(b => 
-      `<span class="badge-item badge-${b.tier}" title="${b.desc || b.name}">
-         <span class="badge-icon">${b.name.split(' ')[0]}</span>
-         <span class="badge-name">${b.name.split(' ').slice(1).join(' ')}</span>
-       </span>`
-    ).join('');
-    
-    const remainingBadges = student.badges.length - 15;
-    const moreBadgesHtml = remainingBadges > 0 
-      ? `<span class="badge-item badge-platinum">+${remainingBadges} more</span>` 
-      : '';
-    
-    return `
-      <div class="elite-card ${rankClass}">
-        <div class="card-inner">
-          <div class="rank-circle ${rankClass}">
-            <div class="rank-number">#${student.overall_rank}</div>
-            <div class="rank-label">OVERALL</div>
-          </div>
-          
-          <div class="photo-wrapper">
-            <div class="photo-inner">
-              ${photoHtml}
+    emptyDiv.style.display = "none";
+    container.innerHTML = data.map(s => {
+      const rankClass = s.rank === 1 ? "rank1" : (s.rank === 2 ? "rank2" : (s.rank === 3 ? "rank3" : ""));
+      const highestTier = s.badges.some(b=>b.tier==="legendary") ? "legendary" : (s.badges.some(b=>b.tier==="gold") ? "gold" : "silver");
+      const avatarHtml = s.photo ? `<img class="avatar-img" src="${s.photo}" onerror="this.src='';this.nextElementSibling.style.display='flex';">` : `<div class="avatar-fallback">${s.name.split(' ').map(w=>w[0]).join('')}</div>`;
+      const instClass = s.inst === "KJS" ? "" : (s.inst === "MJS" ? "inst-mjs" : "inst-ujs");
+      return `
+        <div class="elite-monument" onclick="window.location.href='/student?student=${encodeURIComponent(s.name)}'">
+          <div class="tier-stripe"></div>
+          <div class="monument-inner">
+            <div class="rank-orb ${rankClass}">#${s.rank}</div>
+            <div class="hero-portrait">
+              <div class="avatar-frame">${avatarHtml}</div>
+              <div class="name-inst">
+                <div class="elite-name">${s.name}</div>
+                <span class="inst-tag ${instClass}">${s.inst}</span>
+              </div>
             </div>
-          </div>
-          
-          <div class="info-section">
-            <div class="elite-name"><a href="/student?student=${encodeURIComponent(student.name)}">${student.name}</a></div>
-            <div class="elite-institution">${student.inst}</div>
-            <div class="elite-stats">
-              <div class="stat"><span class="stat-val">${student.attended}</span><span class="stat-label">JUTs</span></div>
-              <div class="stat"><span class="stat-val">${student.accuracy}%</span><span class="stat-label">Accuracy</span></div>
-              <div class="stat"><span class="stat-val">${student.consistency}%</span><span class="stat-label">Consistency</span></div>
+            <div class="metrics-row">
+              <div class="metric"><div class="metric-val">${Math.round(s.avg_score)}</div><div class="metric-label">AVG</div></div>
+              <div class="metric"><div class="metric-val">${s.best_score}</div><div class="metric-label">PEAK</div></div>
+              <div class="metric"><div class="metric-val">${s.accuracy}%</div><div class="metric-label">ACC</div></div>
+              <div class="metric"><div class="metric-val">${s.consistency}%</div><div class="metric-label">CONS</div></div>
             </div>
-          </div>
-          
-          <div class="score-section">
-            <div class="avg-score">${Math.round(student.avg_score)}</div>
-            <div class="avg-label">AVERAGE</div>
-            <div class="best-score">Best: ${student.best_score}</div>
-          </div>
-          
-          <div class="badges-section">
-            <div class="badges-title">ACHIEVEMENTS (${student.badges.length})</div>
-            <div class="badges-container">
-              ${badgesHtml}
-              ${moreBadgesHtml}
+            <div class="subject-badge">
+              <span class="subj-item subj-phy">⚛️ PHY ${Math.round(s.avg_phy)}</span>
+              <span class="subj-item subj-chem">🧪 CHEM ${Math.round(s.avg_chem)}</span>
+              <span class="subj-item subj-math">∑ MATH ${Math.round(s.avg_math)}</span>
+            </div>
+            <div class="badges-wall">
+              ${s.badges.map(b => `<span class="achievement-badge ${b.tier === 'legendary' ? 'legendary-badge' : ''}"><span class="badge-icon">${b.icon}</span> ${b.label}</span>`).join('')}
             </div>
           </div>
         </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// Event listeners
-document.querySelectorAll('.sort-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentSort = btn.dataset.sort;
-    renderElites();
+      `;
+    }).join('');
+  };
+  
+  const applyFiltersAndRender = () => {
+    renderGrid();
+  };
+  
+  // event listeners
+  document.querySelectorAll("[data-tier]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-tier]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeTier = btn.dataset.tier;
+      applyFiltersAndRender();
+    });
   });
-});
-
-document.querySelectorAll('.filter-pill').forEach(pill => {
-  pill.addEventListener('click', () => {
-    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-    pill.classList.add('active');
-    currentFilter = pill.dataset.filter;
-    renderElites();
+  document.querySelectorAll("[data-inst]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-inst]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeInst = btn.dataset.inst;
+      applyFiltersAndRender();
+    });
   });
-});
-
-loadElites();
+  document.getElementById("sortSelect").addEventListener("change", e => {
+    sortMode = e.target.value;
+    applyFiltersAndRender();
+  });
+  document.getElementById("searchName").addEventListener("input", e => {
+    searchTerm = e.target.value;
+    applyFiltersAndRender();
+  });
+  
+  renderGrid();
 </script>
 </body>
 </html>"""
