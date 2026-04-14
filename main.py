@@ -3938,7 +3938,7 @@ section{padding:5rem 0;}
 .rank-n-c{color:var(--muted);}
 
 /* photo area */
-.card-photo-wrap{width:100%;aspect-ratio:4/3;overflow:hidden;position:relative;background:var(--surface2);}
+.card-photo-wrap{width:100%;aspect-ratio:3/4;overflow:hidden;position:relative;background:var(--surface2);}
 .card-photo{width:100%;height:100%;object-fit:cover;display:block;transition:transform 0.5s;}
 .elite-card:hover .card-photo{transform:scale(1.04);}
 .card-photo-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:4rem;color:rgba(232,197,71,0.15);}
