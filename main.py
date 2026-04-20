@@ -1351,6 +1351,12 @@ section{padding:4rem 0;}
   .hero-kpis{gap:1.5rem;}
   .topnav-links .topnav-link:not(.always){display:none;}
 }
+
+.avg-dec{
+  font-size:0.65em;
+  opacity:0.7;
+  margin-left:1px;
+}
 </style>
 </head>
 <body>
@@ -1524,6 +1530,12 @@ const avg = arr => arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
 const rnd = v => Math.round(v*10)/10;
 Chart.defaults.font.family='JetBrains Mono';
 Chart.defaults.color='#6b6b8a';
+
+function formatAvg(v){
+  const intPart = Math.floor(v);
+  const decPart = (v - intPart).toFixed(2).slice(2); // 2 digits
+  return `${intPart}<span class="avg-dec">.${decPart}</span>`;
+}
 
 function normName(s){return s.trim().replace(/\s+/g,' ').toUpperCase();}
 function shortLabel(s){
@@ -1830,7 +1842,7 @@ function renderLeaderboard(){
       <td><span class="rnk ${rc}">${r}</span></td>
       <td><a class="name-link" href="/student?student=${encodeURIComponent(s.name)}">${s.name}</a></td>
       <td>${s.inst?`<span class="inst-chip ${instCls}">${s.inst}</span>`:''}</td>
-      <td><span class="score-chip" style="background:${sc}22;color:${sc}">${Math.round(s.avg)}</span></td>
+      <td><span class="score-chip" style="background:${sc}22;color:${sc}">${formatAvg(s.avg)}</span></td>
       <td style="color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:1.2rem;">${s.best}</td>
       <td>
         <div class="mini-bars">
