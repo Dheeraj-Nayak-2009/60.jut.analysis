@@ -1,4 +1,4 @@
-from flask import Flask, Blueprint, jsonify, request, render_template
+from flask import Flask, Blueprint, jsonify, request, render_template, url_for
 import os
 import csv
 
@@ -2096,7 +2096,7 @@ HOME_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JUT · Analytics Hub</title>
+<title>FLOODING IN PROGRESS</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -2501,8 +2501,70 @@ HOME_HTML = r"""<!DOCTYPE html>
     footer { flex-direction: column; gap: 0.5rem; text-align: center; }
   }
 </style>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Forum&family=Lexend:wght@100..900&family=Special+Gothic+Condensed+One&display=swap');
+    *{
+        user-select: none;
+    }
+    .tapoverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgb(194, 149, 0);
+        display: flex;
+        flex-direction: column;
+        z-index: 9999;
+    }
+    .tapoverlay h1 {
+        font-size: 7em;
+        color: #fff;
+        margin: 30px 40px 0 40px;
+        font-family: "Bebas Neue", sans-serif;
+    }
+    .tapoverlay img {
+        width: 400px;
+        height: auto;
+        position: absolute;
+        bottom: 0;
+        right:0;
+    }
+    @media only screen and (max-width: 450px) {
+        .tapoverlay h1 {
+            font-size: 5em;
+            margin: 20px 20px 0 20px;
+        }
+    }
+</style>
 </head>
 <body>
+
+    <div class="tapoverlay">
+        <h1>TWO TAPS ARE ENOUGH<br> TO FLOOD YOUR ROOM</h1>
+        <img src="{{ url_for('public', filename='tap.gif') }}" alt="WATERTAP">
+    </div>
+    <script>
+        document.title = "FLOODING IN PROGRESS";
+        // quick double tap to remove the overlay
+        let tapCount = 0;
+        let tapTimeout;
+        document.querySelector('.tapoverlay').addEventListener('click', () => {
+            tapCount++;
+            if (tapCount === 2) {
+                document.querySelector('.tapoverlay').style.display = 'none';
+                    // change title to "TAPOVERLAY"
+                    document.title = "JUT · Analytics Hub"
+                clearTimeout(tapTimeout);
+                tapCount = 0;
+            } else {
+                tapTimeout = setTimeout(() => {
+                    tapCount = 0;
+                }, 200); // reset tap count after 200ms
+            }
+        });
+    </script>
+
 <div class="grid-bg"></div>
 <div class="glow-1"></div>
 <div class="glow-2"></div>
