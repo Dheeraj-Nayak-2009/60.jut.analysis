@@ -2087,6 +2087,10 @@ loadData();
 def overview_page():
     return app.response_class(OVERVIEW_HTML, mimetype='text/html')
 
+@app.route('/public/<path:filename>')
+def public_files(filename):
+    from flask import send_from_directory
+    return send_from_directory('public', filename)
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  HOME PAGE
@@ -2542,7 +2546,7 @@ HOME_HTML = r"""<!DOCTYPE html>
 
     <div class="tapoverlay">
         <h1>TWO TAPS ARE ENOUGH<br> TO FLOOD YOUR ROOM</h1>
-        <img src="{{ url_for('public', filename='tap.gif') }}" alt="WATERTAP">
+        <img src="/public/tap.gif" alt="WATERTAP">
     </div>
     <script>
         document.title = "FLOODING IN PROGRESS";
