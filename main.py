@@ -281,7 +281,7 @@ section{padding:4.5rem 0;}
 .sec-label::before{content:'';display:block;width:28px;height:1px;background:var(--accent);}
 .sec-title{font-family:'DM Serif Display',serif;font-size:clamp(1.8rem,4.5vw,3rem);margin-bottom:2rem;}
 .divider{height:1px;background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent);}
-.reveal{opacity:0;transform:translateY(28px);transition:opacity 0.7s,transform 0.7s;}
+.reveal{opacity:1;transform:translateY(28px);transition:opacity 0.7s,transform 0.7s;}
 .reveal.vis{opacity:1;transform:translateY(0);}
 
 /* PROFILE STRIP */
@@ -1205,7 +1205,7 @@ section{padding:4rem 0;}
 .sec-label::before{content:'';display:block;width:28px;height:1px;background:var(--accent);}
 .sec-title{font-family:'DM Serif Display',serif;font-size:clamp(1.8rem,4vw,2.8rem);margin-bottom:2rem;}
 .divider{height:1px;background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent);}
-.reveal{opacity:0;transform:translateY(24px);transition:opacity 0.6s,transform 0.6s;}
+.reveal{opacity:1;transform:translateY(24px);transition:opacity 0.6s,transform 0.6s;}
 .reveal.vis{opacity:1;transform:translateY(0);}
 
 /* STAT STRIP */
@@ -3181,7 +3181,7 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
   }
 
   .reveal {
-    opacity: 0;
+    opacity: 1;
     transform: translateY(30px);
     transition: opacity 0.7s ease, transform 0.7s ease;
   }
@@ -3905,7 +3905,7 @@ section{padding:5rem 0;}
 .sec-label::before{content:'';display:block;width:28px;height:1px;background:var(--accent);}
 .sec-title{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3.5rem);margin-bottom:2.5rem;}
 .divider{height:1px;background:linear-gradient(90deg,transparent,var(--border) 20%,var(--border) 80%,transparent);}
-.reveal{opacity:0;transform:translateY(28px);transition:opacity 0.7s,transform 0.7s;}
+.reveal{opacity:1;transform:translateY(28px);transition:opacity 0.7s,transform 0.7s;}
 .reveal.vis{opacity:1;transform:translateY(0);}
 
 /* ── filter bar ── */
@@ -4894,7 +4894,7 @@ NEET_HTML = r"""<!DOCTYPE html>
   }
 
   .reveal {
-    opacity: 0;
+    opacity: 1;
     transform: translateY(30px);
     transition: opacity 0.7s ease, transform 0.7s ease;
   }
