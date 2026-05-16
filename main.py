@@ -2550,6 +2550,7 @@ HOME_HTML = r"""<!DOCTYPE html>
     </div>
     <script>
         document.title = "FLOODING IN PROGRESS";
+        document.body.style.overflow = "hidden";
         // quick double tap to remove the overlay
         let tapCount = 0;
         let tapTimeout;
@@ -2559,6 +2560,7 @@ HOME_HTML = r"""<!DOCTYPE html>
                 document.querySelector('.tapoverlay').style.display = 'none';
                     // change title to "TAPOVERLAY"
                     document.title = "JUT · Analytics Hub"
+                    document.body.style.overflow = "auto";
                 clearTimeout(tapTimeout);
                 tapCount = 0;
             } else {
