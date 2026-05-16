@@ -4385,6 +4385,7 @@ NEET_HTML = r"""<!DOCTYPE html>
     --phy: #4fc3f7;
     --chem: #a78bfa;
     --bio: #4ade80;
+    --math: #fb923c;
     --gold: #fbbf24;
     --silver: #94a3b8;
     --bronze: #cd7f32;
