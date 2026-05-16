@@ -2556,6 +2556,27 @@ Score • Analyse • Improve
       <div class="nc-desc">Wall of fame — achievement badges, elite performers, remarkable scorers.</div>
       <div class="nc-arrow">→</div>
     </a>
+    <a href="/annual" class="nav-card nc-analysis">
+      <div class="nc-icon">📝</div>
+      <div class="nc-label">EXAM</div>
+      <div class="nc-title">ANNUAL EXAM</div>
+      <div class="nc-desc">I PUC Annual Exam.</div>
+      <div class="nc-arrow">→</div>
+    </a>
+    <a href="/kcet" class="nav-card nc-overview">
+      <div class="nc-icon">🚀</div>
+      <div class="nc-label">BATCH SELECTION</div>
+      <div class="nc-title">KCET Analysis</div>
+      <div class="nc-desc">KCET Mock Test - Batch Selection.</div>
+      <div class="nc-arrow">→</div>
+    </a>
+    <a href="/neet" class="nav-card nc-student">
+      <div class="nc-icon">🧬</div>
+      <div class="nc-label">BATCH SELECTION</div>
+      <div class="nc-title">NEET Analysis</div>
+      <div class="nc-desc">NEET Mock Test - Batch Selection.</div>
+      <div class="nc-arrow">→</div>
+    </a>
   </div>
 
   <div class="divider" style="margin:3rem 0;"></div>
