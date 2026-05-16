@@ -2559,7 +2559,7 @@ Score • Analyse • Improve
     <a href="/annual" class="nav-card nc-analysis">
       <div class="nc-icon">📝</div>
       <div class="nc-label">EXAM</div>
-      <div class="nc-title">ANNUAL EXAM</div>
+      <div class="nc-title">Annual Exam</div>
       <div class="nc-desc">I PUC Annual Exam.</div>
       <div class="nc-arrow">→</div>
     </a>
