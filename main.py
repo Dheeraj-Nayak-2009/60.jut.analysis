@@ -5437,7 +5437,7 @@ function buildDashboard(raw, filename) {
     cell.textContent = s + '\u00b7' + t;
     hmGrid.appendChild(cell);
   }); });
-  sorted.slice(0, 30).forEach(s => {
+  sorted.forEach(s => {
     subjects.forEach(subj => {
       const c = s[subj+'_c'], w = s[subj+'_w'], a = s[subj+'_a'];
       const acc = a > 0 ? Math.round((c/a)*100) : 0;
