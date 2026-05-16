@@ -6126,7 +6126,7 @@ KCET_HTML = r"""<!DOCTYPE html>
   }
 
   .reveal {
-    opacity: 0;
+    opacity: 1;
     transform: translateY(30px);
     transition: opacity 0.7s ease, transform 0.7s ease;
   }
