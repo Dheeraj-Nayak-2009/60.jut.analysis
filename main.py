@@ -2546,7 +2546,7 @@ HOME_HTML = r"""<!DOCTYPE html>
 
     <div class="tapoverlay">
         <h1>TWO TAPS ARE ENOUGH<br> TO FLOOD YOUR ROOM</h1>
-        <img src="/public/tap.gif" alt="WATERTAP">
+        <img src="static/tap.gif" alt="WATERTAP">
     </div>
     <script>
         document.title = "FLOODING IN PROGRESS";
