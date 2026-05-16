@@ -5532,11 +5532,39 @@ async function populatePickerMenu() {
     document.getElementById('heroSub').textContent = 'LOADING ' + fileParam.toUpperCase() + '…';
     await loadCSVByName(fileParam);
   } else {
-    document.getElementById('heroSub').textContent = 'SELECT A NEET TEST TO BEGIN';
-    const overlay = document.getElementById('uploadOverlay');
-    overlay.style.display = 'flex';
-    overlay.style.opacity = '1';
-    await populatePickerMenu();
+    // Try to automatically load the first NEET file found
+    try {
+      const res = await fetch('/api/csv-files');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const files = await res.json();
+      const neetFiles = files.filter(f => f.toLowerCase().includes('neet'));
+      
+      if (neetFiles.length === 1) {
+        // Only one NEET file - load it directly without showing picker
+        document.getElementById('heroSub').textContent = 'LOADING ' + neetFiles[0].toUpperCase() + '…';
+        await loadCSVByName(neetFiles[0]);
+      } else if (neetFiles.length > 1) {
+        // Multiple files - show picker
+        document.getElementById('heroSub').textContent = 'SELECT A NEET TEST TO BEGIN';
+        const overlay = document.getElementById('uploadOverlay');
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+        await populatePickerMenu();
+      } else {
+        // No files found
+        document.getElementById('heroSub').textContent = 'NO NEET CSV FILES FOUND';
+        const overlay = document.getElementById('uploadOverlay');
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+        await populatePickerMenu();
+      }
+    } catch(err) {
+      document.getElementById('heroSub').textContent = 'ERROR LOADING FILES';
+      const overlay = document.getElementById('uploadOverlay');
+      overlay.style.display = 'flex';
+      overlay.style.opacity = '1';
+      await populatePickerMenu();
+    }
   }
 })();
 </script>
