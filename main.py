@@ -4355,6 +4355,1193 @@ loadElites();
 def elites_page():
     return app.response_class(ELITES_HTML, mimetype='text/html')
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  NEET ANALYSIS PAGE
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/neet")
+def neet_page():
+    return app.response_class(NEET_HTML, mimetype='text/html')
+
+
+NEET_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEET Performance Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #e8c547;
+    --accent2: #47e8c5;
+    --accent3: #e847a0;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --phy: #4fc3f7;
+    --chem: #a78bfa;
+    --bio: #4ade80;
+    --gold: #fbbf24;
+    --silver: #94a3b8;
+    --bronze: #cd7f32;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  .topnav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 500;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 2rem;
+  }
+  .topnav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .topnav-logo span { color: var(--accent); }
+  .topnav-back {
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: color 0.2s;
+  }
+  .topnav-back:hover { color: var(--accent); }
+  .topnav-file {
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--accent2);
+    text-transform: uppercase;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 6rem 2rem 3rem;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 40%, rgba(232,197,71,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 60% at 80% 60%, rgba(71,232,197,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 50% 10%, rgba(232,71,160,0.05) 0%, transparent 50%);
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .hero-tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(4rem, 12vw, 10rem);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    opacity: 0;
+    animation: fadeUp 0.8s 0.4s forwards;
+  }
+
+  .hero-title span {
+    -webkit-text-stroke: 1px var(--accent);
+    color: transparent;
+  }
+
+  .hero-sub {
+    font-size: 0.85rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    margin-top: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.6s forwards;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 3rem;
+    margin-top: 3rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.8s forwards;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero-stat { text-align: center; }
+
+  .hero-stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .hero-stat-label {
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 0.3rem;
+  }
+
+  section {
+    padding: 5rem 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1.1;
+    margin-bottom: 3rem;
+    color: var(--text);
+  }
+
+  .podium-section {
+    padding: 5rem 2rem;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .podium-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(232,197,71,0.05) 0%, transparent 70%);
+  }
+
+  .podium-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  .podium {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0;
+    margin-top: 3rem;
+  }
+
+  .podium-card {
+    flex: 1;
+    max-width: 280px;
+    text-align: center;
+    cursor: default;
+    transition: transform 0.3s ease;
+  }
+
+  .podium-card:hover { transform: translateY(-8px); }
+
+  .podium-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+    color: var(--text);
+  }
+
+  .podium-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.5rem;
+    line-height: 1;
+  }
+
+  .podium-rank-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 0.3rem;
+  }
+
+  .podium-block {
+    margin-top: 1rem;
+    border-radius: 4px 4px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+  }
+
+  .p1 .podium-score { color: var(--gold); }
+  .p1 .podium-block { background: linear-gradient(135deg, #fbbf24, #f59e0b); height: 160px; }
+  .p2 .podium-score { color: var(--silver); }
+  .p2 .podium-block { background: linear-gradient(135deg, #94a3b8, #64748b); height: 120px; }
+  .p3 .podium-score { color: var(--bronze); }
+  .p3 .podium-block { background: linear-gradient(135deg, #cd7f32, #a0632a); height: 90px; }
+
+  .leaderboard-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+  }
+
+  .leaderboard-table th {
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 0.5rem 1rem;
+    text-align: left;
+    font-weight: 400;
+  }
+
+  .leaderboard-table tr.row {
+    background: var(--surface);
+    transition: all 0.25s ease;
+    cursor: default;
+  }
+
+  .leaderboard-table tr.row:hover { background: var(--surface2); transform: translateX(4px); }
+
+  .leaderboard-table td {
+    padding: 0.9rem 1rem;
+    font-size: 0.78rem;
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+  }
+
+  .leaderboard-table tr.row:hover td { border-color: var(--border); }
+
+  .rank-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    width: 36px;
+    text-align: center;
+    display: inline-block;
+  }
+
+  .rank-1 { color: var(--gold); }
+  .rank-2 { color: var(--silver); }
+  .rank-3 { color: var(--bronze); }
+  .rank-other { color: var(--muted); }
+
+  .score-pill {
+    display: inline-block;
+    padding: 0.2rem 0.8rem;
+    border-radius: 2px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+  }
+
+  .mini-bar-wrap { display: flex; gap: 3px; align-items: center; }
+
+  .mini-bar {
+    height: 6px;
+    border-radius: 1px;
+    flex-shrink: 0;
+    transition: width 1s ease;
+  }
+
+  .name-cell {
+    font-family: 'DM Serif Display', serif;
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+
+  .name-cell a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dashed var(--muted);
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .name-cell a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .inst-chip{display:inline-block;font-size:0.5rem;letter-spacing:0.15em;padding:0.18rem 0.5rem;border-radius:2px;font-weight:600;text-transform:uppercase;}
+  .inst-kjs{background:rgba(79,195,247,0.15);color:#4fc3f7;}
+  .inst-mjs{background:rgba(167,139,250,0.15);color:#a78bfa;}
+  .inst-ujs{background:rgba(251,146,60,0.15);color:#fb923c;}
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chart-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .chart-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  canvas { width: 100% !important; max-height: 300px; }
+
+  .subject-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .subj-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.25s;
+  }
+
+  .subj-card:hover { transform: translateY(-4px); }
+  .subj-card.phy { border-top: 3px solid var(--phy); }
+  .subj-card.chem { border-top: 3px solid var(--chem); }
+  .subj-card.bio { border-top: 3px solid var(--bio); }
+
+  .subj-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subj-card.phy .subj-name { color: var(--phy); }
+  .subj-card.chem .subj-name { color: var(--chem); }
+  .subj-card.bio .subj-name { color: var(--bio); }
+
+  .subj-stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.72rem;
+  }
+
+  .subj-stat-row:last-child { border-bottom: none; }
+  .subj-stat-key { color: var(--muted); }
+  .subj-stat-val { color: var(--text); font-weight: 600; }
+
+  .matrix-wrap { overflow-x: auto; }
+
+  .matrix-grid {
+    display: grid;
+    justify-content: center;
+    gap: 3px;
+    min-width: 600px;
+  }
+
+  .matrix-cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .matrix-cell:hover { transform: scale(1.15); z-index: 10; }
+
+  .matrix-cell .tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    border: 1px solid var(--border);
+    padding: 0.4rem 0.6rem;
+    border-radius: 3px;
+    font-size: 0.6rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 100;
+    color: var(--text);
+  }
+
+  .matrix-cell:hover .tooltip { opacity: 1; }
+
+  .dist-bar-container { margin-top: 1.5rem; }
+
+  .dist-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .dist-range { font-size: 0.65rem; color: var(--muted); width: 80px; flex-shrink: 0; }
+
+  .dist-bar-outer {
+    flex: 1;
+    height: 24px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .dist-bar-inner {
+    height: 100%;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgba(0,0,0,0.7);
+    transition: width 1.5s cubic-bezier(0.4,0,0.2,1);
+    width: 0;
+  }
+
+  .dist-count { font-size: 0.7rem; color: var(--muted); width: 20px; text-align: right; flex-shrink: 0; }
+
+  footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--muted);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    border-top: 1px solid var(--border);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .search-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.6rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    border-radius: 2px;
+    outline: none;
+    flex: 1;
+    min-width: 200px;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .sort-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.6rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .sort-btn:hover, .sort-btn.active { border-color: var(--accent); color: var(--accent); }
+
+  .inst-filter-bar{display:flex;gap:0.5rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap;}
+  .inst-filter-label{font-size:0.55rem;letter-spacing:0.22em;color:var(--muted);text-transform:uppercase;}
+  .inst-btn{font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;padding:0.35rem 0.8rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;transition:all 0.2s;white-space:nowrap;}
+  .inst-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .inst-btn.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+  .inst-btn.ib-kjs.active{background:#4fc3f7;border-color:#4fc3f7;color:var(--bg);}
+  .inst-btn.ib-mjs.active{background:#a78bfa;border-color:#a78bfa;color:var(--bg);}
+  .inst-btn.ib-ujs.active{background:#fb923c;border-color:#fb923c;color:var(--bg);}
+  .tier-excellent { background: rgba(71,232,197,0.1); }
+  .tier-good { background: rgba(232,197,71,0.1); }
+  .tier-average { background: rgba(251,146,60,0.1); }
+  .tier-poor { background: rgba(232,71,160,0.08); }
+
+  #uploadOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,10,15,0.97);
+    backdrop-filter: blur(10px);
+    transition: opacity 0.5s;
+  }
+
+  .picker-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: #e8c547;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .picker-sub {
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    color: #6b6b8a;
+    margin-top: 0.75rem;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  #csvMenu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    width: 90%;
+    max-width: 480px;
+    margin-top: 2rem;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .csv-btn {
+    background: #111118;
+    border: 1px solid #1e1e2e;
+    color: #e8e8f0;
+    padding: 1rem 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    text-align: left;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+  }
+
+  .csv-btn:hover { border-color: #e8c547; color: #e8c547; background: #16161f; }
+  .csv-btn-filename { color: #6b6b8a; font-size: 0.6rem; }
+
+  #uploadError { color: #e847a0; font-size: 0.7rem; margin-top: 1.5rem; display: none; }
+
+  .picker-back {
+    margin-top: 1.5rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .picker-back:hover { color: var(--accent); }
+
+  @media (max-width: 768px) {
+    .hero-tag {letter-spacing: 0rem;}
+    .charts-grid { grid-template-columns: 1fr; }
+    .subject-grid { grid-template-columns: 1fr; }
+    .hero-stats { gap: 5rem; }
+    .podium { gap: 0.5rem; }
+    .topnav-file { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="topnav-logo" href="/">JUT<span>·</span>HUB</a>
+  <div class="topnav-file" id="topnavFile">—</div>
+  <a class="topnav-back" href="/">← Back</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div style="position:relative;z-index:2;">
+    <div class="hero-tag" id="heroTag">NEET · Batch Analysis</div>
+    <div class="hero-title">NEET<span>PERFOR</span>MANCE</div>
+    <div class="hero-sub" id="heroSub">LOADING…</div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-val" id="hs-avg">—</div><div class="hero-stat-label">Avg Score</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="hs-high">—</div><div class="hero-stat-label">Top Score</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="hs-acc">—</div><div class="hero-stat-label">Avg Accuracy</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="hs-count">—</div><div class="hero-stat-label">Students</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="podium-section">
+  <div class="podium-inner">
+    <div class="section-label reveal">Top Performers</div>
+    <div class="section-title reveal">The Podium</div>
+    <div class="podium reveal" id="podium"></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label reveal">Full Results</div>
+  <div class="section-title reveal">Leaderboard</div>
+  <div class="inst-filter-bar reveal" id="instFilterBar">
+    <span class="inst-filter-label">Institution:</span>
+    <button class="inst-btn active" data-inst="ALL">All</button>
+    <button class="inst-btn ib-kjs" data-inst="KJS">KJS</button>
+    <button class="inst-btn ib-mjs" data-inst="MJS">MJS</button>
+    <button class="inst-btn ib-ujs" data-inst="UJS">UJS</button>
+  </div>
+  <div class="filter-bar reveal">
+    <input class="search-input" id="searchInput" type="text" placeholder="Search student…">
+    <button class="sort-btn active" data-sort="total">Total ↕</button>
+    <button class="sort-btn" data-sort="phy">Physics ↕</button>
+    <button class="sort-btn" data-sort="chem">Chemistry ↕</button>
+    <button class="sort-btn" data-sort="bio">Biology ↕</button>
+    <button class="sort-btn" data-sort="acc">Accuracy ↕</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="leaderboard-table">
+      <thead>
+        <tr>
+          <th>SL</th><th>CSV Rank</th><th>#</th><th>Student</th><th>Inst</th><th>Score</th><th>Subject Breakdown</th><th>Accuracy</th><th>Attempted</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboardBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label reveal">Subject Performance</div>
+  <div class="section-title reveal">Deep Dive</div>
+  <div class="subject-grid">
+    <div class="subj-card phy reveal" id="physCard"></div>
+    <div class="subj-card chem reveal" id="chemCard"></div>
+    <div class="subj-card bio reveal" id="bioCard"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label reveal">Visual Analysis</div>
+  <div class="section-title reveal">Score Insights</div>
+  <div class="charts-grid">
+    <div class="chart-card reveal">
+      <div class="chart-title">Score Distribution</div>
+      <div class="dist-bar-container" id="distBars"></div>
+    </div>
+    <div class="chart-card reveal">
+      <div class="chart-title">Subject Average Comparison</div>
+      <canvas id="radarChart"></canvas>
+    </div>
+    <div class="chart-card reveal">
+      <div class="chart-title">Correct vs Wrong vs Unattempted (Top 10)</div>
+      <canvas id="stackedChart"></canvas>
+    </div>
+    <div class="chart-card reveal">
+      <div class="chart-title">Accuracy per Student</div>
+      <canvas id="accuracyChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label reveal">Accuracy Heatmap</div>
+  <div class="section-title reveal">Who Got What Right</div>
+  <div class="matrix-wrap reveal" style="display:flex;flex-direction:column;align-items:center;">
+    <div style="display:flex;gap:0.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap;justify-content:center;">
+      <span style="font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);text-transform:uppercase;">Subject:</span>
+      <span style="font-size:0.65rem;color:var(--phy);">&#9632; Physics</span>
+      <span style="font-size:0.65rem;color:var(--chem);">&#9632; Chemistry</span>
+      <span style="font-size:0.65rem;color:var(--bio);">&#9632; Biology</span>
+    </div>
+    <div id="heatmapGrid" class="matrix-grid"></div>
+  </div>
+</section>
+
+<footer id="footerBar">NEET ANALYSIS DASHBOARD</footer>
+
+<div id="uploadOverlay" style="display:none;">
+  <div class="picker-title">SELECT NEET TEST</div>
+  <div class="picker-sub">Choose a CSV file to analyse</div>
+  <div id="csvMenu"></div>
+  <div id="uploadError"></div>
+  <a class="picker-back" href="/">← Back to Hub</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+function firstMeaningfulName(fullName) {
+  const parts = fullName.trim().split(/\s+/);
+  for (const part of parts) { if (part.length > 1) return part; }
+  return parts[0] || fullName;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
+  return lines.slice(1).map(line => {
+    const vals = line.split(',');
+    const obj = {};
+    headers.forEach((h,i) => { obj[h] = vals[i] !== undefined ? vals[i].trim() : ''; });
+    return obj;
+  }).filter(r => r[headers[0]]);
+}
+
+function n(v) { return parseFloat(v) || 0; }
+
+function getInstA(fileVal){
+  if(!fileVal) return '';
+  const f=(fileVal+'').trim().toUpperCase();
+  if(f.startsWith('K')) return 'KJS';
+  if(f.startsWith('U')) return 'UJS';
+  if(f.startsWith('M')) return 'MJS';
+  return '';
+}
+
+function mapRow(r) {
+  const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return '0'; };
+  const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return ''; };
+  return {
+    name:   getS('name') || 'Unknown',
+    inst:   getInstA(getS('file','filename')),
+    total:  n(get('total_marks','total_score','total')),
+    rank:   n(get('rank')),
+    // NEET: Bio attempt/correct/wrong - column names may vary
+    phy_a:  n(get('phy_attempt','physics_attempt','phy_attempted','physics_attempted')),
+    chem_a: n(get('chem_attempt','chemistry_attempt','chem_attempted','chemistry_attempted')),
+    bio_a:  n(get('bio_attempt','biology_attempt','bio_attempted','biology_attempted','bot_attempt','zoo_attempt')),
+    tot_a:  n(get('total_attempt','total_attempted')),
+    phy_c:  n(get('phy_correct','physics_correct','phy_corrects','physics_corrects')),
+    chem_c: n(get('chem_correct','chemistry_correct','chem_corrects','chemistry_corrects')),
+    bio_c:  n(get('bio_correct','biology_correct','bio_corrects','biology_corrects','bot_correct','zoo_correct')),
+    tot_c:  n(get('total_correct','total_corrects')),
+    phy_w:  n(get('phy_wrong','physics_wrong','phy_wrongs','physics_wrongs')),
+    chem_w: n(get('chem_wrong','chemistry_wrong','chem_wrongs','chemistry_wrongs')),
+    bio_w:  n(get('bio_wrong','biology_wrong','bio_wrongs','biology_wrongs','bot_wrong','zoo_wrong')),
+    tot_w:  n(get('total_wrong','total_wrongs')),
+    phy_m:  n(get('phy_marks','physics_marks')),
+    chem_m: n(get('chem_marks','chemistry_marks')),
+    bio_m:  n(get('bio_marks','biology_marks','bot_marks','zoo_marks')),
+  };
+}
+
+let radarInst, stackedInst, accuracyInst;
+
+function buildDashboard(raw, filename) {
+  raw.forEach(s => { s.accuracy = s.tot_a > 0 ? Math.round((s.tot_c / s.tot_a) * 100) : 0; });
+  const sorted = [...raw].sort((a,b) => {
+    if (b.total !== a.total) return b.total - a.total;
+    if (b.tot_c !== a.tot_c) return b.tot_c - a.tot_c;
+    return a.name.localeCompare(b.name);
+  });
+  const avg  = Math.round(raw.reduce((s,r) => s+r.total, 0) / raw.length);
+  const high = Math.max(...raw.map(r => r.total));
+  const avgAcc = Math.round(raw.reduce((s,r) => s+r.accuracy, 0) / raw.length);
+  const maxPossible = 720; // NEET total marks
+
+  document.getElementById('hs-avg').textContent   = avg;
+  document.getElementById('hs-high').textContent  = high;
+  document.getElementById('hs-acc').textContent   = avgAcc + '%';
+  document.getElementById('hs-count').textContent = raw.length;
+  document.getElementById('heroSub').textContent  = raw.length + ' STUDENTS · PHYSICS · CHEMISTRY · BIOLOGY';
+  const label = filename.replace('.csv','').replace(/_/g,' ').toUpperCase();
+  document.getElementById('heroTag').textContent  = 'NEET · ' + label + ' · BATCH ANALYSIS';
+  document.getElementById('topnavFile').textContent = label;
+  document.getElementById('footerBar').textContent = 'NEET ANALYSIS DASHBOARD · ' + raw.length + ' STUDENTS · ' + label;
+  document.title = 'NEET · ' + label;
+
+  const podiumEl = document.getElementById('podium');
+  podiumEl.innerHTML = '';
+  const top3 = sorted.slice(0,3);
+  const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean);
+  const heights = [120, 160, 90];
+  const podiumClasses = ['p2','p1','p3'];
+  const bgColors = ['linear-gradient(135deg,#94a3b8,#64748b)','linear-gradient(135deg,#fbbf24,#f59e0b)','linear-gradient(135deg,#cd7f32,#a0632a)'];
+  const scoreColors = ['var(--silver)','var(--gold)','var(--bronze)'];
+  const medalEmoji = ['\u{1F948}','\u{1F947}','\u{1F949}'];
+  podiumOrder.forEach((s,i) => {
+    const c = document.createElement('div');
+    c.className = 'podium-card ' + podiumClasses[i];
+    c.innerHTML =
+      '<div class="podium-name">' + s.name + '</div>' +
+      '<div class="podium-score" style="color:' + scoreColors[i] + '">' + s.total + '</div>' +
+      '<div class="podium-rank-label">Overall Rank ' + (s.rank || i+1) + '</div>' +
+      '<div class="podium-block" style="height:' + heights[i] + 'px;background:' + bgColors[i] + ';">' +
+      '<span style="font-size:2rem;">' + medalEmoji[i] + '</span></div>';
+    podiumEl.appendChild(c);
+  });
+
+  let currentSort = 'total', sortDir = -1, filterText = '', instFilterA = 'ALL';
+
+  function getTier(score) {
+    if (score >= high * 0.75) return 'tier-excellent';
+    if (score >= high * 0.5)  return 'tier-good';
+    if (score >= high * 0.25) return 'tier-average';
+    return 'tier-poor';
+  }
+
+  function renderLeaderboard() {
+    let data = [...raw];
+    if (instFilterA !== 'ALL') data = data.filter(s => (s.inst||'').toUpperCase() === instFilterA);
+    if (filterText) data = data.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
+    const valKeys = {total:'total',phy:'phy_m',chem:'chem_m',bio:'bio_m',acc:'accuracy'};
+    data.sort((a,b) => {
+      const diff = sortDir * (a[valKeys[currentSort]] - b[valKeys[currentSort]]);
+      if (diff !== 0) return diff;
+      if (b.tot_c !== a.tot_c) return b.tot_c - a.tot_c;
+      return a.name.localeCompare(b.name);
+    });
+    const tbody = document.getElementById('leaderboardBody');
+    tbody.innerHTML = '';
+    data.forEach((s, slIdx) => {
+      const phyPct  = Math.max(0, (s.phy_m  / maxPossible) * 100);
+      const chemPct = Math.max(0, (s.chem_m / maxPossible) * 100);
+      const bioPct  = Math.max(0, (s.bio_m  / maxPossible) * 100);
+      const localRank = sorted.indexOf(s) + 1;
+      const rankClass = localRank===1?'rank-1':localRank===2?'rank-2':localRank===3?'rank-3':'rank-other';
+      const scoreColor = s.total>=high*0.75?'var(--accent2)':s.total>=high*0.5?'var(--accent)':s.total>=high*0.25?'var(--math)':'var(--accent3)';
+      const accColor = s.accuracy>=60?'var(--accent2)':s.accuracy>=40?'var(--accent)':'var(--accent3)';
+      const csvRank = s.rank ? s.rank : '\u2014';
+      const tr = document.createElement('tr');
+      tr.className = 'row ' + getTier(s.total);
+      tr.innerHTML =
+        '<td style="color:var(--muted);font-size:0.65rem;min-width:32px;">' + (slIdx+1) + '</td>' +
+        '<td style="color:var(--muted);font-family:\'Bebas Neue\',sans-serif;font-size:1.1rem;min-width:48px;">' + csvRank + '</td>' +
+        '<td><span class="rank-badge ' + rankClass + '">' + localRank + '</span></td>' +
+        '<td><div class="name-cell"><a href="/student?student=' + encodeURIComponent(s.name) + '">' + s.name + '</a></div></td>' +
+        '<td>' + (s.inst ? '<span class="inst-chip inst-'+(s.inst||'').toLowerCase()+'">' + s.inst + '</span>' : '') + '</td>' +
+        '<td><span class="score-pill" style="background:' + scoreColor + '22;color:' + scoreColor + '">' + s.total + '</span></td>' +
+        '<td><div class="mini-bar-wrap">' +
+          '<div class="mini-bar" style="width:' + (phyPct*1.5) + 'px;background:var(--phy)"></div>' +
+          '<div class="mini-bar" style="width:' + (chemPct*1.5) + 'px;background:var(--chem)"></div>' +
+          '<div class="mini-bar" style="width:' + (bioPct*1.5) + 'px;background:var(--bio)"></div>' +
+        '</div><div style="font-size:0.6rem;color:var(--muted);margin-top:3px;">P:' + s.phy_m + ' \u00b7 C:' + s.chem_m + ' \u00b7 B:' + s.bio_m + '</div></td>' +
+        '<td style="color:' + accColor + '">' + s.accuracy + '%</td>' +
+        '<td style="color:var(--muted)">' + s.tot_a + '/180</td>';
+      tbody.appendChild(tr);
+    });
+  }
+  renderLeaderboard();
+
+  document.getElementById('searchInput').oninput = e => { filterText = e.target.value; renderLeaderboard(); };
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.onclick = () => {
+      const sv = btn.dataset.sort;
+      if (sv === currentSort) sortDir *= -1; else { currentSort = sv; sortDir = -1; }
+      document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderLeaderboard();
+    };
+  });
+  document.querySelectorAll('#instFilterBar .inst-btn').forEach(btn => {
+    btn.onclick = () => {
+      instFilterA = btn.dataset.inst;
+      document.querySelectorAll('#instFilterBar .inst-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderLeaderboard();
+    };
+  });
+
+  function subjectStats(marks, correct, wrong, attempt, maxPerQ=4) {
+    const avg  = (marks.reduce((a,b)=>a+b,0)/marks.length).toFixed(1);
+    const best = Math.max(...marks), worst = Math.min(...marks);
+    const avgC = (correct.reduce((a,b)=>a+b,0)/correct.length).toFixed(1);
+    const avgW = (wrong.reduce((a,b)=>a+b,0)/wrong.length).toFixed(1);
+    const totalC = correct.reduce((a,b)=>a+b,0), totalA = attempt.reduce((a,b)=>a+b,0);
+    const acc = totalA > 0 ? Math.round((totalC/totalA)*100) : 0;
+    return {avg, best, worst, avgC, avgW, acc};
+  }
+  
+  function makeSubjectCard(id, label, color, marks, correct, wrong, attempt, qCount) {
+    const s = subjectStats(marks, correct, wrong, attempt);
+    document.getElementById(id).innerHTML =
+      '<div class="subj-name">' + label + '</div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Avg Marks</span><span class="subj-stat-val" style="color:' + color + '">' + s.avg + '</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Highest</span><span class="subj-stat-val">' + s.best + '</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Lowest</span><span class="subj-stat-val">' + s.worst + '</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Avg Correct</span><span class="subj-stat-val">' + s.avgC + ' / ' + qCount + '</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Avg Wrong</span><span class="subj-stat-val">' + s.avgW + '</span></div>' +
+      '<div class="subj-stat-row"><span class="subj-stat-key">Accuracy</span><span class="subj-stat-val">' + s.acc + '%</span></div>';
+  }
+  
+  makeSubjectCard('physCard','Physics','var(--phy)',raw.map(r=>r.phy_m),raw.map(r=>r.phy_c),raw.map(r=>r.phy_w),raw.map(r=>r.phy_a), 45);
+  makeSubjectCard('chemCard','Chemistry','var(--chem)',raw.map(r=>r.chem_m),raw.map(r=>r.chem_c),raw.map(r=>r.chem_w),raw.map(r=>r.chem_a), 45);
+  makeSubjectCard('bioCard','Biology','var(--bio)',raw.map(r=>r.bio_m),raw.map(r=>r.bio_c),raw.map(r=>r.bio_w),raw.map(r=>r.bio_a), 90);
+
+  const distContainer = document.getElementById('distBars');
+  distContainer.innerHTML = '';
+  const step = high > 0 ? Math.ceil(high / 5) : 144;
+  const ranges = [];
+  for(let i=4;i>=0;i--) ranges.push([i*step, (i+1)*step - (i<4?1:0)]);
+  const rangeLabels = ranges.map(([lo,hi],i) => i===0 ? lo+'+' : lo+'\u2013'+hi);
+  const rangeCounts = ranges.map(([lo,hi]) => raw.filter(s=>s.total>=lo&&s.total<=hi).length);
+  const maxCount = Math.max(...rangeCounts, 1);
+  const barColors = ['#47e8c5','#e8c547','#fb923c','#a78bfa','#e847a0'];
+  ranges.forEach((_,i) => {
+    const pct = (rangeCounts[i]/maxCount)*100;
+    const row = document.createElement('div');
+    row.className = 'dist-bar-row';
+    row.innerHTML =
+      '<div class="dist-range">' + rangeLabels[i] + '</div>' +
+      '<div class="dist-bar-outer"><div class="dist-bar-inner" data-pct="' + pct + '" style="background:' + barColors[i] + ';width:0%">' +
+      (rangeCounts[i]>0 ? rangeCounts[i]+' student'+(rangeCounts[i]>1?'s':'') : '') + '</div></div>' +
+      '<div class="dist-count">' + rangeCounts[i] + '</div>';
+    distContainer.appendChild(row);
+  });
+  setTimeout(() => { document.querySelectorAll('.dist-bar-inner').forEach(b => { b.style.width = b.dataset.pct + '%'; }); }, 300);
+
+  const phyAvg  = raw.reduce((a,r)=>a+r.phy_m,0)/raw.length;
+  const chemAvg = raw.reduce((a,r)=>a+r.chem_m,0)/raw.length;
+  const bioAvg  = raw.reduce((a,r)=>a+r.bio_m,0)/raw.length;
+  if(radarInst) radarInst.destroy();
+  radarInst = new Chart(document.getElementById('radarChart'), {
+    type:'radar',
+    data:{labels:['Physics','Chemistry','Biology'],datasets:[{label:'Avg Marks',data:[phyAvg.toFixed(1),chemAvg.toFixed(1),bioAvg.toFixed(1)],borderColor:'#e8c547',backgroundColor:'rgba(232,197,71,0.1)',pointBackgroundColor:['#4fc3f7','#a78bfa','#4ade80'],pointRadius:6,borderWidth:2}]},
+    options:{scales:{r:{grid:{color:'#1e1e2e'},ticks:{display:false},pointLabels:{color:'#e8e8f0',font:{family:'JetBrains Mono',size:11}}}},plugins:{legend:{display:false}}}
+  });
+
+  const top10 = sorted.slice(0,10);
+  if(stackedInst) stackedInst.destroy();
+  stackedInst = new Chart(document.getElementById('stackedChart'), {
+    type:'bar',
+    data:{labels:top10.map(s=>firstMeaningfulName(s.name)),datasets:[
+      {label:'Correct',data:top10.map(s=>s.tot_c),backgroundColor:'#47e8c5bb',stack:'s'},
+      {label:'Wrong',data:top10.map(s=>s.tot_w),backgroundColor:'#e847a0bb',stack:'s'},
+      {label:'Unattempted',data:top10.map(s=>180-s.tot_a),backgroundColor:'#1e1e2e',stack:'s'},
+    ]},
+    options:{scales:{x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:180}},plugins:{legend:{labels:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}}}}}
+  });
+
+  const accSorted = [...raw].sort((a,b)=>b.accuracy-a.accuracy);
+  if(accuracyInst) accuracyInst.destroy();
+  accuracyInst = new Chart(document.getElementById('accuracyChart'), {
+    type:'bar',
+    data:{labels:accSorted.map(s=>firstMeaningfulName(s.name)),datasets:[{label:'Accuracy %',data:accSorted.map(s=>s.accuracy),backgroundColor:accSorted.map(s=>s.accuracy>=70?'#47e8c5aa':s.accuracy>=50?'#e8c547aa':s.accuracy>=35?'#fb923caa':'#e847a0aa'),borderRadius:2}]},
+    options:{indexAxis:'y',scales:{x:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'#1e1e2e'},max:100},y:{ticks:{color:'#6b6b8a',font:{family:'JetBrains Mono',size:9}},grid:{color:'transparent'}}},plugins:{legend:{display:false}}}
+  });
+
+  const hmGrid = document.getElementById('heatmapGrid');
+  hmGrid.innerHTML = '';
+  const subjects = ['phy','chem','bio'];
+  const subjColors = {'phy':'79,195,247','chem':'167,139,250','bio':'74,222,128'};
+  hmGrid.style.gridTemplateColumns = 'repeat(' + (subjects.length * 3) + ', 28px)';
+  ['P','C','B'].forEach(s => { ['C','W','%'].forEach(t => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'font-size:0.55rem;color:var(--muted);letter-spacing:0.1em;text-align:center;padding-bottom:4px;';
+    cell.textContent = s + '\u00b7' + t;
+    hmGrid.appendChild(cell);
+  }); });
+  sorted.slice(0, 30).forEach(s => {
+    subjects.forEach(subj => {
+      const c = s[subj+'_c'], w = s[subj+'_w'], a = s[subj+'_a'];
+      const acc = a > 0 ? Math.round((c/a)*100) : 0;
+      const rgb = subjColors[subj];
+      const dn = firstMeaningfulName(s.name);
+      const maxQ = subj === 'bio' ? 90 : 45;
+      const mk = (bg, tip) => {
+        const el = document.createElement('div');
+        el.className = 'matrix-cell';
+        el.style.cssText = 'background:' + bg + ';width:28px;height:28px;';
+        el.innerHTML = '<div class="tooltip">' + dn + ' \u00b7 ' + subj.toUpperCase() + ' ' + tip + '</div>';
+        hmGrid.appendChild(el);
+      };
+      mk('rgba('+rgb+','+(0.1+(c/maxQ)*0.7)+')', 'correct: '+c);
+      mk('rgba(232,71,160,'+(0.05+(w/maxQ)*0.7)+')', 'wrong: '+w);
+      mk('rgba(232,197,71,'+(0.05+(acc/100)*0.7)+')', 'accuracy: '+acc+'%');
+    });
+  });
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if(e.isIntersecting){
+        e.target.classList.add('visible');
+        e.target.querySelectorAll('.dist-bar-inner').forEach(b => { b.style.width = b.dataset.pct + '%'; });
+      }
+    });
+  }, {threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(el => { el.classList.remove('visible'); observer.observe(el); });
+}
+
+function showError(msg) {
+  const el = document.getElementById('uploadError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideOverlay() {
+  const overlay = document.getElementById('uploadOverlay');
+  overlay.style.opacity = '0';
+  setTimeout(() => { overlay.style.display = 'none'; }, 500);
+}
+
+async function loadCSVByName(filename) {
+  try {
+    const res = await fetch('/static/' + filename);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    if (rows.length === 0) { showError('CSV appears empty or malformed'); return; }
+    hideOverlay();
+    buildDashboard(rows.map(mapRow), filename);
+  } catch(err) {
+    showError('Error loading file: ' + err.message);
+  }
+}
+
+async function populatePickerMenu() {
+  const menu = document.getElementById('csvMenu');
+  try {
+    const res = await fetch('/api/csv-files');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const files = await res.json();
+    const neetFiles = files.filter(f => f.toLowerCase().includes('neet'));
+    if (neetFiles.length === 0) {
+      menu.innerHTML = '<div style="color:#6b6b8a;font-size:0.75rem;letter-spacing:0.15em;text-align:center;padding:1rem;">NO NEET CSV FILES FOUND IN /static<br>Please add a file named like "neet.csv" or "neet_*.csv"</div>';
+      return;
+    }
+    neetFiles.forEach(filename => {
+      const label = filename.replace('.csv','').replace(/_/g,' ').toUpperCase();
+      const btn = document.createElement('button');
+      btn.className = 'csv-btn';
+      btn.innerHTML = '<span>' + label + '</span><span class="csv-btn-filename">' + filename + '</span>';
+      btn.addEventListener('click', () => {
+        const url = new URL(window.location);
+        url.searchParams.set('file', filename);
+        history.replaceState(null, '', url.toString());
+        loadCSVByName(filename);
+      });
+      menu.appendChild(btn);
+    });
+  } catch(err) {
+    menu.innerHTML = '<div style="color:#e847a0;font-size:0.7rem;">Failed to load file list: ' + err.message + '</div>';
+  }
+}
+
+(async function boot() {
+  const params = new URLSearchParams(window.location.search);
+  const fileParam = params.get('file');
+
+  if (fileParam) {
+    document.getElementById('heroSub').textContent = 'LOADING ' + fileParam.toUpperCase() + '…';
+    await loadCSVByName(fileParam);
+  } else {
+    document.getElementById('heroSub').textContent = 'SELECT A NEET TEST TO BEGIN';
+    const overlay = document.getElementById('uploadOverlay');
+    overlay.style.display = 'flex';
+    overlay.style.opacity = '1';
+    await populatePickerMenu();
+  }
+})();
+</script>
+</body>
+</html>"""
+
 
 if __name__ == "__main__":
     app.run(debug=True)
