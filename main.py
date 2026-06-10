@@ -2694,16 +2694,16 @@ async function loadMenu() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const files = await res.json();
     
-    // Filter only files matching pattern: 30jut{num}.csv (case insensitive)
+    // Filter only files matching pattern: 60jut{num}.csv (case insensitive)
     const jutFiles = files.filter(f => {
-      const match = f.toLowerCase().match(/^30jut(\d+)\.csv$/);
+      const match = f.toLowerCase().match(/^60jut(\d+)\.csv$/);
       return match !== null;
     });
     
     // Sort by number (extract the number from filename)
     jutFiles.sort((a, b) => {
-      const numA = parseInt(a.match(/30jut(\d+)\.csv/i)[1]);
-      const numB = parseInt(b.match(/30jut(\d+)\.csv/i)[1]);
+      const numA = parseInt(a.match(/60jut(\d+)\.csv/i)[1]);
+      const numB = parseInt(b.match(/60jut(\d+)\.csv/i)[1]);
       return numA - numB;
     });
 
@@ -2712,7 +2712,7 @@ async function loadMenu() {
     if (jutFiles.length === 0) {
       grid.innerHTML = `<div class="empty-state">
         <div class="empty-state-icon">NO JUT FILES</div>
-        <p>No files matching pattern <code>30jut{num}.csv</code> found in /static folder.<br>Example: 30jut1.csv, 30jut2.csv, ... 30jut30.csv</p>
+        <p>No files matching pattern <code>60jut{num}.csv</code> found in /static folder.<br>Example: 60jut1.csv, 60jut2.csv, ... 60jut30.csv</p>
       </div>`;
       return;
     }
@@ -2720,7 +2720,7 @@ async function loadMenu() {
     grid.innerHTML = '';
     jutFiles.forEach((filename, idx) => {
       // Extract number for display
-      const numMatch = filename.match(/30jut(\d+)\.csv/i);
+      const numMatch = filename.match(/60jut(\d+)\.csv/i);
       const jutNum = numMatch ? numMatch[1] : '';
       const label = `JUT ${jutNum}`;
       const card = document.createElement('a');
