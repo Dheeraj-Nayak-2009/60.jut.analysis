@@ -1,27 +1,59 @@
-from flask import Flask, Blueprint, jsonify, request, render_template, url_for
+from flask import Flask, Blueprint, jsonify, request, render_template, session, redirect, url_for, abort, send_from_directory, render_template_string
 import os
 import csv
+from functools import wraps
 
 app = Flask(__name__)
+app.secret_key = 'supersecretkey-change-in-production'  # Use env var in production
 
+# ── Hardcoded password ──
+PASSWORD = "jut2025"
+
+# ── Login required decorator ──
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated
+
+# ── Login / Logout routes ──
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        if password == PASSWORD:
+            session['logged_in'] = True
+            next_url = request.args.get('next') or url_for('read_root')
+            return redirect(next_url)
+        else:
+            return render_template_string(LOGIN_HTML, error="Incorrect password. Try again.")
+    return render_template_string(LOGIN_HTML, error=None)
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
+
+# ── API blueprint ──
 api_bp = Blueprint('api', __name__)
 
-@app.route("/annual")
-def annual():
-    return render_template("annual.html")
+# All API endpoints are also protected (optional)
+@api_bp.before_request
+def api_login_required():
+    if not session.get('logged_in'):
+        return jsonify({"error": "Authentication required"}), 401
 
-# ── ALL blueprint routes MUST be defined before app.register_blueprint() ──
-
+# ── API routes (same as before, but now protected by blueprint before_request) ──
 @api_bp.get("/api/csv-files")
 def list_csv_files():
     static_dir = app.static_folder
     files = [f for f in os.listdir(static_dir) if f.endswith('.csv')]
     return jsonify(sorted(files))
 
-
 @api_bp.get("/api/master-data")
 def get_master_data():
-    """Return all rows from master/master.csv as JSON."""
     master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
     if not os.path.exists(master_path):
         return jsonify({"error": "master.csv not found"}), 404
@@ -32,10 +64,8 @@ def get_master_data():
             rows.append({k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()})
     return jsonify(rows)
 
-
 @api_bp.get("/api/student/<path:student_name>")
 def get_student_data(student_name):
-    """Return all rows for a specific student from master.csv."""
     master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
     if not os.path.exists(master_path):
         return jsonify({"error": "master.csv not found"}), 404
@@ -48,11 +78,8 @@ def get_student_data(student_name):
                 results.append(clean)
     return jsonify(results)
 
-
-
 @api_bp.get("/api/elites")
 def get_elites():
-    """Compute elite badges from master.csv."""
     import json, math
     master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
     if not os.path.exists(master_path):
@@ -62,7 +89,6 @@ def get_elites():
         reader = csv.DictReader(f)
         for row in reader:
             rows.append({k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()})
-    # Group by student
     students = {}
     for r in rows:
         name = r.get('name','').strip()
@@ -107,10 +133,8 @@ def get_elites():
         pct_rank = round(rank/total_students*100) if total_students else 100
         sd = math_module_sd(scores)
         consistency = max(0, round(100 - sd/avg_score*100)) if avg_score > 0 and len(scores) >= 3 else None
-        # Determine dominant subject
         subj_avgs = {'Physics': avg_phy, 'Chemistry': avg_chem, 'Maths': avg_math}
         dominant = max(subj_avgs, key=subj_avgs.get)
-        # Badges
         badges = []
         if rank == 1: badges.append({'id':'rank1','label':'#1 Overall','tier':'legendary','icon':'👑'})
         if rank <= 3: badges.append({'id':'podium','label':'Podium','tier':'gold','icon':'🏅'})
@@ -130,12 +154,9 @@ def get_elites():
         if avg_phy >= 90: badges.append({'id':'phy_god','label':'Physics God','tier':'gold','icon':'⚡'})
         if avg_chem >= 90: badges.append({'id':'chem_god','label':'Chem Genius','tier':'gold','icon':'🔭'})
         if avg_math >= 90: badges.append({'id':'math_god','label':'Math Wizard','tier':'gold','icon':'🌀'})
-        # Improvement streak: last 3 scores all increasing
         if len(scores) >= 3 and all(scores[i] < scores[i+1] for i in range(len(scores)-3, len(scores)-1)):
             badges.append({'id':'rising','label':'Rising Star','tier':'silver','icon':'📈'})
-        # Only include students with at least 1 badge or top half
         if not badges and pct_rank > 50: continue
-        # Photo path: derive from file column (e.g. U816.csv → U816.jpg)
         file_base = os.path.splitext(os.path.basename(s['file']))[0] if s['file'] else ''
         result.append({
             'name': s['name'],
@@ -163,33 +184,182 @@ def math_module_sd(scores):
     m = sum(scores)/len(scores)
     return math.sqrt(sum((x-m)**2 for x in scores)/len(scores))
 
-
-# ── Register blueprint AFTER all routes are defined ──
 app.register_blueprint(api_bp)
 
+# ── Protected HTML pages ──
+@app.route("/")
+@login_required
+def read_root():
+    return app.response_class(HOME_HTML, mimetype='text/html')
 
+@app.route("/analysis")
+@login_required
+def analysis():
+    return app.response_class(ANALYSIS_HTML, mimetype='text/html')
 
-import mimetypes
+@app.route("/student")
+@login_required
+def student_page():
+    return app.response_class(INDIVIDUAL_HTML, mimetype='text/html')
 
+@app.route("/overview")
+@login_required
+def overview_page():
+    return app.response_class(OVERVIEW_HTML, mimetype='text/html')
+
+@app.route("/elites")
+@login_required
+def elites_page():
+    return app.response_class(ELITES_HTML, mimetype='text/html')
+
+@app.route("/annual")
+@login_required
+def annual():
+    return render_template("annual.html")
+
+@app.route("/kcet")
+@login_required
+def kcet_page():
+    return app.response_class(KCET_HTML, mimetype='text/html')
+
+@app.route("/neet")
+@login_required
+def neet_page():
+    return app.response_class(NEET_HTML, mimetype='text/html')
+
+# ── Static image serving (also protected) ──
 @app.route("/img/<path:filename>")
+@login_required
 def serve_img(filename):
-    from flask import send_from_directory, abort
     img_dir = os.path.join(os.path.dirname(app.static_folder), 'img')
     if not os.path.exists(img_dir):
         abort(404)
     return send_from_directory(img_dir, filename)
 
-# ── Page routes (these go on `app` directly, not the blueprint) ──
+@app.route('/public/<path:filename>')
+@login_required
+def public_files(filename):
+    return send_from_directory('public', filename)
 
-@app.get("/")
-def read_root():
-    return app.response_class(HOME_HTML, mimetype='text/html')
-
-
-@app.get("/analysis")
-def analysis():
-    return app.response_class(ANALYSIS_HTML, mimetype='text/html')
-
+# ── Login page HTML ──
+LOGIN_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login · JUT Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background: #0a0a0f;
+            color: #e8e8f0;
+            font-family: 'JetBrains Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: radial-gradient(ellipse at 30% 40%, rgba(232,197,71,0.06) 0%, transparent 60%),
+                              radial-gradient(ellipse at 70% 60%, rgba(71,232,197,0.05) 0%, transparent 60%);
+        }
+        .login-box {
+            background: #111118;
+            border: 1px solid #1e1e2e;
+            border-radius: 12px;
+            padding: 3rem 2.5rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        .login-box h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.8rem;
+            letter-spacing: 0.02em;
+            color: #e8c547;
+            margin-bottom: 0.3rem;
+        }
+        .login-box .sub {
+            font-size: 0.65rem;
+            letter-spacing: 0.3em;
+            color: #6b6b8a;
+            text-transform: uppercase;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #1e1e2e;
+            padding-bottom: 0.8rem;
+        }
+        .login-box form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+        .login-box label {
+            font-size: 0.6rem;
+            letter-spacing: 0.2em;
+            color: #6b6b8a;
+            text-transform: uppercase;
+        }
+        .login-box input[type="password"] {
+            background: #0a0a0f;
+            border: 1px solid #1e1e2e;
+            color: #e8e8f0;
+            padding: 0.8rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .login-box input[type="password"]:focus {
+            border-color: #e8c547;
+        }
+        .login-box .error {
+            color: #e847a0;
+            font-size: 0.65rem;
+            letter-spacing: 0.1em;
+            min-height: 1.5rem;
+        }
+        .login-box button {
+            background: #e8c547;
+            border: none;
+            color: #0a0a0f;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.4rem;
+            padding: 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            width: 100%;
+            letter-spacing: 0.1em;
+        }
+        .login-box button:hover {
+            background: #d4b03a;
+        }
+        .login-box button:active {
+            transform: scale(0.97);
+        }
+        .login-box .hint {
+            font-size: 0.55rem;
+            color: #6b6b8a;
+            text-align: center;
+            margin-top: 1rem;
+            letter-spacing: 0.15em;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>🔐 JUT HUB</h1>
+        <div class="sub">Authentication Required</div>
+        <form method="post">
+            <label for="password">Enter Password</label>
+            <input type="password" id="password" name="password" placeholder="••••••••" autofocus>
+            <div class="error">{{ error if error else '' }}</div>
+            <button type="submit">Unlock</button>
+        </form>
+        <div class="hint">Contact admin if you don't have the password.</div>
+    </div>
+</body>
+</html>"""
 
 INDIVIDUAL_HTML = r"""<!DOCTYPE html>
 <html lang="en">
@@ -1111,12 +1281,6 @@ function nullEntry(){return{total:0,rank:null,percentile:0,phy_a:0,chem_a:0,math
 </body>
 </html>
 """
-
-
-@app.get("/student")
-def student_page():
-    return app.response_class(INDIVIDUAL_HTML, mimetype='text/html')
-
 
 OVERVIEW_HTML = r"""<!DOCTYPE html>
 <html lang="en">
@@ -2082,16 +2246,6 @@ loadData();
 </html>
 """
 
-
-@app.get("/overview")
-def overview_page():
-    return app.response_class(OVERVIEW_HTML, mimetype='text/html')
-
-@app.route('/public/<path:filename>')
-def public_files(filename):
-    from flask import send_from_directory
-    return send_from_directory('public', filename)
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  HOME PAGE
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2750,7 +2904,6 @@ loadMenu();
 </script>
 </body>
 </html>"""
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  ANALYSIS PAGE
@@ -3932,7 +4085,6 @@ async function populatePickerMenu() {
 </body>
 </html>"""
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  ELITES PAGE
 # ══════════════════════════════════════════════════════════════════════════════
@@ -4455,19 +4607,9 @@ loadElites();
 </body>
 </html>"""
 
-
-@app.get("/elites")
-def elites_page():
-    return app.response_class(ELITES_HTML, mimetype='text/html')
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  NEET ANALYSIS PAGE
 # ══════════════════════════════════════════════════════════════════════════════
-
-@app.get("/neet")
-def neet_page():
-    return app.response_class(NEET_HTML, mimetype='text/html')
-
 
 NEET_HTML = r"""<!DOCTYPE html>
 <html lang="en">
@@ -5679,11 +5821,6 @@ async function populatePickerMenu() {
 # ══════════════════════════════════════════════════════════════════════════════
 #  KCET ANALYSIS PAGE
 # ══════════════════════════════════════════════════════════════════════════════
-
-@app.get("/kcet")
-def kcet_page():
-    return app.response_class(KCET_HTML, mimetype='text/html')
-
 
 KCET_HTML = r"""<!DOCTYPE html>
 <html lang="en">
