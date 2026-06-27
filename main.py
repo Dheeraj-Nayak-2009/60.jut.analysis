@@ -256,6 +256,46 @@ def kcet_page():
 def neet_page():
     return app.response_class(NEET_HTML, mimetype='text/html')
 
+@api_bp.get("/api/anomalies")
+def get_anomalies():
+    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
+    if not os.path.exists(master_path):
+        return jsonify({"error": "master.csv not found"}), 404
+    rows = []
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            # Check if any attempt > 75
+            attempt_keys = ['total_attempt', 'phy_attempt', 'chem_attempt', 'math_attempt']
+            is_anomaly = False
+            for k in attempt_keys:
+                if k in clean and clean[k].strip():
+                    try:
+                        if float(clean[k]) > 75:
+                            is_anomaly = True
+                            break
+                    except ValueError:
+                        pass
+            if is_anomaly:
+                rows.append(clean)
+    # Group by test
+    grouped = {}
+    for r in rows:
+        test = r.get('test', 'Unknown')
+        if test not in grouped:
+            grouped[test] = []
+        grouped[test].append(r)
+    # Sort tests
+    sorted_tests = sorted(grouped.keys())
+    result = {t: grouped[t] for t in sorted_tests}
+    return jsonify(result)
+    
+@app.route("/anomaly")
+@login_required
+def anomaly_page():
+    return app.response_class(ANOMALY_HTML, mimetype='text/html')
+
 # ── Static image serving (also protected) ──
 @app.route("/img/<path:filename>")
 @login_required
@@ -2826,6 +2866,13 @@ Score • Analyse • Improve
       <div class="nc-label">BATCH SELECTION</div>
       <div class="nc-title">NEET Analysis</div>
       <div class="nc-desc">NEET Mock Test - Batch Selection.</div>
+      <div class="nc-arrow">→</div>
+    </a>
+    <a href="/anomaly" class="nav-card nc-analysis">
+      <div class="nc-icon">🔍</div>
+      <div class="nc-label">ANOMALY</div>
+      <div class="nc-title">Check Attempts</div>
+      <div class="nc-desc">Find rows with attempt > 75 across all JUTs – flagged before halving.</div>
       <div class="nc-arrow">→</div>
     </a>
   </div>
@@ -7092,6 +7139,99 @@ async function populatePickerMenu() {
     }
   }
 })();
+</script>
+</body>
+</html>"""
+
+#__________ANOMALY___________#
+ANOMALY_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JUT · Anomaly Check</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#111118;--surface2:#16161f;--border:#1e1e2e;
+  --accent:#e8c547;--accent2:#47e8c5;--accent3:#e847a0;
+  --text:#e8e8f0;--muted:#6b6b8a;
+  --red:#f87171;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;overflow-x:hidden;padding:2rem;}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.4;}
+.topnav{position:sticky;top:0;z-index:10;background:rgba(10,10,15,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;margin:-2rem -2rem 2rem -2rem;}
+.topnav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.08em;color:var(--text);text-decoration:none;}
+.topnav-logo span{color:var(--accent);}
+.topnav-back{font-size:0.6rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color 0.2s;}
+.topnav-back:hover{color:var(--accent);}
+h1{font-family:'Bebas Neue',sans-serif;font-size:4rem;margin-bottom:0.5rem;color:var(--accent);}
+.sub{font-size:0.7rem;color:var(--muted);letter-spacing:0.2em;margin-bottom:2rem;}
+.jut-block{margin-bottom:3rem;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.5rem;overflow-x:auto;}
+.jut-title{font-family:'DM Serif Display',serif;font-size:1.8rem;margin-bottom:1rem;color:var(--accent2);}
+table{width:100%;border-collapse:collapse;font-size:0.75rem;}
+th{text-align:left;padding:0.5rem 0.8rem;color:var(--muted);font-weight:400;letter-spacing:0.15em;text-transform:uppercase;border-bottom:1px solid var(--border);}
+td{padding:0.5rem 0.8rem;border-bottom:1px solid var(--border);}
+.anomaly-highlight{background:rgba(248,113,113,0.08);}
+.high-value{color:var(--red);font-weight:600;}
+.empty-state{text-align:center;padding:4rem;color:var(--muted);font-size:0.8rem;letter-spacing:0.2em;}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="topnav-logo" href="/">JUT<span>·</span>HUB</a>
+  <a class="topnav-back" href="/">← Back to Hub</a>
+</nav>
+<h1>⚠️ ANOMALY CHECK</h1>
+<div class="sub">Rows where any attempt > 75 (before halving correction) – grouped by JUT</div>
+<div id="content">
+  <div style="text-align:center;padding:3rem;color:var(--muted);">Loading anomalies…</div>
+</div>
+<script>
+async function loadAnomalies(){
+  const container = document.getElementById('content');
+  try{
+    const res = await fetch('/api/anomalies');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const tests = Object.keys(data);
+    if(!tests.length){
+      container.innerHTML = '<div class="empty-state">✅ No anomalies found – all attempt values ≤ 75.</div>';
+      return;
+    }
+    let html = '';
+    tests.forEach(test => {
+      const rows = data[test];
+      html += `<div class="jut-block"><div class="jut-title">📄 ${test}</div><table><thead><tr>
+        <th>Student</th><th>Total Attempt</th><th>Physics Attempt</th><th>Chemistry Attempt</th><th>Maths Attempt</th><th>Total Marks</th>
+      </tr></thead><tbody>`;
+      rows.forEach(r => {
+        const totalA = parseFloat(r.total_attempt) || 0;
+        const phyA = parseFloat(r.phy_attempt) || 0;
+        const chemA = parseFloat(r.chem_attempt) || 0;
+        const mathA = parseFloat(r.math_attempt) || 0;
+        const isAnomaly = totalA > 75 || phyA > 75 || chemA > 75 || mathA > 75;
+        const cls = isAnomaly ? 'anomaly-highlight' : '';
+        const highClass = (val) => val > 75 ? 'high-value' : '';
+        html += `<tr class="${cls}">
+          <td><strong>${r.name || 'Unknown'}</strong></td>
+          <td><span class="${highClass(totalA)}">${totalA}</span></td>
+          <td><span class="${highClass(phyA)}">${phyA}</span></td>
+          <td><span class="${highClass(chemA)}">${chemA}</span></td>
+          <td><span class="${highClass(mathA)}">${mathA}</span></td>
+          <td>${r.total_marks || r.total_score || '—'}</td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+    });
+    container.innerHTML = html;
+  } catch(e){
+    container.innerHTML = `<div class="empty-state" style="color:var(--red);">Error: ${e.message}</div>`;
+  }
+}
+loadAnomalies();
 </script>
 </body>
 </html>"""
