@@ -36,16 +36,40 @@ def logout():
     session.pop('logged_in', None)
     return redirect(url_for('login'))
 
+# ── Halving correction ──
+def halve_row_if_needed(row):
+    """If any attempt field > 75, halve all relevant numeric fields in place."""
+    attempt_keys = ['total_attempt', 'phy_attempt', 'chem_attempt', 'math_attempt']
+    for k in attempt_keys:
+        if k in row and row[k].strip():
+            try:
+                val = float(row[k])
+                if val > 75:
+                    fields_to_halve = [
+                        'total_score', 'phy_attempt', 'chem_attempt', 'math_attempt', 'total_attempt',
+                        'phy_correct', 'chem_correct', 'math_correct', 'total_correct',
+                        'phy_wrong', 'chem_wrong', 'math_wrong', 'total_wrong',
+                        'phy_marks', 'chem_marks', 'math_marks', 'total_marks'
+                    ]
+                    for f in fields_to_halve:
+                        if f in row and row[f].strip():
+                            try:
+                                row[f] = str(float(row[f]) / 2.0)
+                            except ValueError:
+                                pass
+                    break  # only halve once per row
+            except ValueError:
+                pass
+    return row
+
 # ── API blueprint ──
 api_bp = Blueprint('api', __name__)
 
-# All API endpoints are also protected (optional)
 @api_bp.before_request
 def api_login_required():
     if not session.get('logged_in'):
         return jsonify({"error": "Authentication required"}), 401
 
-# ── API routes (same as before, but now protected by blueprint before_request) ──
 @api_bp.get("/api/csv-files")
 def list_csv_files():
     static_dir = app.static_folder
@@ -61,7 +85,9 @@ def get_master_data():
     with open(master_path, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            rows.append({k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()})
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            halve_row_if_needed(clean)
+            rows.append(clean)
     return jsonify(rows)
 
 @api_bp.get("/api/student/<path:student_name>")
@@ -75,6 +101,7 @@ def get_student_data(student_name):
         for row in reader:
             clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
             if clean.get('name', '').strip().lower() == student_name.strip().lower():
+                halve_row_if_needed(clean)
                 results.append(clean)
     return jsonify(results)
 
@@ -88,7 +115,9 @@ def get_elites():
     with open(master_path, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            rows.append({k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()})
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            halve_row_if_needed(clean)
+            rows.append(clean)
     students = {}
     for r in rows:
         name = r.get('name','').strip()
@@ -2906,7 +2935,7 @@ loadMenu();
 </html>"""
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  ANALYSIS PAGE
+#  ANALYSIS PAGE (with halving correction in mapRow)
 # ══════════════════════════════════════════════════════════════════════════════
 ANALYSIS_HTML = r"""<!DOCTYPE html>
 <html lang="en">
@@ -3749,10 +3778,13 @@ function getInstA(fileVal){
   if(f.startsWith('M')) return 'MJS';
   return '';
 }
+
 function mapRow(r) {
-  const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined) return r[k]; } return '0'; };
-  const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined) return r[k]; } return ''; };
-  return {
+  const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return '0'; };
+  const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return ''; };
+  
+  // Base row
+  const row = {
     name:   getS('name') || 'Unknown',
     inst:   getInstA(getS('file','filename')),
     total:  n(get('total_marks','total_score','total')),
@@ -3773,6 +3805,18 @@ function mapRow(r) {
     chem_m: n(get('chem_marks','chemistry_marks')),
     math_m: n(get('math_marks','maths_marks')),
   };
+
+  // ── Halving correction ──
+  const attemptVals = [row.phy_a, row.chem_a, row.math_a, row.tot_a];
+  if (attemptVals.some(v => v > 75)) {
+    const fields = ['phy_a','chem_a','math_a','tot_a','phy_c','chem_c','math_c','tot_c',
+                    'phy_w','chem_w','math_w','tot_w','phy_m','chem_m','math_m','total'];
+    fields.forEach(f => {
+      if (f === 'total') row.total = row.total / 2;
+      else row[f] = row[f] / 2;
+    });
+  }
+  return row;
 }
 
 let radarInst, stackedInst, accuracyInst;
@@ -4086,7 +4130,7 @@ async function populatePickerMenu() {
 </html>"""
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  ELITES PAGE
+#  ELITES PAGE (unchanged, uses backend corrected data)
 # ══════════════════════════════════════════════════════════════════════════════
 ELITES_HTML = r"""<!DOCTYPE html>
 <html lang="en">
@@ -4608,7 +4652,7 @@ loadElites();
 </html>"""
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  NEET ANALYSIS PAGE
+#  NEET ANALYSIS PAGE (with halving correction in mapRow)
 # ══════════════════════════════════════════════════════════════════════════════
 
 NEET_HTML = r"""<!DOCTYPE html>
@@ -5455,12 +5499,13 @@ function getInstA(fileVal){
 function mapRow(r) {
   const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return '0'; };
   const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return ''; };
-  return {
+  
+  // Base row
+  const row = {
     name:   getS('name') || 'Unknown',
     inst:   getInstA(getS('file','filename')),
     total:  n(get('total_marks','total_score','total')),
     rank:   n(get('rank')),
-    // NEET: Bio attempt/correct/wrong - column names may vary
     phy_a:  n(get('phy_attempt','physics_attempt','phy_attempted','physics_attempted')),
     chem_a: n(get('chem_attempt','chemistry_attempt','chem_attempted','chemistry_attempted')),
     bio_a:  n(get('bio_attempt','biology_attempt','bio_attempted','biology_attempted','bot_attempt','zoo_attempt')),
@@ -5477,6 +5522,20 @@ function mapRow(r) {
     chem_m: n(get('chem_marks','chemistry_marks')),
     bio_m:  n(get('bio_marks','biology_marks','bot_marks','zoo_marks')),
   };
+
+  // ── Halving correction ──
+  const attemptVals = [row.phy_a, row.chem_a, row.bio_a, row.tot_a];
+  if (attemptVals.some(v => v > 180)) { // NEET has 180 questions total, but individual subject max 90 or 45
+    // Check if any attempt > 180 (which would indicate double counting) then halve.
+    // Since NEET has 180 questions total, if any attempt > 180 we halve all fields.
+    const fields = ['phy_a','chem_a','bio_a','tot_a','phy_c','chem_c','bio_c','tot_c',
+                    'phy_w','chem_w','bio_w','tot_w','phy_m','chem_m','bio_m','total'];
+    fields.forEach(f => {
+      if (f === 'total') row.total = row.total / 2;
+      else row[f] = row[f] / 2;
+    });
+  }
+  return row;
 }
 
 let radarInst, stackedInst, accuracyInst;
@@ -5819,7 +5878,7 @@ async function populatePickerMenu() {
 </html>"""
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  KCET ANALYSIS PAGE
+#  KCET ANALYSIS PAGE (with halving correction in mapRow)
 # ══════════════════════════════════════════════════════════════════════════════
 
 KCET_HTML = r"""<!DOCTYPE html>
@@ -6665,7 +6724,9 @@ function getInstA(fileVal){
 function mapRow(r) {
   const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return '0'; };
   const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return ''; };
-  return {
+  
+  // Base row
+  const row = {
     name:   getS('name') || 'Unknown',
     inst:   getInstA(getS('file','filename')),
     total:  n(get('total_marks','total_score','total')),
@@ -6686,6 +6747,18 @@ function mapRow(r) {
     chem_m: n(get('chem_marks','chemistry_marks')),
     math_m: n(get('math_marks','maths_marks','mathematics_marks')),
   };
+
+  // ── Halving correction ──
+  const attemptVals = [row.phy_a, row.chem_a, row.math_a, row.tot_a];
+  if (attemptVals.some(v => v > 180)) { // KCET has 180 questions total (60 per subject)
+    const fields = ['phy_a','chem_a','math_a','tot_a','phy_c','chem_c','math_c','tot_c',
+                    'phy_w','chem_w','math_w','tot_w','phy_m','chem_m','math_m','total'];
+    fields.forEach(f => {
+      if (f === 'total') row.total = row.total / 2;
+      else row[f] = row[f] / 2;
+    });
+  }
+  return row;
 }
 
 let radarInst, stackedInst, accuracyInst;
@@ -6700,8 +6773,7 @@ function buildDashboard(raw, filename) {
   const avg  = Math.round(raw.reduce((s,r) => s+r.total, 0) / raw.length);
   const high = Math.max(...raw.map(r => r.total));
   const avgAcc = Math.round(raw.reduce((s,r) => s+r.accuracy, 0) / raw.length);
-  const maxPossible = 600; // KCET total marks (60 questions x 10 marks? Actually from data: Phy 60, Chem 60, Math 60 = 180 q? Let me check)
-  // From data: total marks appear to be out of 600? Sample: 567, 493, 532 etc. Yes KCET is 60 per subject = 180 q, but marks are 600 total.
+  const maxPossible = 600; // KCET total marks (60 questions x 10 marks? Actually from data: Phy 60, Chem 60, Math 60 = 180 q, but marks are 600 total.)
 
   document.getElementById('hs-avg').textContent   = avg;
   document.getElementById('hs-high').textContent  = high;
