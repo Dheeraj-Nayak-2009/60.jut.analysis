@@ -213,6 +213,41 @@ def math_module_sd(scores):
     m = sum(scores)/len(scores)
     return math.sqrt(sum((x-m)**2 for x in scores)/len(scores))
 
+@api_bp.get("/api/anomalies")
+def get_anomalies():
+    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
+    if not os.path.exists(master_path):
+        return jsonify({"error": "master.csv not found"}), 404
+    rows = []
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            # Check if any attempt > 75
+            attempt_keys = ['total_attempt', 'phy_attempt', 'chem_attempt', 'math_attempt']
+            is_anomaly = False
+            for k in attempt_keys:
+                if k in clean and clean[k].strip():
+                    try:
+                        if float(clean[k]) > 75:
+                            is_anomaly = True
+                            break
+                    except ValueError:
+                        pass
+            if is_anomaly:
+                rows.append(clean)
+    # Group by test
+    grouped = {}
+    for r in rows:
+        test = r.get('test', 'Unknown')
+        if test not in grouped:
+            grouped[test] = []
+        grouped[test].append(r)
+    # Sort tests
+    sorted_tests = sorted(grouped.keys())
+    result = {t: grouped[t] for t in sorted_tests}
+    return jsonify(result)
+
 app.register_blueprint(api_bp)
 
 # ── Protected HTML pages ──
@@ -255,41 +290,6 @@ def kcet_page():
 @login_required
 def neet_page():
     return app.response_class(NEET_HTML, mimetype='text/html')
-
-@api_bp.get("/api/anomalies")
-def get_anomalies():
-    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
-    if not os.path.exists(master_path):
-        return jsonify({"error": "master.csv not found"}), 404
-    rows = []
-    with open(master_path, newline='', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
-            # Check if any attempt > 75
-            attempt_keys = ['total_attempt', 'phy_attempt', 'chem_attempt', 'math_attempt']
-            is_anomaly = False
-            for k in attempt_keys:
-                if k in clean and clean[k].strip():
-                    try:
-                        if float(clean[k]) > 75:
-                            is_anomaly = True
-                            break
-                    except ValueError:
-                        pass
-            if is_anomaly:
-                rows.append(clean)
-    # Group by test
-    grouped = {}
-    for r in rows:
-        test = r.get('test', 'Unknown')
-        if test not in grouped:
-            grouped[test] = []
-        grouped[test].append(r)
-    # Sort tests
-    sorted_tests = sorted(grouped.keys())
-    result = {t: grouped[t] for t in sorted_tests}
-    return jsonify(result)
     
 @app.route("/anomaly")
 @login_required
