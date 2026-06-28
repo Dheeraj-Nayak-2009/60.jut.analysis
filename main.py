@@ -4,12 +4,113 @@ import csv
 from functools import wraps
 import json
 import re
+import base64
+import json
+import re
+import requests
+
+# ── Hardcoded password ──
+PASSWORD = "jut2025"
+
+# ── GitHub configuration ──
+# Set these as environment variables for security
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
+GITHUB_REPO = 'Dheeraj-Nayak-2009/60.jut.analysis'
+GITHUB_PATH = 'master/subject_swaps.json'
+GITHUB_BRANCH = 'main'
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey-change-in-production'  # Use env var in production
 
-# ── Hardcoded password ──
-PASSWORD = "jut2025"
+
+def get_github_file_sha():
+    """Get the SHA of the current file on GitHub."""
+    url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    resp = requests.get(url, headers=headers)
+    if resp.status_code == 200:
+        return resp.json().get('sha')
+    return None
+
+def update_github_file(content, commit_message):
+    """Update the file on GitHub with new content."""
+    url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    
+    # Get current SHA
+    sha = get_github_file_sha()
+    if not sha:
+        return {'error': 'Could not get file SHA'}, 500
+    
+    # Encode content to base64
+    content_b64 = base64.b64encode(content.encode('utf-8')).decode('utf-8')
+    
+    data = {
+        'message': commit_message,
+        'content': content_b64,
+        'sha': sha,
+        'branch': GITHUB_BRANCH
+    }
+    
+    resp = requests.put(url, headers=headers, json=data)
+    if resp.status_code in (200, 201):
+        return resp.json(), 200
+    else:
+        return {'error': resp.text}, resp.status_code
+
+@app.route("/api/swaps")
+@login_required
+def get_swaps():
+    """Get current swaps from GitHub."""
+    url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    resp = requests.get(url, headers=headers)
+    if resp.status_code == 200:
+        data = resp.json()
+        content = base64.b64decode(data['content']).decode('utf-8')
+        swaps = json.loads(content)
+        return jsonify(swaps)
+    return jsonify({}), 200
+
+@app.route("/api/swaps", methods=['POST'])
+@login_required
+def update_swaps():
+    """Update swaps on GitHub."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    # Validate structure
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Invalid format'}), 400
+    
+    for key, value in data.items():
+        if not isinstance(value, dict) or 'swap' not in value:
+            return jsonify({'error': f'Invalid entry for {key}'}), 400
+        if not isinstance(value['swap'], dict):
+            return jsonify({'error': f'Invalid swap for {key}'}), 400
+    
+    # Format as pretty JSON
+    content = json.dumps(data, indent=2, sort_keys=True)
+    result, status = update_github_file(content, 'Update subject swaps via UI')
+    
+    if status == 200:
+        return jsonify({'success': True, 'message': 'Swaps updated successfully'})
+    else:
+        return jsonify({'error': result.get('error', 'Update failed')}), status
+
+
+
+
 
 # ── Login required decorator ──
 def login_required(f):
@@ -371,6 +472,11 @@ def neet_page():
 @login_required
 def anomaly_page():
     return app.response_class(ANOMALY_HTML, mimetype='text/html')
+
+@app.route("/swap")
+@login_required
+def swap_manager():
+    return app.response_class(SWAP_MANAGER_HTML, mimetype='text/html')
 
 # ── Static image serving (also protected) ──
 @app.route("/img/<path:filename>")
@@ -7486,6 +7592,922 @@ async function loadAnomalies(){
   }
 }
 loadAnomalies();
+</script>
+</body>
+</html>"""
+
+
+SWAP_MANAGER_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swap Manager · JUT Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #e8c547;
+    --accent2: #47e8c5;
+    --accent3: #e847a0;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --phy: #4fc3f7;
+    --chem: #a78bfa;
+    --math: #fb923c;
+    --green: #4ade80;
+    --red: #f87171;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridDrift 30s linear infinite;
+  }
+  @keyframes gridDrift {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 60px; }
+  }
+
+  .glow-1 {
+    position: fixed;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,197,71,0.07) 0%, transparent 70%);
+    top: -200px; left: -200px;
+    pointer-events: none;
+    animation: floatA 18s ease-in-out infinite;
+  }
+  .glow-2 {
+    position: fixed;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(71,232,197,0.05) 0%, transparent 70%);
+    bottom: -100px; right: -100px;
+    pointer-events: none;
+    animation: floatB 22s ease-in-out infinite;
+  }
+  .glow-3 {
+    position: fixed;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,71,160,0.04) 0%, transparent 70%);
+    top: 50%; right: 20%;
+    pointer-events: none;
+    animation: floatC 26s ease-in-out infinite;
+  }
+  @keyframes floatA { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,40px)} }
+  @keyframes floatB { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-50px,-30px)} }
+  @keyframes floatC { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-50px)} }
+
+  .page {
+    position: relative;
+    z-index: 10;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 0;
+    border-bottom: 1px solid var(--border);
+    opacity: 0;
+    animation: fadeUp 0.6s 0.1s forwards;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+  .header-tag {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .hero {
+    padding: 4rem 0 3rem;
+    text-align: center;
+  }
+  .hero-eyebrow {
+    font-size: 0.65rem;
+    letter-spacing: 0.45em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.3s forwards;
+  }
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 8vw, 6rem);
+    line-height: 0.88;
+    letter-spacing: 0.02em;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.45s forwards;
+  }
+  .hero-title .outline { -webkit-text-stroke: 1.5px var(--accent); color: transparent; }
+  .hero-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    margin-top: 1.5rem;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.8;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.6s forwards;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 2rem 0;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.75s forwards;
+  }
+
+  .section-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.5rem);
+    margin-bottom: 2rem;
+  }
+
+  .topnav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 500;
+    background: rgba(10,10,15,0.9);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 2rem;
+  }
+  .topnav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .topnav-logo span { color: var(--accent); }
+  .topnav-back {
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .topnav-back:hover { color: var(--accent); }
+
+  .main-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 6rem 2rem 4rem;
+  }
+
+  /* ── Swap UI ── */
+  .swap-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 3rem;
+  }
+  .swap-form-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .swap-form-group {
+    flex: 1;
+    min-width: 180px;
+  }
+  .swap-form-group label {
+    display: block;
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+  .swap-form-group select,
+  .swap-form-group input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.6rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .swap-form-group select:focus,
+  .swap-form-group input:focus {
+    border-color: var(--accent);
+  }
+  .swap-form-group select option {
+    background: var(--surface);
+  }
+
+  .swap-type-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .swap-type-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.4rem 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .swap-type-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .swap-type-btn.active {
+    border-color: var(--accent);
+    background: rgba(232,197,71,0.1);
+    color: var(--accent);
+  }
+
+  .btn {
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    padding: 0.6rem 2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: 0.05em;
+    min-width: 120px;
+  }
+  .btn:hover { background: #d4b03a; }
+  .btn:active { transform: scale(0.97); }
+  .btn-danger {
+    background: var(--accent3);
+  }
+  .btn-danger:hover { background: #c73a8a; }
+  .btn-success {
+    background: var(--accent2);
+    color: var(--bg);
+  }
+  .btn-success:hover { background: #3ad4b5; }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-outline:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── Swap list ── */
+  .swap-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  .swap-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    transition: border-color 0.2s;
+  }
+  .swap-item:hover { border-color: rgba(232,197,71,0.3); }
+  .swap-item-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .swap-item-id {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--accent);
+    min-width: 80px;
+  }
+  .swap-item-mapping {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .swap-subj {
+    display: inline-block;
+    padding: 0.2rem 0.7rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  .swap-subj-phy { background: rgba(79,195,247,0.2); color: var(--phy); }
+  .swap-subj-chem { background: rgba(167,139,250,0.2); color: var(--chem); }
+  .swap-subj-math { background: rgba(251,146,60,0.2); color: var(--math); }
+  .swap-arrow { color: var(--muted); font-size: 1.2rem; }
+  .swap-item-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .swap-item-actions button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.3rem 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .swap-item-actions button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .swap-item-actions .delete-btn:hover {
+    border-color: var(--accent3);
+    color: var(--accent3);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted);
+  }
+  .empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 2rem;
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.4s ease;
+    max-width: 400px;
+  }
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  .toast-success { border-color: var(--green); }
+  .toast-success .toast-icon { color: var(--green); }
+  .toast-error { border-color: var(--red); }
+  .toast-error .toast-icon { color: var(--red); }
+  .toast-message { font-size: 0.7rem; margin-top: 0.3rem; }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(20px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  @media(max-width:600px) {
+    .swap-form-row { flex-direction: column; }
+    .swap-item { flex-direction: column; align-items: stretch; }
+    .swap-item-left { flex-direction: column; align-items: flex-start; }
+    .swap-item-actions { justify-content: flex-end; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="glow-1"></div>
+<div class="glow-2"></div>
+<div class="glow-3"></div>
+
+<nav class="topnav">
+  <a class="topnav-logo" href="/">JUT<span>·</span>HUB</a>
+  <a class="topnav-back" href="/">← Back to Hub</a>
+</nav>
+
+<div class="main-wrap">
+  <div class="hero">
+    <div class="hero-eyebrow">Subject Swap Manager</div>
+    <div class="hero-title">SWAP<span class="outline">CONTROL</span></div>
+    <div class="hero-desc">Add, edit, or remove subject swaps for any JUT. Changes are saved directly to GitHub.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── Add / Edit Form ── -->
+  <div class="section-label">Manage Swap</div>
+  <div class="section-title" id="formTitle">Add New Swap</div>
+  <div class="swap-form" id="swapForm">
+    <div class="swap-form-row">
+      <div class="swap-form-group">
+        <label>JUT ID</label>
+        <select id="jutSelect"></select>
+      </div>
+      <div class="swap-form-group">
+        <label>Swap Type</label>
+        <div class="swap-type-group" id="swapTypeGroup">
+          <button class="swap-type-btn" data-type="phy_math">P ↔ M</button>
+          <button class="swap-type-btn" data-type="chem_math">C ↔ M</button>
+          <button class="swap-type-btn" data-type="phy_chem">P ↔ C</button>
+          <button class="swap-type-btn" data-type="phy_chem_math">P → C → M</button>
+          <button class="swap-type-btn" data-type="custom">Custom</button>
+        </div>
+      </div>
+    </div>
+    <div class="swap-form-row" style="margin-top:1rem;" id="customSwapRow" style="display:none;">
+      <div class="swap-form-group" style="flex:0 0 120px;">
+        <label>From</label>
+        <select id="swapFrom">
+          <option value="phy">Physics</option>
+          <option value="chem">Chemistry</option>
+          <option value="math">Maths</option>
+        </select>
+      </div>
+      <div class="swap-form-group" style="flex:0 0 60px;text-align:center;padding-top:1.5rem;">
+        <span style="color:var(--muted);font-size:1.5rem;">→</span>
+      </div>
+      <div class="swap-form-group" style="flex:0 0 120px;">
+        <label>To</label>
+        <select id="swapTo">
+          <option value="phy">Physics</option>
+          <option value="chem">Chemistry</option>
+          <option value="math">Maths</option>
+        </select>
+      </div>
+    </div>
+    <div class="swap-form-row" style="margin-top:1.5rem;">
+      <button class="btn" id="saveBtn">Save Swap</button>
+      <button class="btn btn-outline" id="cancelBtn" style="display:none;">Cancel</button>
+      <span id="formStatus" style="font-size:0.65rem;color:var(--muted);margin-left:1rem;"></span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── Existing Swaps ── -->
+  <div class="section-label">Active Swaps</div>
+  <div class="section-title">Current Mappings</div>
+  <div id="swapListContainer">
+    <div style="text-align:center;padding:2rem;color:var(--muted);">
+      <div class="loading-spinner"></div>
+      <div style="margin-top:0.5rem;font-size:0.7rem;">Loading swaps…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast">
+  <div style="display:flex;align-items:center;gap:0.8rem;">
+    <span class="toast-icon" style="font-size:1.5rem;">✓</span>
+    <div>
+      <div style="font-weight:600;font-size:0.75rem;" id="toastTitle">Success</div>
+      <div class="toast-message" id="toastMessage">Swaps updated.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentSwaps = {};
+let editingId = null;
+let csvFiles = [];
+
+// ── DOM refs ──
+const jutSelect = document.getElementById('jutSelect');
+const swapTypeGroup = document.getElementById('swapTypeGroup');
+const customSwapRow = document.getElementById('customSwapRow');
+const swapFrom = document.getElementById('swapFrom');
+const swapTo = document.getElementById('swapTo');
+const saveBtn = document.getElementById('saveBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const formStatus = document.getElementById('formStatus');
+const formTitle = document.getElementById('formTitle');
+const swapListContainer = document.getElementById('swapListContainer');
+const toast = document.getElementById('toast');
+
+// ── Toast ──
+let toastTimeout;
+
+function showToast(message, type = 'success') {
+  toast.className = `toast toast-${type}`;
+  document.getElementById('toastTitle').textContent = type === 'success' ? 'Success' : 'Error';
+  document.getElementById('toastMessage').textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+// ── Fetch CSV files ──
+async function fetchCSVFiles() {
+  try {
+    const res = await fetch('/api/csv-files');
+    if (!res.ok) throw new Error('Failed to fetch files');
+    csvFiles = await res.json();
+    const ids = csvFiles
+      .map(f => {
+        const match = f.match(/\d+/g);
+        return match ? match[match.length - 1] : null;
+      })
+      .filter(id => id !== null);
+    // Populate dropdown
+    jutSelect.innerHTML = '';
+    ids.forEach(id => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `JUT ${id}`;
+      jutSelect.appendChild(opt);
+    });
+  } catch (e) {
+    console.error('Error fetching CSV files:', e);
+    showToast('Could not load JUT list', 'error');
+  }
+}
+
+// ── Fetch swaps ──
+async function fetchSwaps() {
+  try {
+    const res = await fetch('/api/swaps');
+    if (!res.ok) throw new Error('Failed to fetch swaps');
+    currentSwaps = await res.json();
+    renderSwaps();
+  } catch (e) {
+    console.error('Error fetching swaps:', e);
+    swapListContainer.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">⚠️</div>
+      <p>Could not load swaps. Make sure GITHUB_TOKEN is set.</p>
+    </div>`;
+  }
+}
+
+// ── Render swaps ──
+function renderSwaps() {
+  const ids = Object.keys(currentSwaps);
+  if (ids.length === 0) {
+    swapListContainer.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <p>No swaps configured yet. Add one above.</p>
+    </div>`;
+    return;
+  }
+
+  let html = '<div class="swap-list">';
+  ids.sort().forEach(id => {
+    const swap = currentSwaps[id].swap || {};
+    const entries = Object.entries(swap);
+    const mappingHtml = entries.map(([from, to]) => {
+      const fromLabel = {phy:'Physics',chem:'Chemistry',math:'Maths'}[from] || from;
+      const toLabel = {phy:'Physics',chem:'Chemistry',math:'Maths'}[to] || to;
+      const fromClass = {phy:'swap-subj-phy',chem:'swap-subj-chem',math:'swap-subj-math'}[from] || '';
+      const toClass = {phy:'swap-subj-phy',chem:'swap-subj-chem',math:'swap-subj-math'}[to] || '';
+      return `<span class="swap-subj ${fromClass}">${fromLabel}</span>
+              <span class="swap-arrow">→</span>
+              <span class="swap-subj ${toClass}">${toLabel}</span>`;
+    }).join(' <span class="swap-arrow" style="margin:0 0.3rem;">·</span> ');
+
+    html += `
+      <div class="swap-item" data-id="${id}">
+        <div class="swap-item-left">
+          <div class="swap-item-id">#${id}</div>
+          <div class="swap-item-mapping">${mappingHtml}</div>
+        </div>
+        <div class="swap-item-actions">
+          <button class="edit-btn" onclick="editSwap('${id}')">✎ Edit</button>
+          <button class="delete-btn" onclick="deleteSwap('${id}')">✕ Delete</button>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  swapListContainer.innerHTML = html;
+}
+
+// ── Swap type presets ──
+function getSwapForType(type) {
+  const presets = {
+    'phy_math': { phy: 'math', math: 'phy' },
+    'chem_math': { chem: 'math', math: 'chem' },
+    'phy_chem': { phy: 'chem', chem: 'phy' },
+    'phy_chem_math': { phy: 'chem', chem: 'math', math: 'phy' },
+  };
+  return presets[type] || null;
+}
+
+// ── Swap type button clicks ──
+document.querySelectorAll('.swap-type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const type = btn.dataset.type;
+    if (type === 'custom') {
+      customSwapRow.style.display = 'flex';
+      formStatus.textContent = 'Custom swap: select from → to';
+    } else {
+      customSwapRow.style.display = 'none';
+      const preset = getSwapForType(type);
+      if (preset) {
+        const desc = Object.entries(preset).map(([f,t]) => {
+          const labels = {phy:'P',chem:'C',math:'M'};
+          return `${labels[f]}→${labels[t]}`;
+        }).join(' · ');
+        formStatus.textContent = `Preset: ${desc}`;
+      }
+    }
+  });
+});
+
+// Default: select first preset
+document.querySelector('.swap-type-btn')?.classList.add('active');
+
+// ── Save / Update swap ──
+saveBtn.addEventListener('click', async () => {
+  const id = jutSelect.value;
+  if (!id) {
+    showToast('Please select a JUT ID', 'error');
+    return;
+  }
+
+  // Get active swap type
+  const activeBtn = document.querySelector('.swap-type-btn.active');
+  const type = activeBtn ? activeBtn.dataset.type : 'custom';
+  let swap = {};
+
+  if (type === 'custom') {
+    const from = swapFrom.value;
+    const to = swapTo.value;
+    if (from === to) {
+      showToast('Cannot swap a subject with itself', 'error');
+      return;
+    }
+    swap[from] = to;
+  } else {
+    const preset = getSwapForType(type);
+    if (!preset) {
+      showToast('Invalid swap type', 'error');
+      return;
+    }
+    swap = { ...preset };
+  }
+
+  // Update currentSwaps
+  currentSwaps[id] = { swap };
+
+  try {
+    const res = await fetch('/api/swaps', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentSwaps)
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(`Swap for JUT ${id} saved successfully!`, 'success');
+      renderSwaps();
+      resetForm();
+    } else {
+      showToast(data.error || 'Failed to save', 'error');
+    }
+  } catch (e) {
+    showToast('Network error: ' + e.message, 'error');
+  }
+});
+
+// ── Edit swap ──
+function editSwap(id) {
+  editingId = id;
+  const swap = currentSwaps[id]?.swap || {};
+  const entries = Object.entries(swap);
+
+  // Select JUT
+  jutSelect.value = id;
+
+  // Try to match a preset
+  const presetNames = {
+    'phy_math': { phy: 'math', math: 'phy' },
+    'chem_math': { chem: 'math', math: 'chem' },
+    'phy_chem': { phy: 'chem', chem: 'phy' },
+    'phy_chem_math': { phy: 'chem', chem: 'math', math: 'phy' },
+  };
+
+  let matched = false;
+  for (const [name, preset] of Object.entries(presetNames)) {
+    if (JSON.stringify(entries.sort()) === JSON.stringify(Object.entries(preset).sort())) {
+      document.querySelectorAll('.swap-type-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === name);
+      });
+      matched = true;
+      customSwapRow.style.display = 'none';
+      formStatus.textContent = `Editing preset for JUT ${id}`;
+      break;
+    }
+  }
+
+  if (!matched) {
+    // Custom
+    document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-type="custom"]')?.classList.add('active');
+    customSwapRow.style.display = 'flex';
+    if (entries.length > 0) {
+      swapFrom.value = entries[0][0];
+      swapTo.value = entries[0][1];
+    }
+    formStatus.textContent = `Editing custom swap for JUT ${id}`;
+  }
+
+  formTitle.textContent = `Edit Swap for JUT ${id}`;
+  saveBtn.textContent = 'Update Swap';
+  cancelBtn.style.display = 'inline-block';
+}
+
+// ── Delete swap ──
+async function deleteSwap(id) {
+  if (!confirm(`Delete swap for JUT ${id}?`)) return;
+  delete currentSwaps[id];
+
+  try {
+    const res = await fetch('/api/swaps', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentSwaps)
+    });
+    if (res.ok) {
+      showToast(`Swap for JUT ${id} deleted`, 'success');
+      renderSwaps();
+    } else {
+      const data = await res.json();
+      showToast(data.error || 'Failed to delete', 'error');
+    }
+  } catch (e) {
+    showToast('Network error: ' + e.message, 'error');
+  }
+}
+
+// ── Reset form ──
+function resetForm() {
+  editingId = null;
+  formTitle.textContent = 'Add New Swap';
+  saveBtn.textContent = 'Save Swap';
+  cancelBtn.style.display = 'none';
+  formStatus.textContent = '';
+  customSwapRow.style.display = 'none';
+  // Reset to first JUT
+  if (jutSelect.options.length > 0) jutSelect.selectedIndex = 0;
+  // Select first preset
+  document.querySelectorAll('.swap-type-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === 0);
+  });
+  swapFrom.value = 'phy';
+  swapTo.value = 'math';
+}
+
+cancelBtn.addEventListener('click', resetForm);
+
+// ── Auto-fill JUT from dropdown ──
+// When selecting a JUT that already has a swap, show its current mapping
+jutSelect.addEventListener('change', () => {
+  const id = jutSelect.value;
+  if (id && currentSwaps[id]) {
+    // We're viewing an existing swap - show its mapping but don't auto-edit
+    const swap = currentSwaps[id].swap || {};
+    const entries = Object.entries(swap);
+    if (entries.length > 0) {
+      // Try to match preset for display
+      const presetNames = {
+        'phy_math': { phy: 'math', math: 'phy' },
+        'chem_math': { chem: 'math', math: 'chem' },
+        'phy_chem': { phy: 'chem', chem: 'phy' },
+        'phy_chem_math': { phy: 'chem', chem: 'math', math: 'phy' },
+      };
+      let matched = false;
+      for (const [name, preset] of Object.entries(presetNames)) {
+        if (JSON.stringify(entries.sort()) === JSON.stringify(Object.entries(preset).sort())) {
+          document.querySelectorAll('.swap-type-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.type === name);
+          });
+          matched = true;
+          customSwapRow.style.display = 'none';
+          formStatus.textContent = `Existing: ${Object.entries(swap).map(([f,t]) => {
+            const labels = {phy:'P',chem:'C',math:'M'};
+            return `${labels[f]}→${labels[t]}`;
+          }).join(' · ')}`;
+          break;
+        }
+      }
+      if (!matched) {
+        document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('[data-type="custom"]')?.classList.add('active');
+        customSwapRow.style.display = 'flex';
+        swapFrom.value = entries[0][0];
+        swapTo.value = entries[0][1];
+        formStatus.textContent = `Existing custom: ${entries[0][0]} → ${entries[0][1]}`;
+      }
+    }
+  } else {
+    // Reset to default
+    document.querySelectorAll('.swap-type-btn').forEach((b, i) => {
+      b.classList.toggle('active', i === 0);
+    });
+    customSwapRow.style.display = 'none';
+    formStatus.textContent = '';
+  }
+});
+
+// ── Init ──
+async function init() {
+  await fetchCSVFiles();
+  await fetchSwaps();
+  // Set default JUT
+  if (jutSelect.options.length > 0) {
+    // Try to find the largest JUT number (most recent)
+    let maxIdx = 0;
+    let maxVal = 0;
+    for (let i = 0; i < jutSelect.options.length; i++) {
+      const val = parseInt(jutSelect.options[i].value);
+      if (val > maxVal) { maxVal = val; maxIdx = i; }
+    }
+    jutSelect.selectedIndex = maxIdx;
+  }
+  // Trigger change to show existing swap if any
+  jutSelect.dispatchEvent(new Event('change'));
+}
+
+init();
 </script>
 </body>
 </html>"""
