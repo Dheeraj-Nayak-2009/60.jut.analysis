@@ -2,6 +2,8 @@ from flask import Flask, Blueprint, jsonify, request, render_template, session, 
 import os
 import csv
 from functools import wraps
+import json
+import re
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey-change-in-production'  # Use env var in production
@@ -86,6 +88,7 @@ def get_master_data():
         reader = csv.DictReader(f)
         for row in reader:
             clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            apply_subject_swaps(clean)
             halve_row_if_needed(clean)
             rows.append(clean)
     return jsonify(rows)
@@ -101,6 +104,7 @@ def get_student_data(student_name):
         for row in reader:
             clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
             if clean.get('name', '').strip().lower() == student_name.strip().lower():
+                apply_subject_swaps(clean)
                 halve_row_if_needed(clean)
                 results.append(clean)
     return jsonify(results)
@@ -116,6 +120,7 @@ def get_elites():
         reader = csv.DictReader(f)
         for row in reader:
             clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            apply_subject_swaps(clean)
             halve_row_if_needed(clean)
             rows.append(clean)
     students = {}
@@ -213,6 +218,10 @@ def math_module_sd(scores):
     m = sum(scores)/len(scores)
     return math.sqrt(sum((x-m)**2 for x in scores)/len(scores))
 
+@api_bp.get("/api/subject-swaps")
+def get_subject_swaps():
+    return jsonify(load_subject_swaps())
+
 @api_bp.get("/api/anomalies")
 def get_anomalies():
     master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
@@ -223,6 +232,7 @@ def get_anomalies():
         reader = csv.DictReader(f)
         for row in reader:
             clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            apply_subject_swaps(clean)
             # Check if any attempt > 75
             attempt_keys = ['total_attempt', 'phy_attempt', 'chem_attempt', 'math_attempt']
             is_anomaly = False
@@ -248,6 +258,72 @@ def get_anomalies():
     result = {t: grouped[t] for t in sorted_tests}
     return jsonify(result)
 
+#______SWAP______#
+
+SWAPS_FILE = os.path.join(os.path.dirname(app.static_folder), 'master', 'subject_swaps.json')
+_subject_swaps = None
+
+def load_subject_swaps():
+    global _subject_swaps
+    if _subject_swaps is not None:
+        return _subject_swaps
+    if os.path.exists(SWAPS_FILE):
+        with open(SWAPS_FILE, 'r', encoding='utf-8') as f:
+            _subject_swaps = json.load(f)
+    else:
+        _subject_swaps = {}
+    return _subject_swaps
+
+def extract_test_code(test_field):
+    """Extract numeric code from test field, e.g. 'Details of NEW JEE: 9488' -> '9488'"""
+    if not test_field:
+        return None
+    # Try to find a number after a colon or at the end
+    m = re.search(r':\s*(\d+)', test_field)
+    if m:
+        return m.group(1)
+    # Fallback: any number in the string
+    m = re.search(r'\b(\d+)\b', test_field)
+    if m:
+        return m.group(1)
+    return test_field.strip()  # fallback to the whole string
+
+def apply_subject_swaps(row):
+    """Swap subject data in place if the test code has a swap mapping."""
+    test_field = row.get('test', '')
+    test_code = extract_test_code(test_field)
+    if not test_code:
+        return row
+    swaps = load_subject_swaps()
+    if test_code not in swaps:
+        return row
+    swap_map = swaps[test_code].get('swap', {})
+    if not swap_map:
+        return row
+
+    subjects = ['phy', 'chem', 'math']
+    suffixes = ['_marks', '_correct', '_wrong', '_attempt']
+    # Save original values for involved subjects
+    involved = set(swap_map.keys()) | set(swap_map.values())
+    original = {}
+    for subj in involved:
+        for suff in suffixes:
+            key = subj + suff
+            if key in row:
+                original[key] = row[key]
+    # Apply swaps
+    for subj in involved:
+        target = swap_map.get(subj, subj)
+        if target == subj:
+            continue
+        for suff in suffixes:
+            src_key = subj + suff
+            dst_key = target + suff
+            if src_key in original:
+                row[dst_key] = original[src_key]
+    return row
+    
+########### BLUEPRINT REG ##############
 app.register_blueprint(api_bp)
 
 # ── Protected HTML pages ──
@@ -3798,6 +3874,19 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
+let subjectSwaps = {};
+
+async function loadSubjectSwaps() {
+    try {
+        const res = await fetch('/api/subject-swaps');
+        if (res.ok) {
+            subjectSwaps = await res.json();
+        }
+    } catch(e) {
+        console.warn('Could not load subject swaps', e);
+    }
+}
+
 function firstMeaningfulName(fullName) {
   const parts = fullName.trim().split(/\s+/);
   for (const part of parts) { if (part.length > 1) return part; }
@@ -3826,6 +3915,15 @@ function getInstA(fileVal){
   return '';
 }
 
+function extractTestCode(testField) {
+    if (!testField) return null;
+    const m = testField.match(/:\s*(\d+)/);
+    if (m) return m[1];
+    const m2 = testField.match(/\b(\d+)\b/);
+    if (m2) return m2[1];
+    return testField.trim();
+}
+
 function mapRow(r) {
   const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return '0'; };
   const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return ''; };
@@ -3851,7 +3949,35 @@ function mapRow(r) {
     phy_m:  n(get('phy_marks','physics_marks')),
     chem_m: n(get('chem_marks','chemistry_marks')),
     math_m: n(get('math_marks','maths_marks')),
+    // also need 'test' for swaps
+    test: getS('test','test_name','filename','jut','jut_name') || 'Unknown'
   };
+
+  // ── Subject swap correction ──
+  const testCode = extractTestCode(row.test);
+  if (testCode && subjectSwaps[testCode]) {
+      const swapMap = subjectSwaps[testCode].swap || {};
+      const subjects = ['phy', 'chem', 'math'];
+      const suffixes = ['_marks', '_correct', '_wrong', '_attempt'];
+      const original = {};
+      for (const subj of subjects) {
+          for (const suff of suffixes) {
+              const key = subj + suff;
+              if (row[key] !== undefined) original[key] = row[key];
+          }
+      }
+      for (const subj of subjects) {
+          const target = swapMap[subj] || subj;
+          if (target === subj) continue;
+          for (const suff of suffixes) {
+              const srcKey = subj + suff;
+              const dstKey = target + suff;
+              if (srcKey in original) {
+                  row[dstKey] = original[srcKey];
+              }
+          }
+      }
+  }
 
   // ── Halving correction ──
   const attemptVals = [row.phy_a, row.chem_a, row.math_a, row.tot_a];
@@ -4158,6 +4284,7 @@ async function populatePickerMenu() {
 }
 
 (async function boot() {
+  await loadSubjectSwaps();   // <-- added
   const params = new URLSearchParams(window.location.search);
   const fileParam = params.get('file');
 
@@ -5572,9 +5699,7 @@ function mapRow(r) {
 
   // ── Halving correction ──
   const attemptVals = [row.phy_a, row.chem_a, row.bio_a, row.tot_a];
-  if (attemptVals.some(v => v > 180)) { // NEET has 180 questions total, but individual subject max 90 or 45
-    // Check if any attempt > 180 (which would indicate double counting) then halve.
-    // Since NEET has 180 questions total, if any attempt > 180 we halve all fields.
+  if (attemptVals.some(v => v > 180)) {
     const fields = ['phy_a','chem_a','bio_a','tot_a','phy_c','chem_c','bio_c','tot_c',
                     'phy_w','chem_w','bio_w','tot_w','phy_m','chem_m','bio_m','total'];
     fields.forEach(f => {
@@ -5597,7 +5722,7 @@ function buildDashboard(raw, filename) {
   const avg  = Math.round(raw.reduce((s,r) => s+r.total, 0) / raw.length);
   const high = Math.max(...raw.map(r => r.total));
   const avgAcc = Math.round(raw.reduce((s,r) => s+r.accuracy, 0) / raw.length);
-  const maxPossible = 720; // NEET total marks
+  const maxPossible = 720;
 
   document.getElementById('hs-avg').textContent   = avg;
   document.getElementById('hs-high').textContent  = high;
@@ -5893,18 +6018,15 @@ async function populatePickerMenu() {
       const neetFiles = files.filter(f => f.toLowerCase().includes('neet'));
       
       if (neetFiles.length === 1) {
-        // Only one NEET file - load it directly without showing picker
         document.getElementById('heroSub').textContent = 'LOADING ' + neetFiles[0].toUpperCase() + '…';
         await loadCSVByName(neetFiles[0]);
       } else if (neetFiles.length > 1) {
-        // Multiple files - show picker
         document.getElementById('heroSub').textContent = 'SELECT A NEET TEST TO BEGIN';
         const overlay = document.getElementById('uploadOverlay');
         overlay.style.display = 'flex';
         overlay.style.opacity = '1';
         await populatePickerMenu();
       } else {
-        // No files found
         document.getElementById('heroSub').textContent = 'NO NEET CSV FILES FOUND';
         const overlay = document.getElementById('uploadOverlay');
         overlay.style.display = 'flex';
@@ -6797,7 +6919,7 @@ function mapRow(r) {
 
   // ── Halving correction ──
   const attemptVals = [row.phy_a, row.chem_a, row.math_a, row.tot_a];
-  if (attemptVals.some(v => v > 180)) { // KCET has 180 questions total (60 per subject)
+  if (attemptVals.some(v => v > 180)) {
     const fields = ['phy_a','chem_a','math_a','tot_a','phy_c','chem_c','math_c','tot_c',
                     'phy_w','chem_w','math_w','tot_w','phy_m','chem_m','math_m','total'];
     fields.forEach(f => {
@@ -6820,7 +6942,7 @@ function buildDashboard(raw, filename) {
   const avg  = Math.round(raw.reduce((s,r) => s+r.total, 0) / raw.length);
   const high = Math.max(...raw.map(r => r.total));
   const avgAcc = Math.round(raw.reduce((s,r) => s+r.accuracy, 0) / raw.length);
-  const maxPossible = 600; // KCET total marks (60 questions x 10 marks? Actually from data: Phy 60, Chem 60, Math 60 = 180 q, but marks are 600 total.)
+  const maxPossible = 600;
 
   document.getElementById('hs-avg').textContent   = avg;
   document.getElementById('hs-high').textContent  = high;
