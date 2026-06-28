@@ -1,4 +1,22 @@
 {
+  "9513": {
+    "swap": {
+      "chem": "math",
+      "math": "chem"
+    }
+  },
+  "9535": {
+    "swap": {
+      "chem": "math",
+      "math": "chem"
+    }
+  },
+  "9626": {
+    "swap": {
+      "chem": "math",
+      "math": "chem"
+    }
+  },
   "9722": {
     "swap": {
       "phy": "math",
