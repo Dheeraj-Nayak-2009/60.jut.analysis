@@ -3882,8 +3882,6 @@ async function loadSubjectSwaps() {
         if (res.ok) {
             subjectSwaps = await res.json();
             console.log('✅ Subject swaps loaded:', subjectSwaps);
-        } else {
-            console.warn('⚠️ Failed to load subject swaps:', res.status);
         }
     } catch(e) {
         console.warn('⚠️ Could not load subject swaps', e);
@@ -3927,12 +3925,11 @@ function extractTestCode(testField) {
     return testField.trim();
 }
 
-function mapRow(r, filename) {
-  const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return '0'; };
-  const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return ''; };
-  
-  // Base row
-  const row = {
+function mapRow(r) {
+  const get = (...ks) => { for (const k of ks) { if (r[k] !== undefined && r[k] !== '') return r[k]; } return '0'; };
+  const getS = (...ks) => { for (const k of ks) { if (r[k] !== undefined && r[k] !== '') return r[k]; } return ''; };
+
+  return {
     name:   getS('name') || 'Unknown',
     inst:   getInstA(getS('file','filename')),
     total:  n(get('total_marks','total_score','total')),
@@ -3952,65 +3949,69 @@ function mapRow(r, filename) {
     phy_m:  n(get('phy_marks','physics_marks')),
     chem_m: n(get('chem_marks','chemistry_marks')),
     math_m: n(get('math_marks','maths_marks')),
-    // also need 'test' for swaps
-    test: getS('test','test_name','filename','jut','jut_name') || 'Unknown'
+    test:   getS('test','test_name','filename','jut','jut_name') || 'Unknown'
   };
+}
 
-  // ── Extract test code: first from row.test, then fallback to filename ──
-  let testCode = extractTestCode(row.test);
-  if (!testCode && filename) {
-      const match = filename.match(/\b(\d+)\b/);
-      if (match) testCode = match[1];
-  }
+// Apply subject swaps to an entire array of rows using a test code
+function applySwapsToData(rows, testCode) {
+    if (!testCode || !subjectSwaps[testCode]) return rows;
+    console.log(`🔄 Applying swap for test code: ${testCode}`);
+    const swapMap = subjectSwaps[testCode].swap || {};
+    const suffixMap = {
+        '_marks':   '_m',
+        '_correct': '_c',
+        '_wrong':   '_w',
+        '_attempt': '_a'
+    };
+    const subjects = ['phy', 'chem', 'math'];
 
-  // ── Subject swap correction ──
-  if (testCode && subjectSwaps[testCode]) {
-      console.log(`🔄 Applying swap for test code: ${testCode}`);
-      const swapMap = subjectSwaps[testCode].swap || {};
-      const subjects = ['phy', 'chem', 'math'];
-      const suffixes = ['_marks', '_correct', '_wrong', '_attempt'];
-      const original = {};
-      for (const subj of subjects) {
-          for (const suff of suffixes) {
-              const key = subj + suff;
-              if (row[key] !== undefined) original[key] = row[key];
-          }
-      }
-      for (const subj of subjects) {
-          const target = swapMap[subj] || subj;
-          if (target === subj) continue;
-          for (const suff of suffixes) {
-              const srcKey = subj + suff;
-              const dstKey = target + suff;
-              if (srcKey in original) {
-                  row[dstKey] = original[srcKey];
-              }
-          }
-      }
-  } else if (testCode && !subjectSwaps[testCode]) {
-      console.log(`ℹ️ No swap defined for test code: ${testCode}`);
-  } else {
-      console.log('⚠️ Could not extract test code from row or filename.');
-  }
-
-  // ── Halving correction ──
-  const attemptVals = [row.phy_a, row.chem_a, row.math_a, row.tot_a];
-  if (attemptVals.some(v => v > 75)) {
-    const fields = ['phy_a','chem_a','math_a','tot_a','phy_c','chem_c','math_c','tot_c',
-                    'phy_w','chem_w','math_w','tot_w','phy_m','chem_m','math_m','total'];
-    fields.forEach(f => {
-      if (f === 'total') row.total = row.total / 2;
-      else row[f] = row[f] / 2;
+    rows.forEach(row => {
+        // Save originals
+        const original = {};
+        subjects.forEach(subj => {
+            Object.values(suffixMap).forEach(suff => {
+                const key = subj + suff;
+                if (row[key] !== undefined) original[key] = row[key];
+            });
+        });
+        // Apply swaps
+        subjects.forEach(subj => {
+            const target = swapMap[subj] || subj;
+            if (target === subj) return;
+            Object.values(suffixMap).forEach(suff => {
+                const srcKey = subj + suff;
+                const dstKey = target + suff;
+                if (srcKey in original) {
+                    row[dstKey] = original[srcKey];
+                }
+            });
+        });
     });
-  }
-  return row;
+    console.log('✅ Swap applied to', rows.length, 'rows');
+    return rows;
+}
+
+// Halving correction (unchanged)
+function applyHalving(rows) {
+    rows.forEach(row => {
+        const attemptVals = [row.phy_a, row.chem_a, row.math_a, row.tot_a];
+        if (attemptVals.some(v => v > 75)) {
+            const fields = ['phy_a','chem_a','math_a','tot_a','phy_c','chem_c','math_c','tot_c',
+                            'phy_w','chem_w','math_w','tot_w','phy_m','chem_m','math_m','total'];
+            fields.forEach(f => {
+                if (f === 'total') row.total = row.total / 2;
+                else row[f] = row[f] / 2;
+            });
+        }
+    });
+    return rows;
 }
 
 let radarInst, stackedInst, accuracyInst;
 
 function buildDashboard(raw, filename) {
   raw.forEach(s => { s.accuracy = s.tot_a > 0 ? Math.round((s.tot_c / s.tot_a) * 100) : 0; });
-  // Canonical sort: score desc → correct desc → alphabetical (used for stable localRank)
   const sorted = [...raw].sort((a,b) => {
     if (b.total !== a.total) return b.total - a.total;
     if (b.tot_c !== a.tot_c) return b.tot_c - a.tot_c;
@@ -4063,14 +4064,12 @@ function buildDashboard(raw, filename) {
 
   function renderLeaderboard() {
     let data = [...raw];
-    // Institution filter
     if (instFilterA !== 'ALL') data = data.filter(s => (s.inst||'').toUpperCase() === instFilterA);
     if (filterText) data = data.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
     const valKeys = {total:'total',phy:'phy_m',chem:'chem_m',math:'math_m',acc:'accuracy'};
     data.sort((a,b) => {
       const diff = sortDir * (a[valKeys[currentSort]] - b[valKeys[currentSort]]);
       if (diff !== 0) return diff;
-      // Tiebreakers are always direction-neutral: more correct → alphabetical
       if (b.tot_c !== a.tot_c) return b.tot_c - a.tot_c;
       return a.name.localeCompare(b.name);
     });
@@ -4262,9 +4261,22 @@ async function loadCSVByName(filename) {
     const text = await res.text();
     const rows = parseCSV(text);
     if (rows.length === 0) { showError('CSV appears empty or malformed'); return; }
+
+    // Map rows
+    let data = rows.map(mapRow);
+
+    // Apply halving
+    data = applyHalving(data);
+
+    // Apply subject swaps using filename (take the last number)
+    const allNums = filename.match(/\d+/g);
+    const testCode = allNums ? allNums[allNums.length - 1] : null;
+    if (testCode && subjectSwaps[testCode]) {
+        data = applySwapsToData(data, testCode);
+    }
+
     hideOverlay();
-    // Pass filename to mapRow as second argument
-    buildDashboard(rows.map(r => mapRow(r, filename)), filename);
+    buildDashboard(data, filename);
   } catch(err) {
     showError('Error loading file: ' + err.message);
   }
