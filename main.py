@@ -7416,6 +7416,29 @@ def debug_row(student_name):
         "hint": "Copy one of these names exactly as shown"
     }), 404
 
+@app.route("/debug-test-rows/<test_code>")
+@login_required
+def debug_test_rows(test_code):
+    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
+    if not os.path.exists(master_path):
+        return jsonify({"error": "master.csv not found"}), 404
+    rows = []
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            tcode = extract_test_code(clean.get('test', ''))
+            if tcode == test_code:
+                before = clean.copy()
+                apply_subject_swaps(clean)
+                rows.append({
+                    'name': clean.get('name'),
+                    'test': clean.get('test'),
+                    'before_phy_math': (before.get('phy_marks'), before.get('math_marks')),
+                    'after_phy_math': (clean.get('phy_marks'), clean.get('math_marks'))
+                })
+    return jsonify(rows[:5])  # first 5 rows
+
 @app.route("/debug-headers")
 @login_required
 def debug_headers():
