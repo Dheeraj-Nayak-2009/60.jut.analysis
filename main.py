@@ -7368,5 +7368,30 @@ def debug_swaps():
         'content': load_subject_swaps()
     })
     
+@app.route("/debug-row/<student_name>")
+@login_required
+def debug_row(student_name):
+    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
+    if not os.path.exists(master_path):
+        return jsonify({"error": "master.csv not found"}), 404
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            if clean.get('name', '').strip().lower() == student_name.strip().lower():
+                # Before swap
+                before = clean.copy()
+                # Extract test code
+                test_code = extract_test_code(clean.get('test', ''))
+                # Apply swap
+                apply_subject_swaps(clean)
+                return jsonify({
+                    'test_code': test_code,
+                    'before': before,
+                    'after': clean,
+                    'swaps_loaded': load_subject_swaps()
+                })
+    return jsonify({"error": "Student not found"}), 404
+    
 if __name__ == "__main__":
     app.run(debug=True)
