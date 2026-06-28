@@ -7660,6 +7660,7 @@ SWAP_MANAGER_HTML = r"""<!DOCTYPE html>
       linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
     background-size: 60px 60px;
     animation: gridDrift 30s linear infinite;
+    z-index: -5;
   }
   @keyframes gridDrift {
     0% { background-position: 0 0; }
