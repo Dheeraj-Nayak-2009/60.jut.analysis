@@ -7368,15 +7368,18 @@ def debug_swaps():
         'content': load_subject_swaps()
     })
     
-@app.route("/debug-row/<path:student_name>")
+from urllib.parse import unquote
+
+@app.route("/debug-row/<student_name>")
 @login_required
 def debug_row(student_name):
     master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
     if not os.path.exists(master_path):
         return jsonify({"error": "master.csv not found"}), 404
     
-    # Normalize the input: trim, collapse multiple spaces
-    normalized_input = ' '.join(student_name.strip().split())
+    # Decode URL‑encoded characters and normalize spaces
+    decoded_name = unquote(student_name)
+    normalized_input = ' '.join(decoded_name.strip().split())
     
     with open(master_path, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -7384,11 +7387,7 @@ def debug_row(student_name):
             clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
             if 'name' not in clean or not clean['name']:
                 continue
-            
-            # Normalize the stored name the same way
             stored_name = ' '.join(clean['name'].strip().split())
-            
-            # Case‑insensitive comparison
             if stored_name.lower() == normalized_input.lower():
                 before = clean.copy()
                 test_code = extract_test_code(clean.get('test', ''))
@@ -7398,10 +7397,10 @@ def debug_row(student_name):
                     'before': before,
                     'after': clean,
                     'swaps_loaded': load_subject_swaps(),
-                    'matched_on': stored_name  # show what we matched
+                    'matched_on': stored_name
                 })
     
-    # If not found, return the list of available names for debugging
+    # If not found, return the full list of names for debugging
     available = []
     with open(master_path, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -7413,8 +7412,8 @@ def debug_row(student_name):
     return jsonify({
         "error": "Student not found",
         "you_searched_for": normalized_input,
-        "available_names": sorted(set(available))[:20],  # show first 20 for brevity
-        "hint": "Try one of these names exactly as shown"
+        "available_names": sorted(set(available)),
+        "hint": "Copy one of these names exactly as shown"
     }), 404
 
 @app.route("/debug-headers")
