@@ -7418,6 +7418,24 @@ def debug_students():
             if 'name' in clean and clean['name']:
                 names.append(clean['name'])
     return jsonify(sorted(set(names)))
-    
+
+@app.route("/debug-students-by-test/<test_code>")
+@login_required
+def debug_students_by_test(test_code):
+    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
+    if not os.path.exists(master_path):
+        return jsonify({"error": "master.csv not found"}), 404
+    students = []
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            if 'name' in clean and clean['name']:
+                tcode = extract_test_code(clean.get('test', ''))
+                if tcode == test_code:
+                    students.append(clean['name'])
+    return jsonify(sorted(set(students)))
+
+
 if __name__ == "__main__":
     app.run(debug=True)
