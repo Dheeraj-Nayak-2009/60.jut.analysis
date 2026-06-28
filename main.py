@@ -473,7 +473,7 @@ def neet_page():
 def anomaly_page():
     return app.response_class(ANOMALY_HTML, mimetype='text/html')
 
-@app.route("/swap")
+@app.route("/swap-manager")
 @login_required
 def swap_manager():
     return app.response_class(SWAP_MANAGER_HTML, mimetype='text/html')
