@@ -6984,17 +6984,24 @@ function mapRow(r, filename) {
 
   // ── Extract test code ──
   let testCode = extractTestCode(row.test);
+  console.log('🔍 row.test:', JSON.stringify(row.test));
+  console.log('🔍 testCode from row.test:', testCode);
+
   if (!testCode && filename) {
-    const match = filename.match(/\b(\d+)\b/);
-    if (match) testCode = match[1];
+    const allNums = filename.match(/\d+/g);
+    if (allNums && allNums.length > 0) testCode = allNums[allNums.length - 1];
+    console.log('🔍 testCode from filename:', testCode);
   }
+
+  console.log('🔍 subjectSwaps object:', JSON.stringify(subjectSwaps));
+  console.log('🔍 subjectSwaps[testCode]:', JSON.stringify(subjectSwaps[testCode]));
+  console.log('🔍 row BEFORE swap - phy_m:', row.phy_m, 'math_m:', row.math_m);
 
   // ── Subject swap correction ──
   if (testCode && subjectSwaps[testCode]) {
     console.log(`🔄 Applying swap for test code: ${testCode}`);
     const swapMap = subjectSwaps[testCode].swap || {};
 
-    // Map subject short‑names to actual row key suffixes
     const suffixMap = {
       '_marks':   '_m',
       '_correct': '_c',
@@ -7005,7 +7012,6 @@ function mapRow(r, filename) {
     const subjects = ['phy', 'chem', 'math'];
     const original = {};
 
-    // Save original values
     subjects.forEach(subj => {
       Object.values(suffixMap).forEach(suff => {
         const key = subj + suff;
@@ -7013,7 +7019,6 @@ function mapRow(r, filename) {
       });
     });
 
-    // Apply swaps
     subjects.forEach(subj => {
       const target = swapMap[subj] || subj;
       if (target === subj) return;
@@ -7025,10 +7030,11 @@ function mapRow(r, filename) {
         }
       });
     });
-  } else if (testCode && !subjectSwaps[testCode]) {
-    console.log(`ℹ️ No swap defined for test code: ${testCode}`);
+
+    console.log('🔍 row AFTER swap - phy_m:', row.phy_m, 'math_m:', row.math_m);
+
   } else {
-    console.log('⚠️ Could not extract test code from row or filename.');
+    console.log('⚠️ Swap NOT applied. testCode:', testCode, 'exists in swaps?', !!(testCode && subjectSwaps[testCode]));
   }
 
   // ── Halving correction ──
