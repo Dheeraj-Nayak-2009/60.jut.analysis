@@ -7660,7 +7660,6 @@ SWAP_MANAGER_HTML = r"""<!DOCTYPE html>
       linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
     background-size: 60px 60px;
     animation: gridDrift 30s linear infinite;
-    z-index: -5;
   }
   @keyframes gridDrift {
     0% { background-position: 0 0; }
@@ -7895,6 +7894,49 @@ SWAP_MANAGER_HTML = r"""<!DOCTYPE html>
     color: var(--accent);
   }
 
+  /* ── Custom swap rows ── */
+  #customSwapContainer {
+    margin-top: 1.2rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--border);
+  }
+  .custom-swap-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+  }
+  .custom-source-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    width: 80px;
+    flex-shrink: 0;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .custom-target-select {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 120px;
+  }
+  .custom-target-select:focus {
+    border-color: var(--accent);
+  }
+  .custom-arrow {
+    color: var(--muted);
+    font-size: 1.2rem;
+    margin: 0 0.3rem;
+  }
+
   .btn {
     background: var(--accent);
     border: none;
@@ -8059,6 +8101,8 @@ SWAP_MANAGER_HTML = r"""<!DOCTYPE html>
     .swap-item { flex-direction: column; align-items: stretch; }
     .swap-item-left { flex-direction: column; align-items: flex-start; }
     .swap-item-actions { justify-content: flex-end; }
+    .custom-swap-row { flex-wrap: wrap; }
+    .custom-source-label { width: 100%; }
   }
 </style>
 </head>
@@ -8094,35 +8138,42 @@ SWAP_MANAGER_HTML = r"""<!DOCTYPE html>
       <div class="swap-form-group">
         <label>Swap Type</label>
         <div class="swap-type-group" id="swapTypeGroup">
-          <button class="swap-type-btn" data-type="phy_math">P ↔ M</button>
-          <button class="swap-type-btn" data-type="chem_math">C ↔ M</button>
-          <button class="swap-type-btn" data-type="phy_chem">P ↔ C</button>
-          <button class="swap-type-btn" data-type="phy_chem_math">P → C → M</button>
+          <button class="swap-type-btn" data-type="pc">P ↔ C</button>
+          <button class="swap-type-btn" data-type="cm">C ↔ M</button>
+          <button class="swap-type-btn" data-type="mp">M ↔ P</button>
           <button class="swap-type-btn" data-type="custom">Custom</button>
         </div>
       </div>
     </div>
-    <div class="swap-form-row" style="margin-top:1rem;" id="customSwapRow" style="display:none;">
-      <div class="swap-form-group" style="flex:0 0 120px;">
-        <label>From</label>
-        <select id="swapFrom">
-          <option value="phy">Physics</option>
+
+    <!-- Custom swap rows -->
+    <div id="customSwapContainer" style="display:none;">
+      <div class="custom-swap-row">
+        <span class="custom-source-label" style="color:var(--phy);">Physics →</span>
+        <select id="swapTargetPhy" class="custom-target-select">
           <option value="chem">Chemistry</option>
           <option value="math">Maths</option>
         </select>
+        <span class="custom-arrow">→</span>
       </div>
-      <div class="swap-form-group" style="flex:0 0 60px;text-align:center;padding-top:1.5rem;">
-        <span style="color:var(--muted);font-size:1.5rem;">→</span>
-      </div>
-      <div class="swap-form-group" style="flex:0 0 120px;">
-        <label>To</label>
-        <select id="swapTo">
+      <div class="custom-swap-row">
+        <span class="custom-source-label" style="color:var(--chem);">Chemistry →</span>
+        <select id="swapTargetChem" class="custom-target-select">
           <option value="phy">Physics</option>
-          <option value="chem">Chemistry</option>
           <option value="math">Maths</option>
         </select>
+        <span class="custom-arrow">→</span>
+      </div>
+      <div class="custom-swap-row">
+        <span class="custom-source-label" style="color:var(--math);">Maths →</span>
+        <select id="swapTargetMath" class="custom-target-select">
+          <option value="phy">Physics</option>
+          <option value="chem">Chemistry</option>
+        </select>
+        <span class="custom-arrow">→</span>
       </div>
     </div>
+
     <div class="swap-form-row" style="margin-top:1.5rem;">
       <button class="btn" id="saveBtn">Save Swap</button>
       <button class="btn btn-outline" id="cancelBtn" style="display:none;">Cancel</button>
@@ -8162,9 +8213,10 @@ let csvFiles = [];
 // ── DOM refs ──
 const jutSelect = document.getElementById('jutSelect');
 const swapTypeGroup = document.getElementById('swapTypeGroup');
-const customSwapRow = document.getElementById('customSwapRow');
-const swapFrom = document.getElementById('swapFrom');
-const swapTo = document.getElementById('swapTo');
+const customContainer = document.getElementById('customSwapContainer');
+const swapTargetPhy = document.getElementById('swapTargetPhy');
+const swapTargetChem = document.getElementById('swapTargetChem');
+const swapTargetMath = document.getElementById('swapTargetMath');
 const saveBtn = document.getElementById('saveBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 const formStatus = document.getElementById('formStatus');
@@ -8268,16 +8320,12 @@ function renderSwaps() {
   swapListContainer.innerHTML = html;
 }
 
-// ── Swap type presets ──
-function getSwapForType(type) {
-  const presets = {
-    'phy_math': { phy: 'math', math: 'phy' },
-    'chem_math': { chem: 'math', math: 'chem' },
-    'phy_chem': { phy: 'chem', chem: 'phy' },
-    'phy_chem_math': { phy: 'chem', chem: 'math', math: 'phy' },
-  };
-  return presets[type] || null;
-}
+// ── Preset mappings ──
+const PRESETS = {
+  'pc': { phy: 'chem', chem: 'phy' },          // Physics ↔ Chemistry
+  'cm': { chem: 'math', math: 'chem' },        // Chemistry ↔ Maths
+  'mp': { math: 'phy', phy: 'math' }           // Maths ↔ Physics
+};
 
 // ── Swap type button clicks ──
 document.querySelectorAll('.swap-type-btn').forEach(btn => {
@@ -8287,11 +8335,12 @@ document.querySelectorAll('.swap-type-btn').forEach(btn => {
 
     const type = btn.dataset.type;
     if (type === 'custom') {
-      customSwapRow.style.display = 'flex';
-      formStatus.textContent = 'Custom swap: select from → to';
+      customContainer.style.display = 'block';
+      updateCustomOptions(); // refresh dropdown validity
+      formStatus.textContent = 'Custom mapping – choose targets for each subject.';
     } else {
-      customSwapRow.style.display = 'none';
-      const preset = getSwapForType(type);
+      customContainer.style.display = 'none';
+      const preset = PRESETS[type];
       if (preset) {
         const desc = Object.entries(preset).map(([f,t]) => {
           const labels = {phy:'P',chem:'C',math:'M'};
@@ -8306,6 +8355,79 @@ document.querySelectorAll('.swap-type-btn').forEach(btn => {
 // Default: select first preset
 document.querySelector('.swap-type-btn')?.classList.add('active');
 
+// ── Custom dropdown logic ──
+const subjectLabels = { phy: 'Physics', chem: 'Chemistry', math: 'Maths' };
+const allSubjects = ['phy', 'chem', 'math'];
+
+function updateCustomOptions() {
+  // Read current selections
+  const current = {
+    phy: swapTargetPhy.value,
+    chem: swapTargetChem.value,
+    math: swapTargetMath.value
+  };
+
+  // For each source, build allowed targets: not self, not already taken by another source (unless that source is the same)
+  const sources = ['phy', 'chem', 'math'];
+  sources.forEach(src => {
+    const select = document.getElementById(`swapTarget${src.charAt(0).toUpperCase() + src.slice(1)}`);
+    const currentVal = current[src];
+    // Determine taken targets by other sources
+    const taken = {};
+    sources.forEach(other => {
+      if (other !== src && current[other]) {
+        taken[current[other]] = true;
+      }
+    });
+    // Build options
+    const options = allSubjects.filter(sub => sub !== src && !taken[sub]);
+    // If currentVal is not in options, we need to add it temporarily? But we should keep it if it's valid or we'll lose selection.
+    // We'll preserve the current selection if it's still valid, otherwise select first available.
+    const currentValid = options.includes(currentVal);
+    // Clear and repopulate
+    select.innerHTML = '';
+    options.forEach(sub => {
+      const opt = document.createElement('option');
+      opt.value = sub;
+      opt.textContent = subjectLabels[sub];
+      select.appendChild(opt);
+    });
+    if (currentValid) {
+      select.value = currentVal;
+    } else {
+      // Select first option if available
+      if (options.length > 0) select.value = options[0];
+    }
+  });
+}
+
+// Attach change events to custom dropdowns
+[swapTargetPhy, swapTargetChem, swapTargetMath].forEach(sel => {
+  sel.addEventListener('change', updateCustomOptions);
+});
+
+// ── Get current swap from UI ──
+function getCurrentSwap() {
+  const activeBtn = document.querySelector('.swap-type-btn.active');
+  const type = activeBtn ? activeBtn.dataset.type : 'custom';
+  if (type === 'custom') {
+    // Build from custom dropdowns
+    const swap = {};
+    const phyTarget = swapTargetPhy.value;
+    const chemTarget = swapTargetChem.value;
+    const mathTarget = swapTargetMath.value;
+    // Only include if target is valid (not self and not empty)
+    if (phyTarget && phyTarget !== 'phy') swap.phy = phyTarget;
+    if (chemTarget && chemTarget !== 'chem') swap.chem = chemTarget;
+    if (mathTarget && mathTarget !== 'math') swap.math = mathTarget;
+    // Check uniqueness: if any two sources map to same target, it's invalid (but we already enforce via dropdown logic)
+    return swap;
+  } else {
+    // Preset
+    return PRESETS[type] || {};
+  }
+}
+
 // ── Save / Update swap ──
 saveBtn.addEventListener('click', async () => {
   const id = jutSelect.value;
@@ -8314,26 +8436,10 @@ saveBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Get active swap type
-  const activeBtn = document.querySelector('.swap-type-btn.active');
-  const type = activeBtn ? activeBtn.dataset.type : 'custom';
-  let swap = {};
-
-  if (type === 'custom') {
-    const from = swapFrom.value;
-    const to = swapTo.value;
-    if (from === to) {
-      showToast('Cannot swap a subject with itself', 'error');
-      return;
-    }
-    swap[from] = to;
-  } else {
-    const preset = getSwapForType(type);
-    if (!preset) {
-      showToast('Invalid swap type', 'error');
-      return;
-    }
-    swap = { ...preset };
+  const swap = getCurrentSwap();
+  if (Object.keys(swap).length === 0) {
+    showToast('Swap mapping is empty or invalid', 'error');
+    return;
   }
 
   // Update currentSwaps
@@ -8368,21 +8474,14 @@ function editSwap(id) {
   jutSelect.value = id;
 
   // Try to match a preset
-  const presetNames = {
-    'phy_math': { phy: 'math', math: 'phy' },
-    'chem_math': { chem: 'math', math: 'chem' },
-    'phy_chem': { phy: 'chem', chem: 'phy' },
-    'phy_chem_math': { phy: 'chem', chem: 'math', math: 'phy' },
-  };
-
   let matched = false;
-  for (const [name, preset] of Object.entries(presetNames)) {
+  for (const [name, preset] of Object.entries(PRESETS)) {
     if (JSON.stringify(entries.sort()) === JSON.stringify(Object.entries(preset).sort())) {
       document.querySelectorAll('.swap-type-btn').forEach(b => {
         b.classList.toggle('active', b.dataset.type === name);
       });
       matched = true;
-      customSwapRow.style.display = 'none';
+      customContainer.style.display = 'none';
       formStatus.textContent = `Editing preset for JUT ${id}`;
       break;
     }
@@ -8392,10 +8491,16 @@ function editSwap(id) {
     // Custom
     document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('[data-type="custom"]')?.classList.add('active');
-    customSwapRow.style.display = 'flex';
+    customContainer.style.display = 'block';
+    // Populate dropdowns from swap
     if (entries.length > 0) {
-      swapFrom.value = entries[0][0];
-      swapTo.value = entries[0][1];
+      const map = {};
+      entries.forEach(([from, to]) => { map[from] = to; });
+      if (map.phy) swapTargetPhy.value = map.phy;
+      if (map.chem) swapTargetChem.value = map.chem;
+      if (map.math) swapTargetMath.value = map.math;
+      // Ensure valid options after setting values
+      updateCustomOptions();
     }
     formStatus.textContent = `Editing custom swap for JUT ${id}`;
   }
@@ -8435,43 +8540,39 @@ function resetForm() {
   saveBtn.textContent = 'Save Swap';
   cancelBtn.style.display = 'none';
   formStatus.textContent = '';
-  customSwapRow.style.display = 'none';
+  customContainer.style.display = 'none';
   // Reset to first JUT
   if (jutSelect.options.length > 0) jutSelect.selectedIndex = 0;
   // Select first preset
   document.querySelectorAll('.swap-type-btn').forEach((b, i) => {
     b.classList.toggle('active', i === 0);
   });
-  swapFrom.value = 'phy';
-  swapTo.value = 'math';
+  // Reset custom dropdowns to default cycle: P→C, C→M, M→P
+  swapTargetPhy.value = 'chem';
+  swapTargetChem.value = 'math';
+  swapTargetMath.value = 'phy';
+  updateCustomOptions();
 }
 
 cancelBtn.addEventListener('click', resetForm);
 
 // ── Auto-fill JUT from dropdown ──
-// When selecting a JUT that already has a swap, show its current mapping
 jutSelect.addEventListener('change', () => {
   const id = jutSelect.value;
   if (id && currentSwaps[id]) {
-    // We're viewing an existing swap - show its mapping but don't auto-edit
+    // Show its current mapping but don't auto-edit (user can click Edit)
     const swap = currentSwaps[id].swap || {};
     const entries = Object.entries(swap);
     if (entries.length > 0) {
       // Try to match preset for display
-      const presetNames = {
-        'phy_math': { phy: 'math', math: 'phy' },
-        'chem_math': { chem: 'math', math: 'chem' },
-        'phy_chem': { phy: 'chem', chem: 'phy' },
-        'phy_chem_math': { phy: 'chem', chem: 'math', math: 'phy' },
-      };
       let matched = false;
-      for (const [name, preset] of Object.entries(presetNames)) {
+      for (const [name, preset] of Object.entries(PRESETS)) {
         if (JSON.stringify(entries.sort()) === JSON.stringify(Object.entries(preset).sort())) {
           document.querySelectorAll('.swap-type-btn').forEach(b => {
             b.classList.toggle('active', b.dataset.type === name);
           });
           matched = true;
-          customSwapRow.style.display = 'none';
+          customContainer.style.display = 'none';
           formStatus.textContent = `Existing: ${Object.entries(swap).map(([f,t]) => {
             const labels = {phy:'P',chem:'C',math:'M'};
             return `${labels[f]}→${labels[t]}`;
@@ -8482,10 +8583,17 @@ jutSelect.addEventListener('change', () => {
       if (!matched) {
         document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('[data-type="custom"]')?.classList.add('active');
-        customSwapRow.style.display = 'flex';
-        swapFrom.value = entries[0][0];
-        swapTo.value = entries[0][1];
-        formStatus.textContent = `Existing custom: ${entries[0][0]} → ${entries[0][1]}`;
+        customContainer.style.display = 'block';
+        const map = {};
+        entries.forEach(([from, to]) => { map[from] = to; });
+        if (map.phy) swapTargetPhy.value = map.phy;
+        if (map.chem) swapTargetChem.value = map.chem;
+        if (map.math) swapTargetMath.value = map.math;
+        updateCustomOptions();
+        formStatus.textContent = `Existing custom: ${entries.map(([f,t]) => {
+          const labels = {phy:'P',chem:'C',math:'M'};
+          return `${labels[f]}→${labels[t]}`;
+        }).join(' · ')}`;
       }
     }
   } else {
@@ -8493,7 +8601,7 @@ jutSelect.addEventListener('change', () => {
     document.querySelectorAll('.swap-type-btn').forEach((b, i) => {
       b.classList.toggle('active', i === 0);
     });
-    customSwapRow.style.display = 'none';
+    customContainer.style.display = 'none';
     formStatus.textContent = '';
   }
 });
@@ -8515,6 +8623,11 @@ async function init() {
   }
   // Trigger change to show existing swap if any
   jutSelect.dispatchEvent(new Event('change'));
+  // Initialize custom dropdowns to a sensible default
+  swapTargetPhy.value = 'chem';
+  swapTargetChem.value = 'math';
+  swapTargetMath.value = 'phy';
+  updateCustomOptions();
 }
 
 init();
