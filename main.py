@@ -23,6 +23,14 @@ GITHUB_BRANCH = 'main'
 app = Flask(__name__)
 app.secret_key = 'supersecretkey-change-in-production'  # Use env var in production
 
+# ── Login required decorator ──
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated
 
 def get_github_file_sha():
     """Get the SHA of the current file on GitHub."""
@@ -121,18 +129,6 @@ def update_swaps():
     else:
         return jsonify({'error': result.get('error', 'Update failed')}), status
 
-
-
-
-
-# ── Login required decorator ──
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get('logged_in'):
-            return redirect(url_for('login', next=request.url))
-        return f(*args, **kwargs)
-    return decorated
 
 # ── Login / Logout routes ──
 @app.route('/login', methods=['GET', 'POST'])
