@@ -7895,47 +7895,37 @@ SWAP_MANAGER_HTML = r"""<!DOCTYPE html>
     color: var(--accent);
   }
 
-  /* ── Custom swap rows ── */
-  #customSwapContainer {
+  /* ── Custom cyclic options ── */
+  #customContainer {
     margin-top: 1.2rem;
     padding: 1rem 0;
     border-top: 1px solid var(--border);
+    display: none;
   }
-  .custom-swap-row {
+  .custom-cyclic-group {
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.8rem;
+    gap: 0.8rem;
+    flex-wrap: wrap;
   }
-  .custom-source-label {
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    width: 80px;
-    flex-shrink: 0;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-  .custom-target-select {
-    flex: 1;
-    background: var(--bg);
+  .custom-cyclic-btn {
+    background: var(--surface2);
     border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0.5rem 0.8rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    border-radius: 4px;
-    outline: none;
-    transition: border-color 0.2s;
-    min-width: 120px;
-  }
-  .custom-target-select:focus {
-    border-color: var(--accent);
-  }
-  .custom-arrow {
     color: var(--muted);
-    font-size: 1.2rem;
-    margin: 0 0.3rem;
+    padding: 0.5rem 1.2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .custom-cyclic-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .custom-cyclic-btn.active {
+    border-color: var(--accent);
+    background: rgba(232,197,71,0.1);
+    color: var(--accent);
   }
 
   .btn {
@@ -8102,8 +8092,6 @@ SWAP_MANAGER_HTML = r"""<!DOCTYPE html>
     .swap-item { flex-direction: column; align-items: stretch; }
     .swap-item-left { flex-direction: column; align-items: flex-start; }
     .swap-item-actions { justify-content: flex-end; }
-    .custom-swap-row { flex-wrap: wrap; }
-    .custom-source-label { width: 100%; }
   }
 </style>
 </head>
@@ -8147,31 +8135,12 @@ SWAP_MANAGER_HTML = r"""<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Custom swap rows -->
-    <div id="customSwapContainer" style="display:none;">
-      <div class="custom-swap-row">
-        <span class="custom-source-label" style="color:var(--phy);">Physics →</span>
-        <select id="swapTargetPhy" class="custom-target-select">
-          <option value="chem">Chemistry</option>
-          <option value="math">Maths</option>
-        </select>
-        <span class="custom-arrow">→</span>
-      </div>
-      <div class="custom-swap-row">
-        <span class="custom-source-label" style="color:var(--chem);">Chemistry →</span>
-        <select id="swapTargetChem" class="custom-target-select">
-          <option value="phy">Physics</option>
-          <option value="math">Maths</option>
-        </select>
-        <span class="custom-arrow">→</span>
-      </div>
-      <div class="custom-swap-row">
-        <span class="custom-source-label" style="color:var(--math);">Maths →</span>
-        <select id="swapTargetMath" class="custom-target-select">
-          <option value="phy">Physics</option>
-          <option value="chem">Chemistry</option>
-        </select>
-        <span class="custom-arrow">→</span>
+    <!-- Custom cyclic options -->
+    <div id="customContainer">
+      <div style="font-size:0.55rem;letter-spacing:0.15em;color:var(--muted);margin-bottom:0.6rem;text-transform:uppercase;">Choose cyclic mapping</div>
+      <div class="custom-cyclic-group">
+        <button class="custom-cyclic-btn active" data-cyclic="cw">P→C→M→P (CW)</button>
+        <button class="custom-cyclic-btn" data-cyclic="ccw">P→M→C→P (CCW)</button>
       </div>
     </div>
 
@@ -8214,10 +8183,7 @@ let csvFiles = [];
 // ── DOM refs ──
 const jutSelect = document.getElementById('jutSelect');
 const swapTypeGroup = document.getElementById('swapTypeGroup');
-const customContainer = document.getElementById('customSwapContainer');
-const swapTargetPhy = document.getElementById('swapTargetPhy');
-const swapTargetChem = document.getElementById('swapTargetChem');
-const swapTargetMath = document.getElementById('swapTargetMath');
+const customContainer = document.getElementById('customContainer');
 const saveBtn = document.getElementById('saveBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 const formStatus = document.getElementById('formStatus');
@@ -8328,6 +8294,12 @@ const PRESETS = {
   'mp': { math: 'phy', phy: 'math' }           // Maths ↔ Physics
 };
 
+// ── Cyclic mappings ──
+const CYCLIC = {
+  'cw': { phy: 'chem', chem: 'math', math: 'phy' },   // P→C→M→P
+  'ccw': { phy: 'math', chem: 'phy', math: 'chem' }   // P→M→C→P
+};
+
 // ── Swap type button clicks ──
 document.querySelectorAll('.swap-type-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -8337,8 +8309,7 @@ document.querySelectorAll('.swap-type-btn').forEach(btn => {
     const type = btn.dataset.type;
     if (type === 'custom') {
       customContainer.style.display = 'block';
-      updateCustomOptions(); // refresh dropdown validity
-      formStatus.textContent = 'Custom mapping – choose targets for each subject.';
+      formStatus.textContent = 'Select a cyclic mapping (CW or CCW).';
     } else {
       customContainer.style.display = 'none';
       const preset = PRESETS[type];
@@ -8355,56 +8326,17 @@ document.querySelectorAll('.swap-type-btn').forEach(btn => {
 
 // Default: select first preset
 document.querySelector('.swap-type-btn')?.classList.add('active');
+customContainer.style.display = 'none';
 
-// ── Custom dropdown logic ──
-const subjectLabels = { phy: 'Physics', chem: 'Chemistry', math: 'Maths' };
-const allSubjects = ['phy', 'chem', 'math'];
-
-function updateCustomOptions() {
-  // Read current selections
-  const current = {
-    phy: swapTargetPhy.value,
-    chem: swapTargetChem.value,
-    math: swapTargetMath.value
-  };
-
-  // For each source, build allowed targets: not self, not already taken by another source (unless that source is the same)
-  const sources = ['phy', 'chem', 'math'];
-  sources.forEach(src => {
-    const select = document.getElementById(`swapTarget${src.charAt(0).toUpperCase() + src.slice(1)}`);
-    const currentVal = current[src];
-    // Determine taken targets by other sources
-    const taken = {};
-    sources.forEach(other => {
-      if (other !== src && current[other]) {
-        taken[current[other]] = true;
-      }
-    });
-    // Build options
-    const options = allSubjects.filter(sub => sub !== src && !taken[sub]);
-    // If currentVal is not in options, we need to add it temporarily? But we should keep it if it's valid or we'll lose selection.
-    // We'll preserve the current selection if it's still valid, otherwise select first available.
-    const currentValid = options.includes(currentVal);
-    // Clear and repopulate
-    select.innerHTML = '';
-    options.forEach(sub => {
-      const opt = document.createElement('option');
-      opt.value = sub;
-      opt.textContent = subjectLabels[sub];
-      select.appendChild(opt);
-    });
-    if (currentValid) {
-      select.value = currentVal;
-    } else {
-      // Select first option if available
-      if (options.length > 0) select.value = options[0];
-    }
+// ── Custom cyclic button clicks ──
+document.querySelectorAll('.custom-cyclic-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.custom-cyclic-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const dir = btn.dataset.cyclic;
+    const desc = dir === 'cw' ? 'P→C→M→P' : 'P→M→C→P';
+    formStatus.textContent = `Custom cyclic: ${desc}`;
   });
-}
-
-// Attach change events to custom dropdowns
-[swapTargetPhy, swapTargetChem, swapTargetMath].forEach(sel => {
-  sel.addEventListener('change', updateCustomOptions);
 });
 
 // ── Get current swap from UI ──
@@ -8412,20 +8344,12 @@ function getCurrentSwap() {
   const activeBtn = document.querySelector('.swap-type-btn.active');
   const type = activeBtn ? activeBtn.dataset.type : 'custom';
   if (type === 'custom') {
-    // Build from custom dropdowns
-    const swap = {};
-    const phyTarget = swapTargetPhy.value;
-    const chemTarget = swapTargetChem.value;
-    const mathTarget = swapTargetMath.value;
-    // Only include if target is valid (not self and not empty)
-    if (phyTarget && phyTarget !== 'phy') swap.phy = phyTarget;
-    if (chemTarget && chemTarget !== 'chem') swap.chem = chemTarget;
-    if (mathTarget && mathTarget !== 'math') swap.math = mathTarget;
-    // Check uniqueness: if any two sources map to same target, it's invalid (but we already enforce via dropdown logic)
-    return swap;
+    // Get active cyclic button
+    const activeCyclic = document.querySelector('.custom-cyclic-btn.active');
+    const dir = activeCyclic ? activeCyclic.dataset.cyclic : 'cw';
+    return { ...CYCLIC[dir] };
   } else {
-    // Preset
-    return PRESETS[type] || {};
+    return { ...PRESETS[type] } || {};
   }
 }
 
@@ -8489,21 +8413,33 @@ function editSwap(id) {
   }
 
   if (!matched) {
-    // Custom
-    document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('[data-type="custom"]')?.classList.add('active');
-    customContainer.style.display = 'block';
-    // Populate dropdowns from swap
-    if (entries.length > 0) {
-      const map = {};
-      entries.forEach(([from, to]) => { map[from] = to; });
-      if (map.phy) swapTargetPhy.value = map.phy;
-      if (map.chem) swapTargetChem.value = map.chem;
-      if (map.math) swapTargetMath.value = map.math;
-      // Ensure valid options after setting values
-      updateCustomOptions();
+    // Check if it matches a cyclic pattern
+    let cyclicMatched = false;
+    for (const [dir, cyclic] of Object.entries(CYCLIC)) {
+      if (JSON.stringify(entries.sort()) === JSON.stringify(Object.entries(cyclic).sort())) {
+        document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('[data-type="custom"]')?.classList.add('active');
+        customContainer.style.display = 'block';
+        // Activate the corresponding cyclic button
+        document.querySelectorAll('.custom-cyclic-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.cyclic === dir);
+        });
+        cyclicMatched = true;
+        const dirLabel = dir === 'cw' ? 'CW (P→C→M→P)' : 'CCW (P→M→C→P)';
+        formStatus.textContent = `Editing custom cyclic: ${dirLabel}`;
+        break;
+      }
     }
-    formStatus.textContent = `Editing custom swap for JUT ${id}`;
+    if (!cyclicMatched) {
+      // Fallback: just show custom with default CW
+      document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('[data-type="custom"]')?.classList.add('active');
+      customContainer.style.display = 'block';
+      document.querySelectorAll('.custom-cyclic-btn').forEach((b,i) => {
+        b.classList.toggle('active', i === 0);
+      });
+      formStatus.textContent = `Editing custom (default CW) for JUT ${id}`;
+    }
   }
 
   formTitle.textContent = `Edit Swap for JUT ${id}`;
@@ -8548,11 +8484,10 @@ function resetForm() {
   document.querySelectorAll('.swap-type-btn').forEach((b, i) => {
     b.classList.toggle('active', i === 0);
   });
-  // Reset custom dropdowns to default cycle: P→C, C→M, M→P
-  swapTargetPhy.value = 'chem';
-  swapTargetChem.value = 'math';
-  swapTargetMath.value = 'phy';
-  updateCustomOptions();
+  // Reset custom to CW
+  document.querySelectorAll('.custom-cyclic-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === 0);
+  });
 }
 
 cancelBtn.addEventListener('click', resetForm);
@@ -8565,7 +8500,7 @@ jutSelect.addEventListener('change', () => {
     const swap = currentSwaps[id].swap || {};
     const entries = Object.entries(swap);
     if (entries.length > 0) {
-      // Try to match preset for display
+      // Try to match a preset
       let matched = false;
       for (const [name, preset] of Object.entries(PRESETS)) {
         if (JSON.stringify(entries.sort()) === JSON.stringify(Object.entries(preset).sort())) {
@@ -8582,19 +8517,31 @@ jutSelect.addEventListener('change', () => {
         }
       }
       if (!matched) {
-        document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('[data-type="custom"]')?.classList.add('active');
-        customContainer.style.display = 'block';
-        const map = {};
-        entries.forEach(([from, to]) => { map[from] = to; });
-        if (map.phy) swapTargetPhy.value = map.phy;
-        if (map.chem) swapTargetChem.value = map.chem;
-        if (map.math) swapTargetMath.value = map.math;
-        updateCustomOptions();
-        formStatus.textContent = `Existing custom: ${entries.map(([f,t]) => {
-          const labels = {phy:'P',chem:'C',math:'M'};
-          return `${labels[f]}→${labels[t]}`;
-        }).join(' · ')}`;
+        // Try cyclic
+        let cyclicMatched = false;
+        for (const [dir, cyclic] of Object.entries(CYCLIC)) {
+          if (JSON.stringify(entries.sort()) === JSON.stringify(Object.entries(cyclic).sort())) {
+            document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-type="custom"]')?.classList.add('active');
+            customContainer.style.display = 'block';
+            document.querySelectorAll('.custom-cyclic-btn').forEach(b => {
+              b.classList.toggle('active', b.dataset.cyclic === dir);
+            });
+            cyclicMatched = true;
+            formStatus.textContent = `Existing cyclic: ${dir === 'cw' ? 'CW' : 'CCW'}`;
+            break;
+          }
+        }
+        if (!cyclicMatched) {
+          // Unknown – default to custom CW but show message
+          document.querySelectorAll('.swap-type-btn').forEach(b => b.classList.remove('active'));
+          document.querySelector('[data-type="custom"]')?.classList.add('active');
+          customContainer.style.display = 'block';
+          document.querySelectorAll('.custom-cyclic-btn').forEach((b,i) => {
+            b.classList.toggle('active', i === 0);
+          });
+          formStatus.textContent = `Unknown mapping – defaulting to CW`;
+        }
       }
     }
   } else {
@@ -8624,11 +8571,6 @@ async function init() {
   }
   // Trigger change to show existing swap if any
   jutSelect.dispatchEvent(new Event('change'));
-  // Initialize custom dropdowns to a sensible default
-  swapTargetPhy.value = 'chem';
-  swapTargetChem.value = 'math';
-  swapTargetMath.value = 'phy';
-  updateCustomOptions();
 }
 
 init();
