@@ -7368,30 +7368,54 @@ def debug_swaps():
         'content': load_subject_swaps()
     })
     
-@app.route("/debug-row/<student_name>")
+@app.route("/debug-row/<path:student_name>")
 @login_required
 def debug_row(student_name):
     master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
     if not os.path.exists(master_path):
         return jsonify({"error": "master.csv not found"}), 404
+    
+    # Normalize the input: trim, collapse multiple spaces
+    normalized_input = ' '.join(student_name.strip().split())
+    
     with open(master_path, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
-            if clean.get('name', '').strip().lower() == student_name.strip().lower():
-                # Before swap
+            if 'name' not in clean or not clean['name']:
+                continue
+            
+            # Normalize the stored name the same way
+            stored_name = ' '.join(clean['name'].strip().split())
+            
+            # Case‑insensitive comparison
+            if stored_name.lower() == normalized_input.lower():
                 before = clean.copy()
-                # Extract test code
                 test_code = extract_test_code(clean.get('test', ''))
-                # Apply swap
                 apply_subject_swaps(clean)
                 return jsonify({
                     'test_code': test_code,
                     'before': before,
                     'after': clean,
-                    'swaps_loaded': load_subject_swaps()
+                    'swaps_loaded': load_subject_swaps(),
+                    'matched_on': stored_name  # show what we matched
                 })
-    return jsonify({"error": "Student not found"}), 404
+    
+    # If not found, return the list of available names for debugging
+    available = []
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            if 'name' in clean and clean['name']:
+                available.append(clean['name'])
+    
+    return jsonify({
+        "error": "Student not found",
+        "you_searched_for": normalized_input,
+        "available_names": sorted(set(available))[:20],  # show first 20 for brevity
+        "hint": "Try one of these names exactly as shown"
+    }), 404
 
 @app.route("/debug-headers")
 @login_required
