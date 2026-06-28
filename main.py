@@ -7358,5 +7358,15 @@ loadAnomalies();
 </body>
 </html>"""
 
+
+@app.route('/debug-swaps')
+@login_required
+def debug_swaps():
+    return jsonify({
+        'swaps_file': SWAPS_FILE,
+        'exists': os.path.exists(SWAPS_FILE),
+        'content': load_subject_swaps()
+    })
+    
 if __name__ == "__main__":
     app.run(debug=True)
