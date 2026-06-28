@@ -3881,9 +3881,12 @@ async function loadSubjectSwaps() {
         const res = await fetch('/api/subject-swaps');
         if (res.ok) {
             subjectSwaps = await res.json();
+            console.log('✅ Subject swaps loaded:', subjectSwaps);
+        } else {
+            console.warn('⚠️ Failed to load subject swaps:', res.status);
         }
     } catch(e) {
-        console.warn('Could not load subject swaps', e);
+        console.warn('⚠️ Could not load subject swaps', e);
     }
 }
 
@@ -3924,7 +3927,7 @@ function extractTestCode(testField) {
     return testField.trim();
 }
 
-function mapRow(r) {
+function mapRow(r, filename) {
   const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return '0'; };
   const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return ''; };
   
@@ -3953,9 +3956,16 @@ function mapRow(r) {
     test: getS('test','test_name','filename','jut','jut_name') || 'Unknown'
   };
 
+  // ── Extract test code: first from row.test, then fallback to filename ──
+  let testCode = extractTestCode(row.test);
+  if (!testCode && filename) {
+      const match = filename.match(/\b(\d+)\b/);
+      if (match) testCode = match[1];
+  }
+
   // ── Subject swap correction ──
-  const testCode = extractTestCode(row.test);
   if (testCode && subjectSwaps[testCode]) {
+      console.log(`🔄 Applying swap for test code: ${testCode}`);
       const swapMap = subjectSwaps[testCode].swap || {};
       const subjects = ['phy', 'chem', 'math'];
       const suffixes = ['_marks', '_correct', '_wrong', '_attempt'];
@@ -3977,6 +3987,10 @@ function mapRow(r) {
               }
           }
       }
+  } else if (testCode && !subjectSwaps[testCode]) {
+      console.log(`ℹ️ No swap defined for test code: ${testCode}`);
+  } else {
+      console.log('⚠️ Could not extract test code from row or filename.');
   }
 
   // ── Halving correction ──
@@ -4249,7 +4263,8 @@ async function loadCSVByName(filename) {
     const rows = parseCSV(text);
     if (rows.length === 0) { showError('CSV appears empty or malformed'); return; }
     hideOverlay();
-    buildDashboard(rows.map(mapRow), filename);
+    // Pass filename to mapRow as second argument
+    buildDashboard(rows.map(r => mapRow(r, filename)), filename);
   } catch(err) {
     showError('Error loading file: ' + err.message);
   }
@@ -4284,7 +4299,7 @@ async function populatePickerMenu() {
 }
 
 (async function boot() {
-  await loadSubjectSwaps();   // <-- added
+  await loadSubjectSwaps();
   const params = new URLSearchParams(window.location.search);
   const fileParam = params.get('file');
 
