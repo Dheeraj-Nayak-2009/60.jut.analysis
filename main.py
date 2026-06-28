@@ -6905,36 +6905,86 @@ function getInstA(fileVal){
   return '';
 }
 
-function mapRow(r) {
-  const get = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return '0'; };
-  const getS = (...keys) => { for(const k of keys){ if(r[k]!==undefined && r[k]!=='') return r[k]; } return ''; };
-  
+function mapRow(r, filename) {
+  const get = (...ks) => { for (const k of ks) { if (r[k] !== undefined && r[k] !== '') return r[k]; } return '0'; };
+  const getS = (...ks) => { for (const k of ks) { if (r[k] !== undefined && r[k] !== '') return r[k]; } return ''; };
+
   // Base row
   const row = {
     name:   getS('name') || 'Unknown',
     inst:   getInstA(getS('file','filename')),
     total:  n(get('total_marks','total_score','total')),
     rank:   n(get('rank')),
-    phy_a:  n(get('phy_attempt','physics_attempt','phy_attempted','physics_attempted')),
-    chem_a: n(get('chem_attempt','chemistry_attempt','chem_attempted','chemistry_attempted')),
-    math_a: n(get('math_attempt','maths_attempt','math_attempted','maths_attempted','mathematics_attempt')),
-    tot_a:  n(get('total_attempt','total_attempted')),
-    phy_c:  n(get('phy_correct','physics_correct','phy_corrects','physics_corrects')),
-    chem_c: n(get('chem_correct','chemistry_correct','chem_corrects','chemistry_corrects')),
-    math_c: n(get('math_correct','maths_correct','math_corrects','maths_corrects','mathematics_correct')),
-    tot_c:  n(get('total_correct','total_corrects')),
-    phy_w:  n(get('phy_wrong','physics_wrong','phy_wrongs','physics_wrongs')),
-    chem_w: n(get('chem_wrong','chemistry_wrong','chem_wrongs','chemistry_wrongs')),
-    math_w: n(get('math_wrong','maths_wrong','math_wrongs','maths_wrongs','mathematics_wrong')),
-    tot_w:  n(get('total_wrong','total_wrongs')),
+    phy_a:  n(get('phy_attempt','physics_attempt')),
+    chem_a: n(get('chem_attempt','chemistry_attempt')),
+    math_a: n(get('math_attempt','maths_attempt')),
+    tot_a:  n(get('total_attempt')),
+    phy_c:  n(get('phy_correct','physics_correct')),
+    chem_c: n(get('chem_correct','chemistry_correct')),
+    math_c: n(get('math_correct','maths_correct')),
+    tot_c:  n(get('total_correct')),
+    phy_w:  n(get('phy_wrong','physics_wrong')),
+    chem_w: n(get('chem_wrong','chemistry_wrong')),
+    math_w: n(get('math_wrong','maths_wrong')),
+    tot_w:  n(get('total_wrong')),
     phy_m:  n(get('phy_marks','physics_marks')),
     chem_m: n(get('chem_marks','chemistry_marks')),
-    math_m: n(get('math_marks','maths_marks','mathematics_marks')),
+    math_m: n(get('math_marks','maths_marks')),
+    test:   getS('test','test_name','filename','jut','jut_name') || 'Unknown'
   };
+
+  // ── Extract test code ──
+  let testCode = extractTestCode(row.test);
+  if (!testCode && filename) {
+    const match = filename.match(/\b(\d+)\b/);
+    if (match) testCode = match[1];
+  }
+
+  // ── Subject swap correction ──
+  if (testCode && subjectSwaps[testCode]) {
+    console.log(`🔄 Applying swap for test code: ${testCode}`);
+    const swapMap = subjectSwaps[testCode].swap || {};
+
+    // Map subject short‑names to actual row key suffixes
+    const suffixMap = {
+      '_marks':   '_m',
+      '_correct': '_c',
+      '_wrong':   '_w',
+      '_attempt': '_a'
+    };
+
+    const subjects = ['phy', 'chem', 'math'];
+    const original = {};
+
+    // Save original values
+    subjects.forEach(subj => {
+      Object.values(suffixMap).forEach(suff => {
+        const key = subj + suff;
+        if (row[key] !== undefined) original[key] = row[key];
+      });
+    });
+
+    // Apply swaps
+    subjects.forEach(subj => {
+      const target = swapMap[subj] || subj;
+      if (target === subj) return;
+      Object.values(suffixMap).forEach(suff => {
+        const srcKey = subj + suff;
+        const dstKey = target + suff;
+        if (srcKey in original) {
+          row[dstKey] = original[srcKey];
+        }
+      });
+    });
+  } else if (testCode && !subjectSwaps[testCode]) {
+    console.log(`ℹ️ No swap defined for test code: ${testCode}`);
+  } else {
+    console.log('⚠️ Could not extract test code from row or filename.');
+  }
 
   // ── Halving correction ──
   const attemptVals = [row.phy_a, row.chem_a, row.math_a, row.tot_a];
-  if (attemptVals.some(v => v > 180)) {
+  if (attemptVals.some(v => v > 75)) {
     const fields = ['phy_a','chem_a','math_a','tot_a','phy_c','chem_c','math_c','tot_c',
                     'phy_w','chem_w','math_w','tot_w','phy_m','chem_m','math_m','total'];
     fields.forEach(f => {
