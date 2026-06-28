@@ -17,6 +17,18 @@
       "math": "chem"
     }
   },
+  "9669": {
+    "swap": {
+      "chem": "math",
+      "math": "chem"
+    }
+  },
+  "9702": {
+    "swap": {
+      "chem": "math",
+      "math": "chem"
+    }
+  },
   "9722": {
     "swap": {
       "phy": "math",
