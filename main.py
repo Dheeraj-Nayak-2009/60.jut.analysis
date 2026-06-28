@@ -7,7 +7,8 @@ import re
 import base64
 import json
 import re
-import requests
+import urllib.request
+import urllib.error
 
 # ── Hardcoded password ──
 PASSWORD = "jut2025"
@@ -30,27 +31,29 @@ def get_github_file_sha():
         'Authorization': f'token {GITHUB_TOKEN}',
         'Accept': 'application/vnd.github.v3+json'
     }
-    resp = requests.get(url, headers=headers)
-    if resp.status_code == 200:
-        return resp.json().get('sha')
-    return None
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            return data.get('sha')
+    except urllib.error.HTTPError as e:
+        print(f"GitHub API error: {e.code} {e.reason}")
+        return None
 
 def update_github_file(content, commit_message):
     """Update the file on GitHub with new content."""
     url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}'
     headers = {
         'Authorization': f'token {GITHUB_TOKEN}',
-        'Accept': 'application/vnd.github.v3+json'
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
     }
     
-    # Get current SHA
     sha = get_github_file_sha()
     if not sha:
         return {'error': 'Could not get file SHA'}, 500
-    
-    # Encode content to base64
+
     content_b64 = base64.b64encode(content.encode('utf-8')).decode('utf-8')
-    
     data = {
         'message': commit_message,
         'content': content_b64,
@@ -58,11 +61,18 @@ def update_github_file(content, commit_message):
         'branch': GITHUB_BRANCH
     }
     
-    resp = requests.put(url, headers=headers, json=data)
-    if resp.status_code in (200, 201):
-        return resp.json(), 200
-    else:
-        return {'error': resp.text}, resp.status_code
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(data).encode('utf-8'),
+        headers=headers,
+        method='PUT'
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode('utf-8')), resp.status
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        return {'error': f'{e.code} {e.reason}: {error_body}'}, e.code
 
 @app.route("/api/swaps")
 @login_required
@@ -73,13 +83,16 @@ def get_swaps():
         'Authorization': f'token {GITHUB_TOKEN}',
         'Accept': 'application/vnd.github.v3+json'
     }
-    resp = requests.get(url, headers=headers)
-    if resp.status_code == 200:
-        data = resp.json()
-        content = base64.b64decode(data['content']).decode('utf-8')
-        swaps = json.loads(content)
-        return jsonify(swaps)
-    return jsonify({}), 200
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            content = base64.b64decode(data['content']).decode('utf-8')
+            swaps = json.loads(content)
+            return jsonify(swaps)
+    except Exception as e:
+        print(f"Error fetching swaps: {e}")
+        return jsonify({}), 200
 
 @app.route("/api/swaps", methods=['POST'])
 @login_required
