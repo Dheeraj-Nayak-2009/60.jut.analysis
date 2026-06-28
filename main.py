@@ -7392,6 +7392,32 @@ def debug_row(student_name):
                     'swaps_loaded': load_subject_swaps()
                 })
     return jsonify({"error": "Student not found"}), 404
+
+@app.route("/debug-headers")
+@login_required
+def debug_headers():
+    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
+    if not os.path.exists(master_path):
+        return jsonify({"error": "master.csv not found"}), 404
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        headers = reader.fieldnames
+    return jsonify({"headers": headers})
+
+@app.route("/debug-students")
+@login_required
+def debug_students():
+    master_path = os.path.join(os.path.dirname(app.static_folder), 'master', 'master.csv')
+    if not os.path.exists(master_path):
+        return jsonify({"error": "master.csv not found"}), 404
+    names = []
+    with open(master_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            clean = {k.strip().lower().replace(' ', '_'): v.strip() for k, v in row.items()}
+            if 'name' in clean and clean['name']:
+                names.append(clean['name'])
+    return jsonify(sorted(set(names)))
     
 if __name__ == "__main__":
     app.run(debug=True)
