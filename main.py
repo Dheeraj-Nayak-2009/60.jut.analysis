@@ -2693,11 +2693,11 @@ HOME_HTML = r"""<!DOCTYPE html>
     animation: fadeUp 0.7s 0.95s forwards;
   }
 
-  #fileGrid {
+  .file-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.2rem;
-    margin-bottom: 5rem;
+    margin-bottom: 3rem;
     opacity: 0;
     animation: fadeUp 0.8s 1.1s forwards;
   }
@@ -2847,7 +2847,6 @@ HOME_HTML = r"""<!DOCTYPE html>
     margin-top: 0.3rem;
   }
 
-  /* NAV GRID */
   .nav-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -3089,17 +3088,15 @@ Score • Analyse • Improve
     </div>
   </div>
 
-  <div class="section-label">All Tests</div>
+  <!-- JUT Tests -->
+  <div class="section-label">JUT Tests</div>
   <div class="section-title">Choose a JUT Result</div>
+  <div id="jutGrid" class="file-grid"></div>
 
-  <div id="fileGrid">
-    <div class="loading-row">
-      <div class="loading-dot"></div>
-      <div class="loading-dot"></div>
-      <div class="loading-dot"></div>
-      <span style="font-size:0.65rem;letter-spacing:0.2em;color:var(--muted);margin-left:0.5rem;">LOADING FILES…</span>
-    </div>
-  </div>
+  <!-- Cumulative Tests -->
+  <div class="section-label" style="margin-top:3rem;">Cumulative Tests</div>
+  <div class="section-title">Choose a CT Result</div>
+  <div id="ctGrid" class="file-grid"></div>
 
   <footer>
     <span>JUT Analytics Hub</span>
@@ -3109,69 +3106,62 @@ Score • Analyse • Improve
 
 <script>
 async function loadMenu() {
-  const grid = document.getElementById('fileGrid');
+  const jutGrid = document.getElementById('jutGrid');
+  const ctGrid = document.getElementById('ctGrid');
   try {
     const res = await fetch('/api/csv-files');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const files = await res.json();
     
-    // Filter only files matching pattern: 60jut{num}.csv (case insensitive)
-    const jutFiles = files.filter(f => {
-      const match = f.toLowerCase().match(/^60jut(\d+)\.csv$/);
-      return match !== null;
-    });
+    const jutFiles = files.filter(f => /^60jut(\d+)\.csv$/i.test(f));
+    const ctFiles = files.filter(f => /^60ct(\d+)\.csv$/i.test(f));
     
-    // Sort by number (extract the number from filename)
-    jutFiles.sort((a, b) => {
-      const numA = parseInt(a.match(/60jut(\d+)\.csv/i)[1]);
-      const numB = parseInt(b.match(/60jut(\d+)\.csv/i)[1]);
-      return numA - numB;
-    });
+    const sortByNum = (a,b) => parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0]);
+    jutFiles.sort(sortByNum);
+    ctFiles.sort(sortByNum);
 
-    document.getElementById('strip-files').textContent = jutFiles.length || '0';
+    document.getElementById('strip-files').textContent = files.length || '0';
 
-    if (jutFiles.length === 0) {
-      grid.innerHTML = `<div class="empty-state">
-        <div class="empty-state-icon">NO JUT FILES</div>
-        <p>No files matching pattern <code>60jut{num}.csv</code> found in /static folder.<br>Example: 60jut1.csv, 60jut2.csv, ... 60jut30.csv</p>
-      </div>`;
-      return;
-    }
+    renderFileGrid(jutGrid, jutFiles, 'JUT');
+    renderFileGrid(ctGrid, ctFiles, 'CT');
 
-    grid.innerHTML = '';
-    jutFiles.forEach((filename, idx) => {
-      // Extract number for display
-      const numMatch = filename.match(/60jut(\d+)\.csv/i);
-      const jutNum = numMatch ? numMatch[1] : '';
-      const label = `JUT ${jutNum}`;
-      const card = document.createElement('a');
-      card.className = 'file-card';
-      card.href = '/analysis?file=' + encodeURIComponent(filename);
-      card.style.animationDelay = (idx * 0.06) + 's';
-      card.innerHTML = `
-        <div class="file-card-icon">JUT Result</div>
-        <div class="file-card-name">${label}</div>
-        <div class="file-card-filename">${filename}</div>
-        <div class="subj-pills">
-          <span class="pill pill-p">Physics</span>
-          <span class="pill pill-c">Chemistry</span>
-          <span class="pill pill-m">Maths</span>
-        </div>
-        <div class="file-card-arrow">↗</div>`;
-      grid.appendChild(card);
-    });
   } catch(err) {
-    grid.innerHTML = `<div class="empty-state">
-      <div class="empty-state-icon">ERROR</div>
-      <p>Could not load file list.<br>${err.message}</p>
-    </div>`;
+    [jutGrid, ctGrid].forEach(g => {
+      g.innerHTML = `<div class="empty-state"><div class="empty-state-icon">ERROR</div><p>Could not load file list.<br>${err.message}</p></div>`;
+    });
   }
+}
+
+function renderFileGrid(grid, files, prefix) {
+  grid.innerHTML = '';
+  if (files.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><p>No ${prefix} files found.</p></div>`;
+    return;
+  }
+  files.forEach((filename, idx) => {
+    const num = filename.match(/\d+/)[0];
+    const label = `${prefix} ${num}`;
+    const card = document.createElement('a');
+    card.className = 'file-card';
+    card.href = '/analysis?file=' + encodeURIComponent(filename);
+    card.style.animationDelay = (idx * 0.06) + 's';
+    card.innerHTML = `
+      <div class="file-card-icon">${prefix} Result</div>
+      <div class="file-card-name">${label}</div>
+      <div class="file-card-filename">${filename}</div>
+      <div class="subj-pills">
+        <span class="pill pill-p">Physics</span>
+        <span class="pill pill-c">Chemistry</span>
+        <span class="pill pill-m">Maths</span>
+      </div>
+      <div class="file-card-arrow">↗</div>`;
+    grid.appendChild(card);
+  });
 }
 loadMenu();
 </script>
 </body>
 </html>"""
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  ANALYSIS PAGE (with halving correction in mapRow)
 # ══════════════════════════════════════════════════════════════════════════════
