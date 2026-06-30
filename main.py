@@ -3139,8 +3139,11 @@ function renderFileGrid(grid, files, prefix) {
     return;
   }
   files.forEach((filename, idx) => {
-    const num = filename.match(/\d+/)[0];
-    const label = `${prefix} ${num}`;
+    // Extract the LAST number in the filename (e.g., "60ct1.csv" → "1")
+    const nums = filename.match(/\d+/g);
+    const num = nums ? nums[nums.length - 1] : '';
+    // Format label: CT-{num} or JUT {num}
+    const label = prefix === 'CT' ? `CT-${num}` : `${prefix} ${num}`;
     const card = document.createElement('a');
     card.className = 'file-card';
     card.href = '/analysis?file=' + encodeURIComponent(filename);
@@ -3514,7 +3517,6 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
     color: var(--text);
   }
 
-  /* Clickable student name link */
   .name-cell a {
     color: inherit;
     text-decoration: none;
@@ -3750,7 +3752,6 @@ ANALYSIS_HTML = r"""<!DOCTYPE html>
 
   .sort-btn:hover, .sort-btn.active { border-color: var(--accent); color: var(--accent); }
 
-  /* INSTITUTION FILTER BAR */
   .inst-filter-bar{display:flex;gap:0.5rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap;}
   .inst-filter-label{font-size:0.55rem;letter-spacing:0.22em;color:var(--muted);text-transform:uppercase;}
   .inst-btn{font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;padding:0.35rem 0.8rem;border:1px solid var(--border);border-radius:2px;cursor:pointer;background:transparent;color:var(--muted);font-family:'JetBrains Mono',monospace;transition:all 0.2s;white-space:nowrap;}
@@ -4126,16 +4127,21 @@ function buildDashboard(raw, filename) {
   const high = Math.max(...raw.map(r => r.total));
   const avgAcc = Math.round(raw.reduce((s,r) => s+r.accuracy, 0) / raw.length);
 
+  // ── Detect file type and set label ──
+  const isCT = /^60ct(\d+)\.csv$/i.test(filename);
+  const numMatch = filename.match(/\d+/);
+  const num = numMatch ? numMatch[0] : '';
+  const label = isCT ? `CT-${num}` : `JUT ${num}`;
+
   document.getElementById('hs-avg').textContent   = avg;
   document.getElementById('hs-high').textContent  = high;
   document.getElementById('hs-acc').textContent   = avgAcc + '%';
   document.getElementById('hs-count').textContent = raw.length;
   document.getElementById('heroSub').textContent  = raw.length + ' STUDENTS · PHYSICS · CHEMISTRY · MATHEMATICS';
-  const label = filename.replace('.csv','').replace(/_/g,' ').toUpperCase();
-  document.getElementById('heroTag').textContent  = 'NEW JUT · ' + label + ' · BATCH ANALYSIS';
+  document.getElementById('heroTag').textContent  = (isCT ? 'CUMULATIVE TEST · ' : 'NEW JUT · ') + label + ' · BATCH ANALYSIS';
   document.getElementById('topnavFile').textContent = label;
-  document.getElementById('footerBar').textContent = 'JUT ANALYSIS DASHBOARD · ' + raw.length + ' STUDENTS · ' + label;
-  document.title = 'JUT · ' + label;
+  document.getElementById('footerBar').textContent = (isCT ? 'CT' : 'JUT') + ' ANALYSIS DASHBOARD · ' + raw.length + ' STUDENTS · ' + label;
+  document.title = (isCT ? 'CT · ' : 'JUT · ') + label;
 
   const podiumEl = document.getElementById('podium');
   podiumEl.innerHTML = '';
@@ -4434,7 +4440,6 @@ async function populatePickerMenu() {
 </script>
 </body>
 </html>"""
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  ELITES PAGE (unchanged, uses backend corrected data)
 # ══════════════════════════════════════════════════════════════════════════════
