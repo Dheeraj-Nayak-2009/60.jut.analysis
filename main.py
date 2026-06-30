@@ -4127,11 +4127,11 @@ function buildDashboard(raw, filename) {
   const high = Math.max(...raw.map(r => r.total));
   const avgAcc = Math.round(raw.reduce((s,r) => s+r.accuracy, 0) / raw.length);
 
-  // ── Detect file type and set label ──
-  const isCT = /^60ct(\d+)\.csv$/i.test(filename);
-  const numMatch = filename.match(/\d+/);
-  const num = numMatch ? numMatch[0] : '';
-  const label = isCT ? `CT-${num}` : `JUT ${num}`;
+  // ── Detect file type and extract the ID (last number) ──
+    const isCT = /^60ct/i.test(filename);
+    const nums = filename.match(/\d+/g);
+    const id = nums && nums.length > 0 ? nums[nums.length - 1] : '';
+    const label = isCT ? `CT-${id}` : `JUT ${id}`;
 
   document.getElementById('hs-avg').textContent   = avg;
   document.getElementById('hs-high').textContent  = high;
