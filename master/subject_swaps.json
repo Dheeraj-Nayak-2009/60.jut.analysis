@@ -40,5 +40,11 @@
       "math": "phy",
       "phy": "math"
     }
+  },
+  "9799": {
+    "swap": {
+      "chem": "math",
+      "math": "chem"
+    }
   }
 }
