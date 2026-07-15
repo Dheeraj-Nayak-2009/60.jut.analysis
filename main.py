@@ -604,10 +604,50 @@ LOGIN_HTML = r"""<!DOCTYPE html>
             margin-top: 1rem;
             letter-spacing: 0.15em;
         }
+
+        /* ===== FLOOD OVERLAY (moved here) ===== */
+        .tapoverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgb(194, 149, 0);
+            display: flex;
+            flex-direction: column;
+            z-index: 9999;
+        }
+        .tapoverlay h1 {
+            font-size: 7em;
+            color: #fff;
+            margin: 30px 40px 0 40px;
+            font-family: "Bebas Neue", sans-serif;
+        }
+        .tapoverlay img {
+            width: 400px;
+            height: auto;
+            position: absolute;
+            bottom: 0;
+            right:0;
+        }
+        @media only screen and (max-width: 450px) {
+            .tapoverlay h1 {
+                font-size: 5em;
+                margin: 20px 20px 0 20px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="login-box">
+
+    <!-- FLOOD OVERLAY – first thing visible -->
+    <div class="tapoverlay" id="floodOverlay">
+        <h1>TWO TAPS ARE ENOUGH<br> TO FLOOD YOUR ROOM</h1>
+        <img src="static/tap.gif" alt="WATERTAP">
+    </div>
+
+    <!-- LOGIN BOX – hidden behind overlay until double-tap -->
+    <div class="login-box" id="loginBox">
         <h1>🔐 JUT HUB</h1>
         <div class="sub">Authentication Required</div>
         <form method="post">
@@ -618,9 +658,33 @@ LOGIN_HTML = r"""<!DOCTYPE html>
         </form>
         <div class="hint">Contact admin if you don't have the password.</div>
     </div>
+
+    <!-- Double‑tap script to remove overlay -->
+    <script>
+        document.title = "FLOODING IN PROGRESS";
+        document.body.style.overflow = "hidden";
+        let tapCount = 0;
+        let tapTimeout;
+        const overlay = document.getElementById('floodOverlay');
+        overlay.addEventListener('click', () => {
+            tapCount++;
+            if (tapCount === 2) {
+                overlay.style.display = 'none';
+                document.title = "JUT · Login";
+                document.body.style.overflow = "auto";
+                clearTimeout(tapTimeout);
+                tapCount = 0;
+                // Focus the password field after overlay disappears
+                document.getElementById('password').focus();
+            } else {
+                tapTimeout = setTimeout(() => {
+                    tapCount = 0;
+                }, 200);
+            }
+        });
+    </script>
 </body>
 </html>"""
-
 INDIVIDUAL_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2918,71 +2982,11 @@ HOME_HTML = r"""<!DOCTYPE html>
     footer { flex-direction: column; gap: 0.5rem; text-align: center; }
   }
 </style>
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Forum&family=Lexend:wght@100..900&family=Special+Gothic+Condensed+One&display=swap');
-    *{
-        user-select: none;
-    }
-    .tapoverlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgb(194, 149, 0);
-        display: flex;
-        flex-direction: column;
-        z-index: 9999;
-    }
-    .tapoverlay h1 {
-        font-size: 7em;
-        color: #fff;
-        margin: 30px 40px 0 40px;
-        font-family: "Bebas Neue", sans-serif;
-    }
-    .tapoverlay img {
-        width: 400px;
-        height: auto;
-        position: absolute;
-        bottom: 0;
-        right:0;
-    }
-    @media only screen and (max-width: 450px) {
-        .tapoverlay h1 {
-            font-size: 5em;
-            margin: 20px 20px 0 20px;
-        }
-    }
-</style>
+
 </head>
 <body>
 
-    <div class="tapoverlay">
-        <h1>TWO TAPS ARE ENOUGH<br> TO FLOOD YOUR ROOM</h1>
-        <img src="static/tap.gif" alt="WATERTAP">
-    </div>
-    <script>
-        document.title = "FLOODING IN PROGRESS";
-        document.body.style.overflow = "hidden";
-        // quick double tap to remove the overlay
-        let tapCount = 0;
-        let tapTimeout;
-        document.querySelector('.tapoverlay').addEventListener('click', () => {
-            tapCount++;
-            if (tapCount === 2) {
-                document.querySelector('.tapoverlay').style.display = 'none';
-                    // change title to "TAPOVERLAY"
-                    document.title = "JUT · Analytics Hub"
-                    document.body.style.overflow = "auto";
-                clearTimeout(tapTimeout);
-                tapCount = 0;
-            } else {
-                tapTimeout = setTimeout(() => {
-                    tapCount = 0;
-                }, 200); // reset tap count after 200ms
-            }
-        });
-    </script>
+    
 
 <div class="grid-bg"></div>
 <div class="glow-1"></div>
