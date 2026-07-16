@@ -5482,7 +5482,7 @@ NEET_HTML = r"""<!DOCTYPE html>
   }
 
   section {
-    padding: 5rem 2rem;
+    padding: 5rem 0.5rem;
     max-width: 1400px;
     margin: 0 auto;
   }
