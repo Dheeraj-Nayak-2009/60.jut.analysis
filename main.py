@@ -2726,7 +2726,7 @@ HOME_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FLOODING IN PROGRESS</title>
+<title>JUT · Analytics Hub</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -2905,11 +2905,55 @@ HOME_HTML = r"""<!DOCTYPE html>
     animation: fadeUp 0.7s 0.95s forwards;
   }
 
+  /* ─── COLLAPSIBLE GRID ─── */
+  .collapsible-wrap {
+    position: relative;
+    max-height: 260px;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .collapsible-wrap.expanded {
+    max-height: none;
+  }
+  .collapsible-wrap .fade-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, transparent, var(--bg));
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+  .collapsible-wrap.expanded .fade-overlay {
+    opacity: 0;
+  }
+  .toggle-btn {
+    display: block;
+    margin: 0.5rem auto 1.5rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    padding: 0.4rem 1.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .toggle-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
   .file-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.2rem;
-    margin-bottom: 3rem;
+    margin-bottom: 0.5rem;
     opacity: 0;
     animation: fadeUp 0.8s 1.1s forwards;
   }
@@ -2924,7 +2968,7 @@ HOME_HTML = r"""<!DOCTYPE html>
     display: block;
     position: relative;
     overflow: hidden;
-    transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+    transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
   }
   .file-card::before {
     content: '';
@@ -2936,8 +2980,17 @@ HOME_HTML = r"""<!DOCTYPE html>
     transform-origin: left;
     transition: transform 0.3s ease;
   }
-  .file-card:hover { transform: translateY(-5px); border-color: var(--accent); background: var(--surface2); }
-  .file-card:hover::before { transform: scaleX(1); }
+  .file-card:hover,
+  .file-card.highlight {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    background: var(--surface2);
+    box-shadow: 0 8px 30px rgba(232,197,71,0.15);
+  }
+  .file-card:hover::before,
+  .file-card.highlight::before {
+    transform: scaleX(1);
+  }
 
   .file-card-icon {
     font-size: 0.55rem;
@@ -2974,7 +3027,11 @@ HOME_HTML = r"""<!DOCTYPE html>
     color: var(--muted);
     transition: color 0.2s, transform 0.2s;
   }
-  .file-card:hover .file-card-arrow { color: var(--accent); transform: translate(3px, -3px); }
+  .file-card:hover .file-card-arrow,
+  .file-card.highlight .file-card-arrow {
+    color: var(--accent);
+    transform: translate(3px, -3px);
+  }
 
   .subj-pills {
     display: flex;
@@ -3118,6 +3175,45 @@ HOME_HTML = r"""<!DOCTYPE html>
     text-transform: uppercase;
   }
 
+  /* ─── FLOATING BUTTON ─── */
+  .jump-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 1000;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+    box-shadow: 0 8px 30px rgba(232,197,71,0.3);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    line-height: 1;
+  }
+  .jump-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 40px rgba(232,197,71,0.5);
+  }
+  .jump-btn:active {
+    transform: scale(0.95);
+  }
+  @media (max-width: 600px) {
+    .jump-btn {
+      width: 50px;
+      height: 50px;
+      font-size: 1.6rem;
+      bottom: 1.5rem;
+      right: 1.5rem;
+    }
+  }
+
   @keyframes fadeUp {
     from { opacity:0; transform:translateY(20px); }
     to   { opacity:1; transform:translateY(0); }
@@ -3128,13 +3224,13 @@ HOME_HTML = r"""<!DOCTYPE html>
     .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
     .stat-item:last-child { border-bottom: none; }
     footer { flex-direction: column; gap: 0.5rem; text-align: center; }
+    .collapsible-wrap {
+      max-height: 200px;
+    }
   }
 </style>
-
 </head>
 <body>
-
-    
 
 <div class="grid-bg"></div>
 <div class="glow-1"></div>
@@ -3243,12 +3339,20 @@ Score • Analyse • Improve
   <!-- JUT Tests -->
   <div class="section-label">JUT Tests</div>
   <div class="section-title">Choose a JUT Result</div>
-  <div id="jutGrid" class="file-grid"></div>
+  <div class="collapsible-wrap" id="jutWrap">
+    <div id="jutGrid" class="file-grid"></div>
+    <div class="fade-overlay"></div>
+  </div>
+  <button class="toggle-btn" id="jutToggle" style="display:none;">Show more</button>
 
   <!-- Cumulative Tests -->
   <div class="section-label" style="margin-top:3rem;">Cumulative Tests</div>
   <div class="section-title">Choose a CT Result</div>
-  <div id="ctGrid" class="file-grid"></div>
+  <div class="collapsible-wrap" id="ctWrap">
+    <div id="ctGrid" class="file-grid"></div>
+    <div class="fade-overlay"></div>
+  </div>
+  <button class="toggle-btn" id="ctToggle" style="display:none;">Show more</button>
 
   <footer>
     <span>JUT Analytics Hub</span>
@@ -3256,7 +3360,11 @@ Score • Analyse • Improve
   </footer>
 </div>
 
+<!-- Floating "Jump to Latest" button -->
+<button class="jump-btn" id="jumpBtn" title="Jump to latest JUT">⬇️</button>
+
 <script>
+// ── Load menu ──
 async function loadMenu() {
   const jutGrid = document.getElementById('jutGrid');
   const ctGrid = document.getElementById('ctGrid');
@@ -3277,6 +3385,13 @@ async function loadMenu() {
     renderFileGrid(jutGrid, jutFiles, 'JUT');
     renderFileGrid(ctGrid, ctFiles, 'CT');
 
+    // After rendering, setup collapsibles
+    setupCollapsible('jutWrap', 'jutToggle', jutFiles.length);
+    setupCollapsible('ctWrap', 'ctToggle', ctFiles.length);
+
+    // Setup jump button
+    setupJumpButton(jutFiles.length);
+
   } catch(err) {
     [jutGrid, ctGrid].forEach(g => {
       g.innerHTML = `<div class="empty-state"><div class="empty-state-icon">ERROR</div><p>Could not load file list.<br>${err.message}</p></div>`;
@@ -3291,15 +3406,14 @@ function renderFileGrid(grid, files, prefix) {
     return;
   }
   files.forEach((filename, idx) => {
-    // Extract the LAST number in the filename (e.g., "60ct1.csv" → "1")
     const nums = filename.match(/\d+/g);
     const num = nums ? nums[nums.length - 1] : '';
-    // Format label: CT-{num} or JUT {num}
     const label = prefix === 'CT' ? `CT-${num}` : `${prefix} ${num}`;
     const card = document.createElement('a');
     card.className = 'file-card';
     card.href = '/analysis?file=' + encodeURIComponent(filename);
     card.style.animationDelay = (idx * 0.06) + 's';
+    card.dataset.filename = filename;
     card.innerHTML = `
       <div class="file-card-icon">${prefix} Result</div>
       <div class="file-card-name">${label}</div>
@@ -3313,6 +3427,72 @@ function renderFileGrid(grid, files, prefix) {
     grid.appendChild(card);
   });
 }
+
+// ── Collapsible logic ──
+function setupCollapsible(wrapId, toggleId, itemCount) {
+  const wrap = document.getElementById(wrapId);
+  const toggle = document.getElementById(toggleId);
+  if (!wrap || !toggle) return;
+
+  // Hide toggle if 3 or fewer cards (or no cards)
+  if (itemCount <= 3) {
+    toggle.style.display = 'none';
+    wrap.classList.add('expanded'); // fully visible
+    return;
+  }
+
+  toggle.style.display = 'block';
+  let expanded = false;
+
+  toggle.addEventListener('click', () => {
+    expanded = !expanded;
+    wrap.classList.toggle('expanded', expanded);
+    toggle.textContent = expanded ? 'Show less' : 'Show more';
+  });
+
+  // Store reference for jump button
+  wrap.dataset.collapsible = 'true';
+  wrap.dataset.expanded = 'false';
+}
+
+// ── Jump to latest ──
+function setupJumpButton(jutCount) {
+  const btn = document.getElementById('jumpBtn');
+  if (!btn) return;
+  if (jutCount === 0) {
+    btn.style.display = 'none';
+    return;
+  }
+
+  btn.addEventListener('click', () => {
+    const wrap = document.getElementById('jutWrap');
+    const grid = document.getElementById('jutGrid');
+    if (!wrap || !grid) return;
+
+    // 1. Expand if collapsed
+    if (wrap.classList.contains('collapsible-wrap') && !wrap.classList.contains('expanded')) {
+      wrap.classList.add('expanded');
+      const toggle = document.getElementById('jutToggle');
+      if (toggle) toggle.textContent = 'Show less';
+    }
+
+    // 2. Get the last card in the grid
+    const cards = grid.querySelectorAll('.file-card');
+    if (cards.length === 0) return;
+    const lastCard = cards[cards.length - 1];
+
+    // 3. Scroll to it smoothly
+    lastCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // 4. Highlight it
+    lastCard.classList.add('highlight');
+    setTimeout(() => {
+      lastCard.classList.remove('highlight');
+    }, 2000);
+  });
+}
+
+// ── Init ──
 loadMenu();
 </script>
 </body>
