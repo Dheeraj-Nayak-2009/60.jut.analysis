@@ -27,6 +27,9 @@ MASTER_PATH = 'master/master.csv'  # path inside the repo
 app = Flask(__name__)
 app.secret_key = 'supersecretkey-change-in-production'  # Use env var in production
 
+# ── API blueprint ──
+api_bp = Blueprint('api', __name__)
+
 # ── Login required decorator ──
 def login_required(f):
     @wraps(f)
@@ -302,8 +305,6 @@ def halve_row_if_needed(row):
                 pass
     return row
 
-# ── API blueprint ──
-api_bp = Blueprint('api', __name__)
 
 @api_bp.before_request
 def api_login_required():
