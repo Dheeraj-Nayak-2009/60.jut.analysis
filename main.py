@@ -8733,8 +8733,275 @@ MASTER_HTML = r"""<!DOCTYPE html>
 <title>Master CSV Manager · JUT Hub</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-  /* (same styles as before, no change) */
-  /* ... keep your existing CSS ... */
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #e8c547;
+    --accent2: #47e8c5;
+    --accent3: #e847a0;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --gold: #fbbf24;
+    --red: #f87171;
+    --orange: #fb923c;
+    --green: #4ade80;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    overflow-x: hidden;
+    display: flex;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── Layout ── */
+  .app { display: flex; width: 100%; height: 100vh; overflow: hidden; }
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+  .sidebar-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+  }
+  .sidebar-sub {
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+  }
+  .sidebar-file {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.7rem;
+    cursor: grab;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sidebar-file:hover { border-color: var(--accent); background: var(--surface); }
+  .sidebar-file.dragging { opacity: 0.3; }
+  .sidebar-file .badge {
+    font-size: 0.5rem;
+    background: var(--border);
+    padding: 0.1rem 0.5rem;
+    border-radius: 10px;
+    color: var(--muted);
+  }
+  .sidebar-file .badge.in-master { background: rgba(71,232,197,0.2); color: var(--accent2); }
+
+  .main {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    height: 100vh;
+  }
+  .header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .header-bar h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    color: var(--accent);
+  }
+  .header-bar .actions {
+    display: flex;
+    gap: 0.8rem;
+  }
+  .btn {
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    padding: 0.4rem 1.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: 0.05em;
+  }
+  .btn:hover { background: #d4b03a; }
+  .btn:active { transform: scale(0.97); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: var(--accent3); }
+  .btn-danger:hover { background: #c73a8a; }
+  .btn-success { background: var(--accent2); color: var(--bg); }
+  .btn-success:hover { background: #3ad4b5; }
+
+  /* ── Tiles ── */
+  .tiles-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding-bottom: 3rem;
+  }
+  .drop-zone {
+    height: 20px;
+    border: 2px dashed var(--border);
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(232,197,71,0.05);
+    height: 40px;
+  }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .tile.mismatch {
+    border-color: var(--orange);
+    background: rgba(251,146,60,0.06);
+  }
+  .tile.dragging { opacity: 0.4; }
+  .tile-left {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .tile-id {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--accent);
+    min-width: 70px;
+  }
+  .tile-info {
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .tile-info strong { color: var(--text); }
+  .tile-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .tile-actions button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.25rem 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tile-actions button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .tile-actions .update-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .tile-actions .remove-btn:hover { border-color: var(--red); color: var(--red); }
+  .tile-actions .move-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .drag-handle {
+    cursor: grab;
+    font-size: 1.2rem;
+    color: var(--muted);
+    user-select: none;
+    padding: 0 0.3rem;
+  }
+  .drag-handle:active { cursor: grabbing; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 2rem;
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.4s ease;
+    max-width: 400px;
+  }
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  .toast-success { border-color: var(--green); }
+  .toast-error { border-color: var(--red); }
+  .toast-message { font-size: 0.7rem; margin-top: 0.3rem; }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 768px) {
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; min-width: unset; height: auto; max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main { height: auto; }
+    .tile { flex-direction: column; align-items: stretch; }
+    .tile-left { flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>
