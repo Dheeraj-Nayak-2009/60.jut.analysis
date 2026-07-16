@@ -9008,10 +9008,10 @@ MASTER_HTML = r"""<!DOCTYPE html>
 
 <script>
 // ── State ──
-let allFiles = [];          // list of filenames
-let masterBlocks = [];      // array of blocks, each block = { id: '123', rows: [[...], ...], sourceFile: '60jut123.csv'? }
-let fileDataCache = {};     // filename -> { header, rows }
-let currentOrder = [];      // array of block indices or ids in order
+let allFiles = [];
+let masterBlocks = [];
+let fileDataCache = {};
+let masterHeader = [];
 
 // ── DOM refs ──
 const fileListEl = document.getElementById('fileList');
@@ -9051,24 +9051,73 @@ async function fetchMaster() {
   return data; // { header: [], blocks: [[...], ...] }
 }
 
-// ── Build master blocks from raw blocks ──
-function buildBlocksFromRaw(rawBlocks, fileList) {
-  // rawBlocks is array of arrays (rows). We need to identify which JUT each block belongs to.
-  // We'll use the first row's "file" or "filename" column if present, otherwise we try to match by JUT number from the test column.
-  // For simplicity, we'll require a 'file' column in the header.
-  // If not present, we'll try to extract JUT number from the first row's 'test' field.
-  // We'll also store the source file if we can match.
+// ── Helper: extract JUT number from test field ──
+function extractJutNumber(testStr) {
+  if (!testStr) return null;
+  const m = testStr.match(/\d+/);
+  return m ? m[0] : null;
+}
+
+// ── Build blocks from raw master data ──
+async function buildBlocksFromRaw(rawBlocks, header, fileList) {
   const blocks = [];
+  // Ensure we have header indices for 'test' and possibly 'file'
+  const testIdx = header.findIndex(h => h.toLowerCase() === 'test');
+  const fileIdx = header.findIndex(h => h.toLowerCase() === 'file' || h.toLowerCase() === 'filename');
+
   for (const rows of rawBlocks) {
     if (rows.length === 0) continue;
-    // Assume header is known: we need the column indices.
-    // We'll just take the first row as sample.
     const sample = rows[0];
-    // Try to find file column
-    let sourceFile = '';
-    let id = '';
-    // We need header – we don't have it here. We'll pass header separately.
-    // We'll have to store header in the state.
+    let id = null;
+    let sourceFile = null;
+
+    // Extract JUT number from test column
+    if (testIdx !== -1 && sample.length > testIdx) {
+      const testVal = sample[testIdx] || '';
+      id = extractJutNumber(testVal);
+    }
+
+    // If we have an id, find the matching CSV file
+    if (id) {
+      const matched = fileList.find(f => f.includes(id));
+      if (matched) sourceFile = matched;
+    }
+
+    // If still no sourceFile, fallback to using the file column (if present)
+    if (!sourceFile && fileIdx !== -1 && sample.length > fileIdx) {
+      const fileVal = sample[fileIdx] || '';
+      // try to extract number from the fileVal (e.g., U989.html -> 989)
+      const numMatch = fileVal.match(/\d+/);
+      if (numMatch) {
+        const num = numMatch[0];
+        const matched = fileList.find(f => f.includes(num));
+        if (matched) sourceFile = matched;
+      }
+    }
+
+    // If still no sourceFile, leave it empty
+    if (!sourceFile) {
+      sourceFile = '';
+    }
+
+    // Determine mismatch: compare row count with source file (if available)
+    let mismatch = false;
+    if (sourceFile && fileDataCache[sourceFile]) {
+      const sourceRows = fileDataCache[sourceFile].rows || [];
+      if (sourceRows.length !== rows.length) mismatch = true;
+    } else if (sourceFile) {
+      // file exists but not cached – mismatch (we'll try to fetch it later)
+      mismatch = true;
+    }
+
+    blocks.push({
+      id: id || '?',
+      sourceFile: sourceFile,
+      rows: rows,
+      rowCount: rows.length,
+      header: header,
+      mismatch: mismatch
+    });
   }
   return blocks;
 }
@@ -9076,81 +9125,22 @@ function buildBlocksFromRaw(rawBlocks, fileList) {
 // ── Full refresh ──
 async function refreshAll() {
   try {
+    showToast('Loading data…', 'success');
     const files = await fetchJutFiles();
     allFiles = files;
-    // Fetch content for all files (cache)
+    // Fetch content for all files
     await Promise.all(files.map(f => fetchFileContent(f)));
 
     const masterData = await fetchMaster();
     const rawBlocks = masterData.blocks || [];
-    const header = masterData.header || [];
+    masterHeader = masterData.header || [];
 
-    // We need to match each raw block to a source file.
-    // We'll build blocks with id, rows, sourceFile, rowCount, etc.
-    // For each block, we'll try to find the source file by looking for a column 'file' or 'filename' in the header.
-    // If not, we'll extract JUT number from the 'test' field.
-    const blocks = rawBlocks.map((rows, idx) => {
-      if (rows.length === 0) return null;
-      const sample = rows[0];
-      // Try to get file from row if column exists
-      let sourceFile = '';
-      let id = '';
-      // If header has 'file' or 'filename'
-      const fileColIdx = header.findIndex(h => h.toLowerCase() === 'file' || h.toLowerCase() === 'filename');
-      if (fileColIdx !== -1 && sample.length > fileColIdx) {
-        sourceFile = sample[fileColIdx] || '';
-      }
-      // If still empty, try to match by JUT number from test field
-      if (!sourceFile) {
-        const testIdx = header.findIndex(h => h.toLowerCase() === 'test');
-        if (testIdx !== -1 && sample.length > testIdx) {
-          const testVal = sample[testIdx] || '';
-          const match = testVal.match(/\d+/);
-          if (match) {
-            id = match[0];
-            // Find file that contains this id
-            const matchedFile = allFiles.find(f => f.includes(id));
-            if (matchedFile) sourceFile = matchedFile;
-          }
-        }
-      }
-      // If still no sourceFile, try to extract from filename pattern
-      if (!sourceFile) {
-        // Maybe the block id can be derived from the JUT number in the test field
-        const testIdx = header.findIndex(h => h.toLowerCase() === 'test');
-        if (testIdx !== -1 && sample.length > testIdx) {
-          const testVal = sample[testIdx] || '';
-          const match = testVal.match(/\d+/);
-          if (match) {
-            id = match[0];
-            const matchedFile = allFiles.find(f => f.includes(id));
-            if (matchedFile) sourceFile = matchedFile;
-          }
-        }
-      }
-      // If still nothing, use a fallback id
-      if (!sourceFile) {
-        id = `block-${idx}`;
-        sourceFile = '';
-      } else {
-        // extract numeric id from filename
-        const numMatch = sourceFile.match(/\d+/);
-        id = numMatch ? numMatch[0] : '';
-      }
-      return {
-        id: id || `block-${idx}`,
-        sourceFile: sourceFile,
-        rows: rows,
-        rowCount: rows.length,
-        header: header,
-        // We'll store the raw rows for later comparison
-        rawRows: rows
-      };
-    }).filter(b => b !== null);
+    // Build blocks with proper sourceFile and mismatch detection
+    masterBlocks = await buildBlocksFromRaw(rawBlocks, masterHeader, allFiles);
 
-    masterBlocks = blocks;
     renderSidebar();
     renderTiles();
+    showToast('Data loaded', 'success');
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   }
@@ -9226,28 +9216,15 @@ function createTile(block, index) {
 
   const sourceFile = block.sourceFile || 'unknown';
   const rowCount = block.rowCount || 0;
-
-  // Check if source file exists and has same row count
-  const fileData = fileDataCache[sourceFile];
-  let mismatch = false;
-  if (fileData) {
-    const sourceRows = fileData.rows || [];
-    if (sourceRows.length !== rowCount) mismatch = true;
-    // Also compare a hash of rows? For simplicity, just row count.
-  } else if (sourceFile) {
-    // file not found in cache – mismatch
-    mismatch = true;
-  }
-
-  if (mismatch) tile.classList.add('mismatch');
+  const idDisplay = block.id || '?';
 
   tile.innerHTML = `
     <div class="tile-left">
       <span class="drag-handle" draggable="true">⠿</span>
-      <span class="tile-id">#${block.id}</span>
+      <span class="tile-id">#${idDisplay}</span>
       <div class="tile-info">
         <strong>${sourceFile}</strong> · ${rowCount} rows
-        ${mismatch ? ' <span style="color:var(--orange);">⚠️ mismatch</span>' : ''}
+        ${block.mismatch ? ' <span style="color:var(--orange);">⚠️ mismatch</span>' : ''}
       </div>
     </div>
     <div class="tile-actions">
@@ -9334,12 +9311,11 @@ function insertFileAt(filename, index) {
   const newBlock = {
     id: id,
     sourceFile: filename,
-    rows: rows.map(row => [...row]), // copy
+    rows: rows.map(row => [...row]),
     rowCount: rows.length,
-    header: fileData.header || [],
-    rawRows: rows
+    header: fileData.header || masterHeader,
+    mismatch: false // initially no mismatch
   };
-  // Insert at index
   masterBlocks.splice(index, 0, newBlock);
   renderTiles();
   showToast(`Inserted ${filename} at position ${index+1}`, 'success');
@@ -9381,9 +9357,7 @@ async function updateBlock(index) {
     // Update block
     block.rows = rows.map(r => [...r]);
     block.rowCount = rows.length;
-    block.rawRows = rows;
-    // Also update header if needed
-    block.header = fileData.header || [];
+    block.mismatch = false; // assume updated
     renderTiles();
     showToast(`Updated block #${block.id} from ${filename}`, 'success');
   } catch (e) {
@@ -9393,14 +9367,13 @@ async function updateBlock(index) {
 
 // ── Save master ──
 async function saveMaster() {
-  // Build the full CSV content: header + blocks separated by blank line
   if (masterBlocks.length === 0) {
     showToast('No blocks to save', 'error');
     return;
   }
-  // Use the header from the first block (or from the first file)
-  let header = masterBlocks[0].header || [];
-  // If header empty, try to get from fileData of first block
+
+  // Use masterHeader (from the first load) or derive from first block
+  let header = masterHeader.length ? masterHeader : (masterBlocks[0].header || []);
   if (header.length === 0 && masterBlocks[0].sourceFile) {
     const fileData = fileDataCache[masterBlocks[0].sourceFile];
     if (fileData && fileData.header) header = fileData.header;
@@ -9417,15 +9390,13 @@ async function saveMaster() {
   for (let i = 0; i < masterBlocks.length; i++) {
     const block = masterBlocks[i];
     const rows = block.rows;
-    // Ensure each row has same length as header (pad if necessary)
+    // Pad rows to match header length
     const paddedRows = rows.map(row => {
       const r = [...row];
       while (r.length < header.length) r.push('');
       return r.slice(0, header.length);
     });
-    // Write rows
     paddedRows.forEach(row => lines.push(row.join(',')));
-    // Add blank line after each block except the last
     if (i < masterBlocks.length - 1) lines.push('');
   }
 
