@@ -3361,8 +3361,9 @@ Score • Analyse • Improve
 </div>
 
 <!-- Floating "Jump to Latest" button -->
-<button class="jump-btn" id="jumpBtn" title="Jump to latest JUT">⬇️</button>
+<button class="jump-btn" id="jumpBtn" title="Jump to latest JUT"><i class="fa-solid fa-angles-down"></i></button>
 
+<script src="https://kit.fontawesome.com/607a222a2c.js" crossorigin="anonymous"></script>
 <script>
 // ── Load menu ──
 async function loadMenu() {
