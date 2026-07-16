@@ -2908,7 +2908,7 @@ HOME_HTML = r"""<!DOCTYPE html>
   /* ─── COLLAPSIBLE GRID ─── */
   .collapsible-wrap {
     position: relative;
-    max-height: 260px;
+    max-height: 460px;
     overflow: hidden;
     transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
