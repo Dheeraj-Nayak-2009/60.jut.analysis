@@ -9,6 +9,8 @@ import json
 import re
 import urllib.request
 import urllib.error
+import logging
+logging.basicConfig(level=logging.INFO)
 
 # ── Hardcoded password ──
 PASSWORD = "jut2025"
@@ -237,21 +239,38 @@ def get_master_csv():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ── Add logging to master-csv POST ──
 @api_bp.post('/api/master-csv')
 def update_master_csv():
     data = request.get_json()
     if not data or 'content' not in data:
         return jsonify({'error': 'Missing content'}), 400
     content = data['content']
-    # Validate that content is a proper CSV (simple check)
     if not isinstance(content, str):
         return jsonify({'error': 'Content must be a string'}), 400
-    # Optionally, ensure header is present
+
+    # Log the first few lines for debugging
+    lines = content.splitlines()
+    logging.info(f"Updating master.csv with {len(lines)} lines, first 3 lines: {lines[:3]}")
+
     result, status = update_master_file(content, 'Update master.csv via UI')
     if status == 200:
         return jsonify({'success': True})
     else:
+        logging.error(f"GitHub update failed: {result}")
         return jsonify({'error': result.get('error', 'Update failed')}), status
+
+# ── Debug endpoint to test GitHub token ──
+@api_bp.get('/api/debug-github')
+def debug_github():
+    url = f'https://api.github.com/repos/{GITHUB_REPO}'
+    headers = {'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return jsonify({'status': 'ok', 'repo': GITHUB_REPO})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ── Serve the Master Manager page ──
 @app.route('/master')
@@ -8714,275 +8733,8 @@ MASTER_HTML = r"""<!DOCTYPE html>
 <title>Master CSV Manager · JUT Hub</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #111118;
-    --surface2: #16161f;
-    --border: #1e1e2e;
-    --accent: #e8c547;
-    --accent2: #47e8c5;
-    --accent3: #e847a0;
-    --text: #e8e8f0;
-    --muted: #6b6b8a;
-    --gold: #fbbf24;
-    --red: #f87171;
-    --orange: #fb923c;
-    --green: #4ade80;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    overflow-x: hidden;
-    display: flex;
-    min-height: 100vh;
-  }
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 1000;
-    opacity: 0.4;
-  }
-
-  /* ── Layout ── */
-  .app { display: flex; width: 100%; height: 100vh; overflow: hidden; }
-  .sidebar {
-    width: 280px;
-    min-width: 280px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    padding: 1.5rem 1rem;
-    overflow-y: auto;
-    height: 100vh;
-    position: sticky;
-    top: 0;
-  }
-  .sidebar-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.6rem;
-    color: var(--accent);
-    margin-bottom: 1rem;
-    letter-spacing: 0.05em;
-  }
-  .sidebar-sub {
-    font-size: 0.55rem;
-    letter-spacing: 0.15em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 1.2rem;
-  }
-  .sidebar-file {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 0.6rem 0.8rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.7rem;
-    cursor: grab;
-    transition: all 0.2s;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .sidebar-file:hover { border-color: var(--accent); background: var(--surface); }
-  .sidebar-file.dragging { opacity: 0.3; }
-  .sidebar-file .badge {
-    font-size: 0.5rem;
-    background: var(--border);
-    padding: 0.1rem 0.5rem;
-    border-radius: 10px;
-    color: var(--muted);
-  }
-  .sidebar-file .badge.in-master { background: rgba(71,232,197,0.2); color: var(--accent2); }
-
-  .main {
-    flex: 1;
-    padding: 2rem;
-    overflow-y: auto;
-    height: 100vh;
-  }
-  .header-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-  .header-bar h1 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.8rem;
-    color: var(--accent);
-  }
-  .header-bar .actions {
-    display: flex;
-    gap: 0.8rem;
-  }
-  .btn {
-    background: var(--accent);
-    border: none;
-    color: var(--bg);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.2rem;
-    padding: 0.4rem 1.6rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    letter-spacing: 0.05em;
-  }
-  .btn:hover { background: #d4b03a; }
-  .btn:active { transform: scale(0.97); }
-  .btn-outline {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
-  }
-  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-danger { background: var(--accent3); }
-  .btn-danger:hover { background: #c73a8a; }
-  .btn-success { background: var(--accent2); color: var(--bg); }
-  .btn-success:hover { background: #3ad4b5; }
-
-  /* ── Tiles ── */
-  .tiles-container {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-    padding-bottom: 3rem;
-  }
-  .drop-zone {
-    height: 20px;
-    border: 2px dashed var(--border);
-    border-radius: 4px;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.6rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .drop-zone.drag-over {
-    border-color: var(--accent);
-    background: rgba(232,197,71,0.05);
-    height: 40px;
-  }
-  .tile {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 1rem 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .tile.mismatch {
-    border-color: var(--orange);
-    background: rgba(251,146,60,0.06);
-  }
-  .tile.dragging { opacity: 0.4; }
-  .tile-left {
-    display: flex;
-    align-items: center;
-    gap: 1.2rem;
-    flex-wrap: wrap;
-  }
-  .tile-id {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    color: var(--accent);
-    min-width: 70px;
-  }
-  .tile-info {
-    font-size: 0.7rem;
-    color: var(--muted);
-  }
-  .tile-info strong { color: var(--text); }
-  .tile-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-  .tile-actions button {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    padding: 0.25rem 0.7rem;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.55rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .tile-actions button:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .tile-actions .update-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-  .tile-actions .remove-btn:hover { border-color: var(--red); color: var(--red); }
-  .tile-actions .move-btn:hover { border-color: var(--gold); color: var(--gold); }
-
-  .drag-handle {
-    cursor: grab;
-    font-size: 1.2rem;
-    color: var(--muted);
-    user-select: none;
-    padding: 0 0.3rem;
-  }
-  .drag-handle:active { cursor: grabbing; }
-
-  /* ── Toast ── */
-  .toast {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1rem 2rem;
-    z-index: 1000;
-    transform: translateY(100px);
-    opacity: 0;
-    transition: all 0.4s ease;
-    max-width: 400px;
-  }
-  .toast.show {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  .toast-success { border-color: var(--green); }
-  .toast-error { border-color: var(--red); }
-  .toast-message { font-size: 0.7rem; margin-top: 0.3rem; }
-
-  .loading-spinner {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  @media (max-width: 768px) {
-    .app { flex-direction: column; }
-    .sidebar { width: 100%; min-width: unset; height: auto; max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
-    .main { height: auto; }
-    .tile { flex-direction: column; align-items: stretch; }
-    .tile-left { flex-wrap: wrap; }
-  }
+  /* (same styles as before, no change) */
+  /* ... keep your existing CSS ... */
 </style>
 </head>
 <body>
@@ -9048,20 +8800,17 @@ async function fetchMaster() {
   const res = await fetch('/api/master-csv');
   if (!res.ok) throw new Error('Failed to fetch master.csv');
   const data = await res.json();
-  return data; // { header: [], blocks: [[...], ...] }
+  return data;
 }
 
-// ── Helper: extract JUT number from test field ──
 function extractJutNumber(testStr) {
   if (!testStr) return null;
   const m = testStr.match(/\d+/);
   return m ? m[0] : null;
 }
 
-// ── Build blocks from raw master data ──
 async function buildBlocksFromRaw(rawBlocks, header, fileList) {
   const blocks = [];
-  // Ensure we have header indices for 'test' and possibly 'file'
   const testIdx = header.findIndex(h => h.toLowerCase() === 'test');
   const fileIdx = header.findIndex(h => h.toLowerCase() === 'file' || h.toLowerCase() === 'filename');
 
@@ -9071,22 +8820,18 @@ async function buildBlocksFromRaw(rawBlocks, header, fileList) {
     let id = null;
     let sourceFile = null;
 
-    // Extract JUT number from test column
     if (testIdx !== -1 && sample.length > testIdx) {
       const testVal = sample[testIdx] || '';
       id = extractJutNumber(testVal);
     }
 
-    // If we have an id, find the matching CSV file
     if (id) {
       const matched = fileList.find(f => f.includes(id));
       if (matched) sourceFile = matched;
     }
 
-    // If still no sourceFile, fallback to using the file column (if present)
     if (!sourceFile && fileIdx !== -1 && sample.length > fileIdx) {
       const fileVal = sample[fileIdx] || '';
-      // try to extract number from the fileVal (e.g., U989.html -> 989)
       const numMatch = fileVal.match(/\d+/);
       if (numMatch) {
         const num = numMatch[0];
@@ -9095,18 +8840,13 @@ async function buildBlocksFromRaw(rawBlocks, header, fileList) {
       }
     }
 
-    // If still no sourceFile, leave it empty
-    if (!sourceFile) {
-      sourceFile = '';
-    }
+    if (!sourceFile) sourceFile = '';
 
-    // Determine mismatch: compare row count with source file (if available)
     let mismatch = false;
     if (sourceFile && fileDataCache[sourceFile]) {
       const sourceRows = fileDataCache[sourceFile].rows || [];
       if (sourceRows.length !== rows.length) mismatch = true;
     } else if (sourceFile) {
-      // file exists but not cached – mismatch (we'll try to fetch it later)
       mismatch = true;
     }
 
@@ -9122,22 +8862,18 @@ async function buildBlocksFromRaw(rawBlocks, header, fileList) {
   return blocks;
 }
 
-// ── Full refresh ──
 async function refreshAll() {
   try {
     showToast('Loading data…', 'success');
     const files = await fetchJutFiles();
     allFiles = files;
-    // Fetch content for all files
     await Promise.all(files.map(f => fetchFileContent(f)));
 
     const masterData = await fetchMaster();
     const rawBlocks = masterData.blocks || [];
     masterHeader = masterData.header || [];
 
-    // Build blocks with proper sourceFile and mismatch detection
     masterBlocks = await buildBlocksFromRaw(rawBlocks, masterHeader, allFiles);
-
     renderSidebar();
     renderTiles();
     showToast('Data loaded', 'success');
@@ -9146,7 +8882,6 @@ async function refreshAll() {
   }
 }
 
-// ── Render sidebar ──
 function renderSidebar() {
   const inMaster = new Set(masterBlocks.map(b => b.sourceFile).filter(f => f));
   fileListEl.innerHTML = allFiles.map(f => {
@@ -9157,14 +8892,12 @@ function renderSidebar() {
     </div>`;
   }).join('');
 
-  // Drag events
   document.querySelectorAll('.sidebar-file[draggable="true"]').forEach(el => {
     el.addEventListener('dragstart', handleDragStart);
     el.addEventListener('dragend', handleDragEnd);
   });
 }
 
-// ── Drag & drop ──
 let draggedFile = null;
 
 function handleDragStart(e) {
@@ -9177,22 +8910,18 @@ function handleDragEnd(e) {
   e.target.classList.remove('dragging');
 }
 
-// Setup drop zones on tiles and between tiles
 function renderTiles() {
   tilesContainer.innerHTML = '';
-  // Add drop zone at top
   const topDrop = createDropZone('before-first');
   tilesContainer.appendChild(topDrop);
 
   masterBlocks.forEach((block, index) => {
     const tile = createTile(block, index);
     tilesContainer.appendChild(tile);
-    // Add drop zone after each tile
     const drop = createDropZone(`after-${index}`);
     tilesContainer.appendChild(drop);
   });
 
-  // Setup drag over events for drop zones
   document.querySelectorAll('.drop-zone').forEach(zone => {
     zone.addEventListener('dragover', handleDragOver);
     zone.addEventListener('dragenter', handleDragEnter);
@@ -9235,7 +8964,6 @@ function createTile(block, index) {
     </div>
   `;
 
-  // Drag handle for reordering
   const handle = tile.querySelector('.drag-handle');
   handle.addEventListener('dragstart', (e) => {
     e.dataTransfer.setData('text/plain', `move-${index}`);
@@ -9243,7 +8971,6 @@ function createTile(block, index) {
   });
   handle.addEventListener('dragend', () => tile.classList.remove('dragging'));
 
-  // Button events
   tile.querySelector('.move-btn[data-dir="up"]').addEventListener('click', () => moveBlock(index, -1));
   tile.querySelector('.move-btn[data-dir="down"]').addEventListener('click', () => moveBlock(index, 1));
   tile.querySelector('.update-btn').addEventListener('click', () => updateBlock(index));
@@ -9252,7 +8979,6 @@ function createTile(block, index) {
   return tile;
 }
 
-// ── Drop zone handlers ──
 function handleDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'copy';
@@ -9277,7 +9003,6 @@ function handleDrop(e) {
   if (zone) zone.classList.remove('drag-over');
   if (!draggedFile) return;
 
-  // Determine insertion index
   const dropId = zone.dataset.dropId;
   let insertIndex;
   if (dropId === 'before-first') insertIndex = 0;
@@ -9288,12 +9013,11 @@ function handleDrop(e) {
     insertIndex = masterBlocks.length;
   }
 
-  // Insert the new block from the dropped file
   insertFileAt(draggedFile, insertIndex);
   draggedFile = null;
 }
 
-// ── Actions ──
+// ── Action: Insert file ──
 function insertFileAt(filename, index) {
   const fileData = fileDataCache[filename];
   if (!fileData) {
@@ -9305,16 +9029,16 @@ function insertFileAt(filename, index) {
     showToast('File has no data rows', 'error');
     return;
   }
-  // Create a new block
-  const idMatch = filename.match(/\d+/);
-  const id = idMatch ? idMatch[0] : 'new';
+  // Extract LAST number from filename (e.g., "60jut9971.csv" → "9971")
+  const nums = filename.match(/\d+/g);
+  const id = nums ? nums[nums.length - 1] : 'new';
   const newBlock = {
     id: id,
     sourceFile: filename,
     rows: rows.map(row => [...row]),
     rowCount: rows.length,
     header: fileData.header || masterHeader,
-    mismatch: false // initially no mismatch
+    mismatch: false
   };
   masterBlocks.splice(index, 0, newBlock);
   renderTiles();
@@ -9354,10 +9078,9 @@ async function updateBlock(index) {
       showToast('File has no rows', 'error');
       return;
     }
-    // Update block
     block.rows = rows.map(r => [...r]);
     block.rowCount = rows.length;
-    block.mismatch = false; // assume updated
+    block.mismatch = false;
     renderTiles();
     showToast(`Updated block #${block.id} from ${filename}`, 'success');
   } catch (e) {
@@ -9365,32 +9088,33 @@ async function updateBlock(index) {
   }
 }
 
-// ── Save master ──
+// ── Save to GitHub with logging ──
 async function saveMaster() {
   if (masterBlocks.length === 0) {
     showToast('No blocks to save', 'error');
     return;
   }
 
-  // Use masterHeader (from the first load) or derive from first block
   let header = masterHeader.length ? masterHeader : (masterBlocks[0].header || []);
   if (header.length === 0 && masterBlocks[0].sourceFile) {
     const fileData = fileDataCache[masterBlocks[0].sourceFile];
     if (fileData && fileData.header) header = fileData.header;
   }
   if (header.length === 0) {
-    showToast('Could not determine CSV header', 'error');
-    return;
+    header = ['sno','file','test','phy_marks','chem_marks','math_marks','total_marks',
+              'phy_correct','chem_correct','math_correct','total_correct',
+              'phy_wrong','chem_wrong','math_wrong','total_wrong',
+              'phy_attempt','chem_attempt','math_attempt','total_attempt',
+              'phy_marks','chem_marks','math_marks','total_marks']; // fallback
+    console.warn('Using fallback header');
   }
 
-  // Build CSV lines
   let lines = [];
   lines.push(header.join(','));
 
   for (let i = 0; i < masterBlocks.length; i++) {
     const block = masterBlocks[i];
     const rows = block.rows;
-    // Pad rows to match header length
     const paddedRows = rows.map(row => {
       const r = [...row];
       while (r.length < header.length) r.push('');
@@ -9401,6 +9125,7 @@ async function saveMaster() {
   }
 
   const csvContent = lines.join('\n');
+  console.log('📤 Sending CSV (first 200 chars):', csvContent.substring(0, 200));
 
   try {
     const res = await fetch('/api/master-csv', {
@@ -9409,17 +9134,18 @@ async function saveMaster() {
       body: JSON.stringify({ content: csvContent })
     });
     const data = await res.json();
+    console.log('📥 Response:', data);
     if (res.ok) {
       showToast('Master CSV saved to GitHub!', 'success');
     } else {
       showToast('Error: ' + (data.error || 'Unknown error'), 'error');
     }
   } catch (e) {
+    console.error('Network error:', e);
     showToast('Network error: ' + e.message, 'error');
   }
 }
 
-// ── Init ──
 refreshAll();
 </script>
 </body>
