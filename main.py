@@ -20,6 +20,10 @@ GITHUB_REPO = 'Dheeraj-Nayak-2009/60.jut.analysis'
 GITHUB_PATH = 'master/subject_swaps.json'
 GITHUB_BRANCH = 'main'
 
+# ── GitHub helpers for master.csv ──
+MASTER_PATH = 'master/master.csv'  # path inside the repo
+
+
 app = Flask(__name__)
 app.secret_key = 'supersecretkey-change-in-production'  # Use env var in production
 
@@ -128,6 +132,130 @@ def update_swaps():
         return jsonify({'success': True, 'message': 'Swaps updated successfully'})
     else:
         return jsonify({'error': result.get('error', 'Update failed')}), status
+
+
+# MASTER UPDATION STUFF #
+def get_master_file_sha():
+    url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/{MASTER_PATH}'
+    headers = {'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            return data.get('sha')
+    except urllib.error.HTTPError as e:
+        print(f"GitHub API error (master): {e.code} {e.reason}")
+        return None
+
+def update_master_file(content, commit_message):
+    url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/{MASTER_PATH}'
+    headers = {
+        'Authorization': f'token {GITHUB_TOKEN}',
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+    }
+    sha = get_master_file_sha()
+    if not sha:
+        return {'error': 'Could not get master.csv SHA'}, 500
+
+    content_b64 = base64.b64encode(content.encode('utf-8')).decode('utf-8')
+    data = {
+        'message': commit_message,
+        'content': content_b64,
+        'sha': sha,
+        'branch': GITHUB_BRANCH
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(data).encode('utf-8'),
+        headers=headers,
+        method='PUT'
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode('utf-8')), resp.status
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8')
+        return {'error': f'{e.code} {e.reason}: {error_body}'}, e.code
+
+# ── API routes ──
+@api_bp.get('/api/jut-files')
+def list_jut_files():
+    static_dir = app.static_folder
+    files = [f for f in os.listdir(static_dir) if f.endswith('.csv') and re.match(r'^60jut\d+\.csv$', f, re.I)]
+    return jsonify(sorted(files))
+
+@api_bp.get('/api/jut-file/<filename>')
+def get_jut_file(filename):
+    # Security: ensure filename is safe
+    if '..' in filename or '/' in filename:
+        abort(400)
+    filepath = os.path.join(app.static_folder, filename)
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'File not found'}), 404
+    with open(filepath, newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        header = next(reader)  # skip header
+        rows = list(reader)
+    return jsonify({'header': header, 'rows': rows})
+
+@api_bp.get('/api/master-csv')
+def get_master_csv():
+    # Fetch from GitHub
+    url = f'https://api.github.com/repos/{GITHUB_REPO}/contents/{MASTER_PATH}'
+    headers = {'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            content = base64.b64decode(data['content']).decode('utf-8')
+            # Parse CSV into blocks (split by empty lines)
+            lines = content.splitlines()
+            if not lines:
+                return jsonify({'blocks': [], 'header': []})
+            header = lines[0].split(',') if lines else []
+            blocks = []
+            current_block = []
+            for line in lines[1:]:
+                if line.strip() == '':
+                    if current_block:
+                        blocks.append(current_block)
+                        current_block = []
+                else:
+                    current_block.append(line.split(','))
+            if current_block:
+                blocks.append(current_block)
+            return jsonify({'header': header, 'blocks': blocks})
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            # File doesn't exist yet – return empty
+            return jsonify({'header': [], 'blocks': []})
+        return jsonify({'error': f'GitHub error: {e.code}'}), e.code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.post('/api/master-csv')
+def update_master_csv():
+    data = request.get_json()
+    if not data or 'content' not in data:
+        return jsonify({'error': 'Missing content'}), 400
+    content = data['content']
+    # Validate that content is a proper CSV (simple check)
+    if not isinstance(content, str):
+        return jsonify({'error': 'Content must be a string'}), 400
+    # Optionally, ensure header is present
+    result, status = update_master_file(content, 'Update master.csv via UI')
+    if status == 200:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': result.get('error', 'Update failed')}), status
+
+# ── Serve the Master Manager page ──
+@app.route('/master')
+@login_required
+def master_manager():
+    # We'll define MASTER_HTML separately
+    return app.response_class(MASTER_HTML, mimetype='text/html')
 
 
 # ── Login / Logout routes ──
@@ -8577,6 +8705,753 @@ init();
 </body>
 </html>"""
 
+MASTER_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Master CSV Manager · JUT Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #16161f;
+    --border: #1e1e2e;
+    --accent: #e8c547;
+    --accent2: #47e8c5;
+    --accent3: #e847a0;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --gold: #fbbf24;
+    --red: #f87171;
+    --orange: #fb923c;
+    --green: #4ade80;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    overflow-x: hidden;
+    display: flex;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── Layout ── */
+  .app { display: flex; width: 100%; height: 100vh; overflow: hidden; }
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+  .sidebar-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    letter-spacing: 0.05em;
+  }
+  .sidebar-sub {
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+  }
+  .sidebar-file {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.7rem;
+    cursor: grab;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sidebar-file:hover { border-color: var(--accent); background: var(--surface); }
+  .sidebar-file.dragging { opacity: 0.3; }
+  .sidebar-file .badge {
+    font-size: 0.5rem;
+    background: var(--border);
+    padding: 0.1rem 0.5rem;
+    border-radius: 10px;
+    color: var(--muted);
+  }
+  .sidebar-file .badge.in-master { background: rgba(71,232,197,0.2); color: var(--accent2); }
+
+  .main {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    height: 100vh;
+  }
+  .header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .header-bar h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    color: var(--accent);
+  }
+  .header-bar .actions {
+    display: flex;
+    gap: 0.8rem;
+  }
+  .btn {
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    padding: 0.4rem 1.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: 0.05em;
+  }
+  .btn:hover { background: #d4b03a; }
+  .btn:active { transform: scale(0.97); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: var(--accent3); }
+  .btn-danger:hover { background: #c73a8a; }
+  .btn-success { background: var(--accent2); color: var(--bg); }
+  .btn-success:hover { background: #3ad4b5; }
+
+  /* ── Tiles ── */
+  .tiles-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding-bottom: 3rem;
+  }
+  .drop-zone {
+    height: 20px;
+    border: 2px dashed var(--border);
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(232,197,71,0.05);
+    height: 40px;
+  }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .tile.mismatch {
+    border-color: var(--orange);
+    background: rgba(251,146,60,0.06);
+  }
+  .tile.dragging { opacity: 0.4; }
+  .tile-left {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .tile-id {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--accent);
+    min-width: 70px;
+  }
+  .tile-info {
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .tile-info strong { color: var(--text); }
+  .tile-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .tile-actions button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.25rem 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tile-actions button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .tile-actions .update-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .tile-actions .remove-btn:hover { border-color: var(--red); color: var(--red); }
+  .tile-actions .move-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .drag-handle {
+    cursor: grab;
+    font-size: 1.2rem;
+    color: var(--muted);
+    user-select: none;
+    padding: 0 0.3rem;
+  }
+  .drag-handle:active { cursor: grabbing; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 2rem;
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.4s ease;
+    max-width: 400px;
+  }
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  .toast-success { border-color: var(--green); }
+  .toast-error { border-color: var(--red); }
+  .toast-message { font-size: 0.7rem; margin-top: 0.3rem; }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 768px) {
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; min-width: unset; height: auto; max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .main { height: auto; }
+    .tile { flex-direction: column; align-items: stretch; }
+    .tile-left { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-title">📂 JUT Files</div>
+    <div class="sidebar-sub">Drag a file to insert into master</div>
+    <div id="fileList"></div>
+  </div>
+  <div class="main">
+    <div class="header-bar">
+      <h1>📋 Master CSV Manager</h1>
+      <div class="actions">
+        <button class="btn btn-outline" onclick="refreshAll()">🔄 Refresh</button>
+        <button class="btn" onclick="saveMaster()">💾 Save to GitHub</button>
+      </div>
+    </div>
+    <div id="tilesContainer" class="tiles-container"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="toast-message" id="toastMessage"></div></div>
+
+<script>
+// ── State ──
+let allFiles = [];          // list of filenames
+let masterBlocks = [];      // array of blocks, each block = { id: '123', rows: [[...], ...], sourceFile: '60jut123.csv'? }
+let fileDataCache = {};     // filename -> { header, rows }
+let currentOrder = [];      // array of block indices or ids in order
+
+// ── DOM refs ──
+const fileListEl = document.getElementById('fileList');
+const tilesContainer = document.getElementById('tilesContainer');
+const toast = document.getElementById('toast');
+const toastMsg = document.getElementById('toastMessage');
+let toastTimeout;
+
+function showToast(msg, type='success') {
+  toast.className = `toast toast-${type}`;
+  toastMsg.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+// ── Fetch data ──
+async function fetchJutFiles() {
+  const res = await fetch('/api/jut-files');
+  if (!res.ok) throw new Error('Failed to fetch JUT files');
+  return await res.json();
+}
+
+async function fetchFileContent(filename) {
+  if (fileDataCache[filename]) return fileDataCache[filename];
+  const res = await fetch(`/api/jut-file/${encodeURIComponent(filename)}`);
+  if (!res.ok) throw new Error(`Failed to fetch ${filename}`);
+  const data = await res.json();
+  fileDataCache[filename] = data;
+  return data;
+}
+
+async function fetchMaster() {
+  const res = await fetch('/api/master-csv');
+  if (!res.ok) throw new Error('Failed to fetch master.csv');
+  const data = await res.json();
+  return data; // { header: [], blocks: [[...], ...] }
+}
+
+// ── Build master blocks from raw blocks ──
+function buildBlocksFromRaw(rawBlocks, fileList) {
+  // rawBlocks is array of arrays (rows). We need to identify which JUT each block belongs to.
+  // We'll use the first row's "file" or "filename" column if present, otherwise we try to match by JUT number from the test column.
+  // For simplicity, we'll require a 'file' column in the header.
+  // If not present, we'll try to extract JUT number from the first row's 'test' field.
+  // We'll also store the source file if we can match.
+  const blocks = [];
+  for (const rows of rawBlocks) {
+    if (rows.length === 0) continue;
+    // Assume header is known: we need the column indices.
+    // We'll just take the first row as sample.
+    const sample = rows[0];
+    // Try to find file column
+    let sourceFile = '';
+    let id = '';
+    // We need header – we don't have it here. We'll pass header separately.
+    // We'll have to store header in the state.
+  }
+  return blocks;
+}
+
+// ── Full refresh ──
+async function refreshAll() {
+  try {
+    const files = await fetchJutFiles();
+    allFiles = files;
+    // Fetch content for all files (cache)
+    await Promise.all(files.map(f => fetchFileContent(f)));
+
+    const masterData = await fetchMaster();
+    const rawBlocks = masterData.blocks || [];
+    const header = masterData.header || [];
+
+    // We need to match each raw block to a source file.
+    // We'll build blocks with id, rows, sourceFile, rowCount, etc.
+    // For each block, we'll try to find the source file by looking for a column 'file' or 'filename' in the header.
+    // If not, we'll extract JUT number from the 'test' field.
+    const blocks = rawBlocks.map((rows, idx) => {
+      if (rows.length === 0) return null;
+      const sample = rows[0];
+      // Try to get file from row if column exists
+      let sourceFile = '';
+      let id = '';
+      // If header has 'file' or 'filename'
+      const fileColIdx = header.findIndex(h => h.toLowerCase() === 'file' || h.toLowerCase() === 'filename');
+      if (fileColIdx !== -1 && sample.length > fileColIdx) {
+        sourceFile = sample[fileColIdx] || '';
+      }
+      // If still empty, try to match by JUT number from test field
+      if (!sourceFile) {
+        const testIdx = header.findIndex(h => h.toLowerCase() === 'test');
+        if (testIdx !== -1 && sample.length > testIdx) {
+          const testVal = sample[testIdx] || '';
+          const match = testVal.match(/\d+/);
+          if (match) {
+            id = match[0];
+            // Find file that contains this id
+            const matchedFile = allFiles.find(f => f.includes(id));
+            if (matchedFile) sourceFile = matchedFile;
+          }
+        }
+      }
+      // If still no sourceFile, try to extract from filename pattern
+      if (!sourceFile) {
+        // Maybe the block id can be derived from the JUT number in the test field
+        const testIdx = header.findIndex(h => h.toLowerCase() === 'test');
+        if (testIdx !== -1 && sample.length > testIdx) {
+          const testVal = sample[testIdx] || '';
+          const match = testVal.match(/\d+/);
+          if (match) {
+            id = match[0];
+            const matchedFile = allFiles.find(f => f.includes(id));
+            if (matchedFile) sourceFile = matchedFile;
+          }
+        }
+      }
+      // If still nothing, use a fallback id
+      if (!sourceFile) {
+        id = `block-${idx}`;
+        sourceFile = '';
+      } else {
+        // extract numeric id from filename
+        const numMatch = sourceFile.match(/\d+/);
+        id = numMatch ? numMatch[0] : '';
+      }
+      return {
+        id: id || `block-${idx}`,
+        sourceFile: sourceFile,
+        rows: rows,
+        rowCount: rows.length,
+        header: header,
+        // We'll store the raw rows for later comparison
+        rawRows: rows
+      };
+    }).filter(b => b !== null);
+
+    masterBlocks = blocks;
+    renderSidebar();
+    renderTiles();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ── Render sidebar ──
+function renderSidebar() {
+  const inMaster = new Set(masterBlocks.map(b => b.sourceFile).filter(f => f));
+  fileListEl.innerHTML = allFiles.map(f => {
+    const inMasterFlag = inMaster.has(f);
+    return `<div class="sidebar-file" draggable="true" data-file="${f}" data-inmaster="${inMasterFlag}">
+      <span>${f}</span>
+      <span class="badge ${inMasterFlag ? 'in-master' : ''}">${inMasterFlag ? '✓ in master' : 'available'}</span>
+    </div>`;
+  }).join('');
+
+  // Drag events
+  document.querySelectorAll('.sidebar-file[draggable="true"]').forEach(el => {
+    el.addEventListener('dragstart', handleDragStart);
+    el.addEventListener('dragend', handleDragEnd);
+  });
+}
+
+// ── Drag & drop ──
+let draggedFile = null;
+
+function handleDragStart(e) {
+  draggedFile = e.target.closest('.sidebar-file').dataset.file;
+  e.dataTransfer.effectAllowed = 'copy';
+  e.target.classList.add('dragging');
+}
+
+function handleDragEnd(e) {
+  e.target.classList.remove('dragging');
+}
+
+// Setup drop zones on tiles and between tiles
+function renderTiles() {
+  tilesContainer.innerHTML = '';
+  // Add drop zone at top
+  const topDrop = createDropZone('before-first');
+  tilesContainer.appendChild(topDrop);
+
+  masterBlocks.forEach((block, index) => {
+    const tile = createTile(block, index);
+    tilesContainer.appendChild(tile);
+    // Add drop zone after each tile
+    const drop = createDropZone(`after-${index}`);
+    tilesContainer.appendChild(drop);
+  });
+
+  // Setup drag over events for drop zones
+  document.querySelectorAll('.drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', handleDragOver);
+    zone.addEventListener('dragenter', handleDragEnter);
+    zone.addEventListener('dragleave', handleDragLeave);
+    zone.addEventListener('drop', handleDrop);
+  });
+}
+
+function createDropZone(id) {
+  const zone = document.createElement('div');
+  zone.className = 'drop-zone';
+  zone.dataset.dropId = id;
+  zone.textContent = 'Drop here to insert';
+  return zone;
+}
+
+function createTile(block, index) {
+  const tile = document.createElement('div');
+  tile.className = 'tile';
+  if (block.mismatch) tile.classList.add('mismatch');
+
+  const sourceFile = block.sourceFile || 'unknown';
+  const rowCount = block.rowCount || 0;
+
+  // Check if source file exists and has same row count
+  const fileData = fileDataCache[sourceFile];
+  let mismatch = false;
+  if (fileData) {
+    const sourceRows = fileData.rows || [];
+    if (sourceRows.length !== rowCount) mismatch = true;
+    // Also compare a hash of rows? For simplicity, just row count.
+  } else if (sourceFile) {
+    // file not found in cache – mismatch
+    mismatch = true;
+  }
+
+  if (mismatch) tile.classList.add('mismatch');
+
+  tile.innerHTML = `
+    <div class="tile-left">
+      <span class="drag-handle" draggable="true">⠿</span>
+      <span class="tile-id">#${block.id}</span>
+      <div class="tile-info">
+        <strong>${sourceFile}</strong> · ${rowCount} rows
+        ${mismatch ? ' <span style="color:var(--orange);">⚠️ mismatch</span>' : ''}
+      </div>
+    </div>
+    <div class="tile-actions">
+      <button class="move-btn" data-dir="up" data-idx="${index}">↑</button>
+      <button class="move-btn" data-dir="down" data-idx="${index}">↓</button>
+      <button class="update-btn" data-idx="${index}">⟳ Update</button>
+      <button class="remove-btn" data-idx="${index}">✕ Remove</button>
+    </div>
+  `;
+
+  // Drag handle for reordering
+  const handle = tile.querySelector('.drag-handle');
+  handle.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', `move-${index}`);
+    tile.classList.add('dragging');
+  });
+  handle.addEventListener('dragend', () => tile.classList.remove('dragging'));
+
+  // Button events
+  tile.querySelector('.move-btn[data-dir="up"]').addEventListener('click', () => moveBlock(index, -1));
+  tile.querySelector('.move-btn[data-dir="down"]').addEventListener('click', () => moveBlock(index, 1));
+  tile.querySelector('.update-btn').addEventListener('click', () => updateBlock(index));
+  tile.querySelector('.remove-btn').addEventListener('click', () => removeBlock(index));
+
+  return tile;
+}
+
+// ── Drop zone handlers ──
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  const zone = e.target.closest('.drop-zone');
+  if (zone) zone.classList.add('drag-over');
+}
+
+function handleDragEnter(e) {
+  e.preventDefault();
+  const zone = e.target.closest('.drop-zone');
+  if (zone) zone.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  const zone = e.target.closest('.drop-zone');
+  if (zone) zone.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const zone = e.target.closest('.drop-zone');
+  if (zone) zone.classList.remove('drag-over');
+  if (!draggedFile) return;
+
+  // Determine insertion index
+  const dropId = zone.dataset.dropId;
+  let insertIndex;
+  if (dropId === 'before-first') insertIndex = 0;
+  else if (dropId.startsWith('after-')) {
+    const idx = parseInt(dropId.split('-')[1]);
+    insertIndex = idx + 1;
+  } else {
+    insertIndex = masterBlocks.length;
+  }
+
+  // Insert the new block from the dropped file
+  insertFileAt(draggedFile, insertIndex);
+  draggedFile = null;
+}
+
+// ── Actions ──
+function insertFileAt(filename, index) {
+  const fileData = fileDataCache[filename];
+  if (!fileData) {
+    showToast('File data not loaded', 'error');
+    return;
+  }
+  const rows = fileData.rows || [];
+  if (rows.length === 0) {
+    showToast('File has no data rows', 'error');
+    return;
+  }
+  // Create a new block
+  const idMatch = filename.match(/\d+/);
+  const id = idMatch ? idMatch[0] : 'new';
+  const newBlock = {
+    id: id,
+    sourceFile: filename,
+    rows: rows.map(row => [...row]), // copy
+    rowCount: rows.length,
+    header: fileData.header || [],
+    rawRows: rows
+  };
+  // Insert at index
+  masterBlocks.splice(index, 0, newBlock);
+  renderTiles();
+  showToast(`Inserted ${filename} at position ${index+1}`, 'success');
+}
+
+function moveBlock(index, direction) {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= masterBlocks.length) return;
+  const [block] = masterBlocks.splice(index, 1);
+  masterBlocks.splice(newIndex, 0, block);
+  renderTiles();
+}
+
+function removeBlock(index) {
+  if (!confirm(`Remove block #${masterBlocks[index].id}?`)) return;
+  masterBlocks.splice(index, 1);
+  renderTiles();
+  showToast('Block removed', 'success');
+}
+
+async function updateBlock(index) {
+  const block = masterBlocks[index];
+  const filename = block.sourceFile;
+  if (!filename) {
+    showToast('No source file for this block', 'error');
+    return;
+  }
+  try {
+    const fileData = await fetchFileContent(filename);
+    if (!fileData || !fileData.rows) {
+      showToast('Failed to fetch file data', 'error');
+      return;
+    }
+    const rows = fileData.rows;
+    if (rows.length === 0) {
+      showToast('File has no rows', 'error');
+      return;
+    }
+    // Update block
+    block.rows = rows.map(r => [...r]);
+    block.rowCount = rows.length;
+    block.rawRows = rows;
+    // Also update header if needed
+    block.header = fileData.header || [];
+    renderTiles();
+    showToast(`Updated block #${block.id} from ${filename}`, 'success');
+  } catch (e) {
+    showToast('Error updating: ' + e.message, 'error');
+  }
+}
+
+// ── Save master ──
+async function saveMaster() {
+  // Build the full CSV content: header + blocks separated by blank line
+  if (masterBlocks.length === 0) {
+    showToast('No blocks to save', 'error');
+    return;
+  }
+  // Use the header from the first block (or from the first file)
+  let header = masterBlocks[0].header || [];
+  // If header empty, try to get from fileData of first block
+  if (header.length === 0 && masterBlocks[0].sourceFile) {
+    const fileData = fileDataCache[masterBlocks[0].sourceFile];
+    if (fileData && fileData.header) header = fileData.header;
+  }
+  if (header.length === 0) {
+    showToast('Could not determine CSV header', 'error');
+    return;
+  }
+
+  // Build CSV lines
+  let lines = [];
+  lines.push(header.join(','));
+
+  for (let i = 0; i < masterBlocks.length; i++) {
+    const block = masterBlocks[i];
+    const rows = block.rows;
+    // Ensure each row has same length as header (pad if necessary)
+    const paddedRows = rows.map(row => {
+      const r = [...row];
+      while (r.length < header.length) r.push('');
+      return r.slice(0, header.length);
+    });
+    // Write rows
+    paddedRows.forEach(row => lines.push(row.join(',')));
+    // Add blank line after each block except the last
+    if (i < masterBlocks.length - 1) lines.push('');
+  }
+
+  const csvContent = lines.join('\n');
+
+  try {
+    const res = await fetch('/api/master-csv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: csvContent })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast('Master CSV saved to GitHub!', 'success');
+    } else {
+      showToast('Error: ' + (data.error || 'Unknown error'), 'error');
+    }
+  } catch (e) {
+    showToast('Network error: ' + e.message, 'error');
+  }
+}
+
+// ── Init ──
+refreshAll();
+</script>
+</body>
+</html>"""
 
 @app.route('/debug-swaps')
 @login_required
