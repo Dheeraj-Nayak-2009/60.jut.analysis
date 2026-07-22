@@ -53,12 +53,5 @@
       "math": "phy",
       "phy": "chem"
     }
-  },
-  "CT_2": {
-    "swap": {
-      "chem": "phy",
-      "math": "chem",
-      "phy": "math"
-    }
   }
 }
