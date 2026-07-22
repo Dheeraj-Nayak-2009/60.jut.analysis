@@ -8536,19 +8536,37 @@ async function fetchCSVFiles() {
   try {
     const res = await fetch('/api/csv-files');
     if (!res.ok) throw new Error('Failed to fetch files');
-    csvFiles = await res.json();
+    const files = await res.json();
     const options = [];
-    csvFiles.forEach(f => {
-      const nums = f.match(/\d+/g);
-      const id = nums ? nums[nums.length - 1] : null;
-      if (!id) return;
-      // Detect CT by filename (case-insensitive)
-      const isCT = f.toLowerCase().includes('ct');
-      const key = isCT ? `CT_${id}` : id;
+
+    for (const f of files) {
+      // Fetch the file content to read its test field
+      const fileRes = await fetch(`/api/jut-file/${encodeURIComponent(f)}`);
+      if (!fileRes.ok) continue;
+      const data = await fileRes.json();
+      const header = data.header || [];
+      const rows = data.rows || [];
+      if (rows.length === 0) continue;
+
+      // Find the 'test' column index
+      const testIdx = header.findIndex(h => h.toLowerCase().trim() === 'test');
+      if (testIdx === -1) continue;
+
+      // Extract the numeric test ID from the first row's test value
+      const testVal = rows[0][testIdx] || '';
+      const match = testVal.match(/\d+/);
+      const id = match ? match[0] : null;
+      if (!id) continue;
+
+      // Determine if it's a CT (by filename or test field content)
+      const isCT = f.toLowerCase().includes('ct') || /\bct\b/i.test(testVal);
       const label = isCT ? `CT ${id}` : `JUT ${id}`;
-      options.push({ key, label });
-    });
-    // Populate dropdown
+
+      // Store the numeric ID as the key (e.g., "10058")
+      options.push({ key: id, label });
+    }
+
+    // Populate the dropdown
     jutSelect.innerHTML = '';
     options.forEach(opt => {
       const el = document.createElement('option');
@@ -8556,6 +8574,7 @@ async function fetchCSVFiles() {
       el.textContent = opt.label;
       jutSelect.appendChild(el);
     });
+
   } catch (e) {
     console.error('Error fetching CSV files:', e);
     showToast('Could not load JUT/CT list', 'error');
