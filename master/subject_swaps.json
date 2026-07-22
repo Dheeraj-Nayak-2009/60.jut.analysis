@@ -1,9 +1,9 @@
 {
   "10058": {
     "swap": {
-      "chem": "math",
-      "math": "phy",
-      "phy": "chem"
+      "chem": "phy",
+      "math": "chem",
+      "phy": "math"
     }
   },
   "9513": {
