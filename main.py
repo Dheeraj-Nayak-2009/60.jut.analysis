@@ -533,18 +533,18 @@ def load_subject_swaps():
     return _subject_swaps
 
 def extract_test_code(test_field):
-    """Extract numeric code from test field, e.g. 'Details of NEW JEE: 9488' -> '9488'"""
     if not test_field:
         return None
-    # Try to find a number after a colon or at the end
-    m = re.search(r':\s*(\d+)', test_field)
+    # Try to find a number after colon or any number
+    m = re.search(r':\s*(\d+)', test_field) or re.search(r'\b(\d+)\b', test_field)
     if m:
-        return m.group(1)
-    # Fallback: any number in the string
-    m = re.search(r'\b(\d+)\b', test_field)
-    if m:
-        return m.group(1)
-    return test_field.strip()  # fallback to the whole string
+        number = m.group(1)
+        # If "CT" appears as a whole word, treat as CT
+        if re.search(r'\bct\b', test_field, re.I):
+            return f"CT_{number}"
+        # For JUT/JEE, return just the number (backward compatible)
+        return number
+    return test_field.strip()
 
 def apply_subject_swaps(row):
     """Swap subject data in place if the test code has a swap mapping."""
@@ -8537,23 +8537,28 @@ async function fetchCSVFiles() {
     const res = await fetch('/api/csv-files');
     if (!res.ok) throw new Error('Failed to fetch files');
     csvFiles = await res.json();
-    const ids = csvFiles
-      .map(f => {
-        const match = f.match(/\d+/g);
-        return match ? match[match.length - 1] : null;
-      })
-      .filter(id => id !== null);
+    const options = [];
+    csvFiles.forEach(f => {
+      const nums = f.match(/\d+/g);
+      const id = nums ? nums[nums.length - 1] : null;
+      if (!id) return;
+      // Detect CT by filename (case-insensitive)
+      const isCT = f.toLowerCase().includes('ct');
+      const key = isCT ? `CT_${id}` : id;
+      const label = isCT ? `CT ${id}` : `JUT ${id}`;
+      options.push({ key, label });
+    });
     // Populate dropdown
     jutSelect.innerHTML = '';
-    ids.forEach(id => {
-      const opt = document.createElement('option');
-      opt.value = id;
-      opt.textContent = `JUT ${id}`;
-      jutSelect.appendChild(opt);
+    options.forEach(opt => {
+      const el = document.createElement('option');
+      el.value = opt.key;
+      el.textContent = opt.label;
+      jutSelect.appendChild(el);
     });
   } catch (e) {
     console.error('Error fetching CSV files:', e);
-    showToast('Could not load JUT list', 'error');
+    showToast('Could not load JUT/CT list', 'error');
   }
 }
 
