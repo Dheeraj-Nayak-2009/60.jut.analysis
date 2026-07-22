@@ -1345,7 +1345,16 @@ function buildProfile(studentName,masterRows){
   const sRows=masterRows.filter(r=>normName(r.name)===normName(studentName));
   const testMap={};
   masterRows.forEach(r=>{if(!testMap[r.test])testMap[r.test]=[];testMap[r.test].push(r);});
-  const allTests=Object.keys(testMap).sort();
+  function extractTestCode(testField) {
+      if (!testField) return null;
+      const m = testField.match(/:\s*(\d+)/) || testField.match(/\b(\d+)\b/);
+      return m ? m[1] : testField.trim();
+    }
+    allTests = Object.keys(testMap).sort((a, b) => {
+      const numA = parseInt(extractTestCode(a) || '0');
+      const numB = parseInt(extractTestCode(b) || '0');
+      return numA - numB;
+    });
 
   // per-test data
   const perTest=allTests.map(testName=>{
@@ -2258,7 +2267,16 @@ async function loadData(){
       if(!testMap[r.test])testMap[r.test]=[];
       testMap[r.test].push(r);
     });
-    allTests=Object.keys(testMap).sort();
+    function extractTestCode(testField) {
+      if (!testField) return null;
+      const m = testField.match(/:\s*(\d+)/) || testField.match(/\b(\d+)\b/);
+      return m ? m[1] : testField.trim();
+    }
+    allTests = Object.keys(testMap).sort((a, b) => {
+      const numA = parseInt(extractTestCode(a) || '0');
+      const numB = parseInt(extractTestCode(b) || '0');
+      return numA - numB;
+    });
 
     // group by student
     allRows.forEach(r=>{
@@ -3377,7 +3395,11 @@ async function loadMenu() {
     const jutFiles = files.filter(f => /^60jut(\d+)\.csv$/i.test(f));
     const ctFiles = files.filter(f => /^60ct(\d+)\.csv$/i.test(f));
     
-    const sortByNum = (a,b) => parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0]);
+    function extractNum(filename) {
+      const match = filename.match(/(\d+)\.csv$/);
+      return match ? parseInt(match[1]) : 0;
+    }
+    const sortByNum = (a, b) => extractNum(a) - extractNum(b);
     jutFiles.sort(sortByNum);
     ctFiles.sort(sortByNum);
 
