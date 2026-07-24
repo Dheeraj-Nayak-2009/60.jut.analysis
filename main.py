@@ -27,7 +27,7 @@ MASTER_PATH = 'master/master.csv'  # path inside the repo
 
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey-change-in-production'  # Use env var in production
+app.secret_key = 'kP9#Go$FvckYourself7xL!Eat$h1tAndD1e*mQ4$'  # Use env var in production
 
 # ── API blueprint ──
 api_bp = Blueprint('api', __name__)
